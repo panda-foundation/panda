@@ -86,39 +86,32 @@ func Parse(r io.Reader) (*Program, error) {
 type Program struct {
 	Pos lexer.Position
 
-	Entries []*Entry `{ @@ }`
+	Entries []*Entry `( @@ )*`
 }
 
 type Entry struct {
 	Pos lexer.Position
 
-	Package *string `  "package" @[ Ident { "." Ident } ]`
+	Package *string `  "package" @( Ident ( "." Ident )* )?`
 	Import  *string `| "import" @String`
 	Method  *Method `| @@`
 
 	//Enum      *Enum     `| @@`
 	//Class     *Class    `| @@`
+
+	// for testing
+	Operation *Operation `| @@`
 }
 
 type Method struct {
 	Pos lexer.Position
 
-	Modifier  []*Modifier   `{ @@ }`
+	Modifier  []string      `@( "static" | "const" | "public" | "protected" | "private" )*`
 	Return    *Type         `@@`
 	Name      *string       `@Ident "("`
-	Arguments []*Argument   `[ @@ { "," @@ } ] ")"`
-	Body      []*Expression `"{" { @@ } "}"`
+	Arguments []*Argument   `( @@ ( "," @@ )* )? ")"`
+	Body      []*Expression `"{" ( @@ )* "}"`
 	//TO-DO add generic for method
-}
-
-type Modifier struct {
-	Pos lexer.Position
-
-	Static    bool `  @"static"`
-	Const     bool `| @"const"`
-	Public    bool `| @"public"`
-	Protected bool `| @"protected"`
-	Private   bool `| @"private"`
 }
 
 type Type struct {
@@ -126,7 +119,7 @@ type Type struct {
 
 	Scalar    Scalar       `  @@`
 	Generic   *GenericType `| @@`
-	Reference *string      `| @( Ident { "." Ident } )`
+	Reference *string      `| @( Ident ( "." Ident )* )`
 	Null      bool         `| @"null"`
 	Void      bool         `| @"void"`
 }
@@ -142,14 +135,14 @@ type Argument struct {
 type GenericType struct {
 	Pos lexer.Position
 
-	Reference *string `@( Ident { "." Ident } ) "<"`
-	Generics  []*Type `@@ { "," @@ } ">"`
+	Reference *string `@( Ident ( "." Ident )* ) "<"`
+	Generics  []*Type `@@ ( "," @@ )* ">"`
 }
 
 type Expression struct {
 	Pos lexer.Position
 
-	Block       []*Expression `  "{" { @@ } "}"`
+	Block       []*Expression `  "{" ( @@ )* "}"`
 	Call        *Call         `| @@`
 	Declaration *Declaration  `| @@`
 	Const       *Const        `| @@`
@@ -158,8 +151,8 @@ type Expression struct {
 type Call struct {
 	Pos lexer.Position
 
-	Callee    *string     `@( Ident { "." Ident } ) "("`
-	Arguments []*Argument `[ @@ { "," @@ } ] ")"`
+	Callee    *string       `@( Ident ( "." Ident )* ) "("`
+	Arguments []*Expression `( @@ ( "," @@ )* )? ")" ";"`
 }
 
 type Declaration struct {
@@ -167,7 +160,7 @@ type Declaration struct {
 
 	Type *Type       `@@`
 	Name *string     `@Ident`
-	Expr *Expression `[ "=" @@ ] ";"`
+	Expr *Expression `( "=" @@ )? ";"`
 }
 
 type Const struct {

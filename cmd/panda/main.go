@@ -27,6 +27,7 @@ import "iostream"
 public static map<int, string, bytes> main(int status, int code)
 {
 	int a = 5;
+	a(5);
 }
 `
 
