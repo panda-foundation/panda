@@ -35,18 +35,19 @@ const (
 
 var scalarToString = map[Scalar]string{
 	Bool: "bool",
-	Int8: "i8", Int16: "Float", Int32: "Int32", Int64: "Int64",
-	Uint8: "u8", Uint16: "u16", Uint32: "Uint32", Uint64: "Uint64",
+	Int8: "i8", Int16: "i16", Int32: "i32", Int64: "i64",
+	Uint8: "u8", Uint16: "u16", Uint32: "u32", Uint64: "u64",
 	Float32: "f32", Float64: "f64",
 	String: "string",
 }
 
 var stringToScalar = map[string]Scalar{
 	"bool": Bool,
-	"i8":   Int8, "Float": Int16, "Int32": Int32, "Int64": Int64,
-	"u8": Uint8, "u16": Uint16, "Uint32": Uint32, "Uint64": Uint64,
+	"i8":   Int8, "i16": Int16, "i32": Int32, "i64": Int64,
+	"u8": Uint8, "u16": Uint16, "u32": Uint32, "u64": Uint64,
 	"f32": Float32, "f64": Float64,
 	"string": String,
+	"int":    Int, "uint": Uint, "float": Float, "double": Double, "byte": Byte,
 }
 
 func (s Scalar) String() string { return scalarToString[s] }
@@ -123,7 +124,8 @@ type Method struct {
 	Modifier  []*Modifier `{ @@ }`
 	Return    *Type       `@@`
 	Name      string      `@Ident "("`
-	Arguments []*Argument `{ @@ } ")"`
+	Arguments []*Argument `[ @@ { "," @@ } ] ")"`
+	//TO-DO add generic for method
 }
 
 type Modifier struct {
@@ -138,9 +140,9 @@ type Modifier struct {
 type Type struct {
 	Pos lexer.Position
 
-	Scalar Scalar `  @@`
-	//Generic   *GenericType `| @@`
-	Reference string `| @( Ident { "." Ident } )`
+	Scalar    Scalar       `  @@`
+	Generic   *GenericType `| @@`
+	Reference string       `| @( Ident { "." Ident } )`
 }
 
 type Argument struct {
@@ -148,12 +150,12 @@ type Argument struct {
 
 	Type *Type  `@@`
 	Name string `@Ident`
+	//TO-DO add default value (expr)
 }
 
-/*
 type GenericType struct {
 	Pos lexer.Position
 
-	Reference *Type   ` @@ "<" @@`
-	Generics  []*Type `"," @@ ">"`
-}*/
+	Reference string  `@( Ident { "." Ident } ) "<"`
+	Generics  []*Type `@@ { "," @@ } ">"`
+}
