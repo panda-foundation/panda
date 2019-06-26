@@ -5,7 +5,6 @@ import (
 
 	"github.com/alecthomas/participle"
 	"github.com/alecthomas/participle/lexer"
-	"github.com/alecthomas/participle/lexer/ebnf"
 )
 
 // Scalar : basic data type
@@ -70,25 +69,7 @@ func (s *Scalar) Parse(lex lexer.PeekingLexer) error {
 }
 
 var (
-	pandaLexer = lexer.Must(ebnf.New(`
-		Comment = ( "//" ) { "\u0000"…"\uffff" - "\n" - "\r" } EOL .
-		Ident = ( Letter | "_") { "_" | Letter | Digit } .
-		String = "\"" { "\u0000" … "\uffff" - "\"" - "\\" | "\\" "\u0000" … "\uffff" } "\"" .
-		Number = [ "-" | "+" ] ("." | Digit) { "." | Digit } .
-		EOL = ( "\n" | "\r" ) { "\n" | "\r" }.
-		Whitespace = ( " " | "\t" ) { " " | "\t" } .
-		Letter = "a"…"z" | "A"…"Z" .
-		Digit = "0"…"9" .
-		Any = "\u0000"…"\uffff" .
-	`))
-
-	pandParser = participle.MustBuild(&Program{},
-		participle.Lexer(pandaLexer),
-		participle.CaseInsensitive("Ident"),
-		participle.Unquote("String"),
-		participle.UseLookahead(2),
-		participle.Elide("Whitespace"),
-	)
+	pandParser = participle.MustBuild(&Program{})
 )
 
 // Parse a BASIC program.
@@ -111,9 +92,10 @@ type Program struct {
 type Entry struct {
 	Pos lexer.Position
 
-	Package string  `  "package" @[ Ident { "." Ident } ]`
-	Import  string  `| "import" @String`
+	Package *string `  "package" @[ Ident { "." Ident } ]`
+	Import  *string `| "import" @String`
 	Method  *Method `| @@`
+
 	//Enum      *Enum     `| @@`
 	//Class     *Class    `| @@`
 }
@@ -121,10 +103,11 @@ type Entry struct {
 type Method struct {
 	Pos lexer.Position
 
-	Modifier  []*Modifier `{ @@ }`
-	Return    *Type       `@@`
-	Name      string      `@Ident "("`
-	Arguments []*Argument `[ @@ { "," @@ } ] ")"`
+	Modifier  []*Modifier   `{ @@ }`
+	Return    *Type         `@@`
+	Name      *string       `@Ident "("`
+	Arguments []*Argument   `[ @@ { "," @@ } ] ")"`
+	Body      []*Expression `"{" { @@ } "}"`
 	//TO-DO add generic for method
 }
 
@@ -132,6 +115,7 @@ type Modifier struct {
 	Pos lexer.Position
 
 	Static    bool `  @"static"`
+	Const     bool `| @"const"`
 	Public    bool `| @"public"`
 	Protected bool `| @"protected"`
 	Private   bool `| @"private"`
@@ -142,20 +126,104 @@ type Type struct {
 
 	Scalar    Scalar       `  @@`
 	Generic   *GenericType `| @@`
-	Reference string       `| @( Ident { "." Ident } )`
+	Reference *string      `| @( Ident { "." Ident } )`
 }
 
 type Argument struct {
 	Pos lexer.Position
 
-	Type *Type  `@@`
-	Name string `@Ident`
+	Type *Type   `@@`
+	Name *string `@Ident`
 	//TO-DO add default value (expr)
 }
 
 type GenericType struct {
 	Pos lexer.Position
 
-	Reference string  `@( Ident { "." Ident } ) "<"`
+	Reference *string `@( Ident { "." Ident } ) "<"`
 	Generics  []*Type `@@ { "," @@ } ">"`
 }
+
+type Expression struct {
+	Pos lexer.Position
+
+	Block       []*Expression `  "{" { @@ } "}"`
+	Call        *Call         `| @@`
+	Declaration *Declaration  `| @@`
+	Const       *Const        `| @@`
+}
+
+type Call struct {
+	Pos lexer.Position
+
+	Callee    *string     `@( Ident { "." Ident } ) "("`
+	Arguments []*Argument `[ @@ { "," @@ } ] ")"`
+}
+
+type Declaration struct {
+	Pos lexer.Position
+
+	Type *Type       `@@`
+	Name *string     `@Ident`
+	Expr *Expression `[ "=" @@ ] ";"`
+}
+
+type Const struct {
+	Pos lexer.Position
+
+	Int64   *int64   `  @Int`
+	Float64 *float64 `| @Float`
+	String  *string  `| @String`
+}
+
+/*
+type Binop struct {
+	Operation string
+	Expr1        *Expression
+	Expr2        *Expression
+}
+
+// ExprUnop unary operation
+type ExprUnop struct {
+	Operation string
+	E         Expr
+}
+
+// ExprIf if define
+type ExprIf struct {
+	Condition Expr
+	E1        Expr
+	E2        Expr
+}
+
+// ExprTernary ternary operation
+type ExprTernary struct {
+	Condition Expr
+	E1        Expr
+	E2        Expr
+}
+
+type ExprWhile struct {
+	Condition Expr
+	E         Expr
+}
+
+type ExprFor struct {
+	IteratorName string
+	Iterator     Expr
+	E            Expr
+}
+
+type ExprBreak struct{}
+
+type ExprContinue struct{}
+
+ENew(cl:String, params:Array<Expr>);
+
+EThrow(e:Expr);
+ETry(e:Expr, v:String, ecatch:Expr);
+*/
+
+// TO-DO if has return value
+// Expression
+// TO-DO corroutine (channel, pipe), thread support
