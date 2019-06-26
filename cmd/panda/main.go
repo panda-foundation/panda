@@ -21,6 +21,7 @@ type cli struct {
 func main() {
 
 	input := `
+// comment
 package main
 import "iostream"
 public static map<int, string, bytes> main(int status, int code)

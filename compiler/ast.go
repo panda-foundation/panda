@@ -127,6 +127,8 @@ type Type struct {
 	Scalar    Scalar       `  @@`
 	Generic   *GenericType `| @@`
 	Reference *string      `| @( Ident { "." Ident } )`
+	Null      bool         `| @"null"`
+	Void      bool         `| @"void"`
 }
 
 type Argument struct {
@@ -174,6 +176,12 @@ type Const struct {
 	Int64   *int64   `  @Int`
 	Float64 *float64 `| @Float`
 	String  *string  `| @String`
+}
+
+type Operation struct {
+	Pos lexer.Position
+
+	Op *string `@( "+" | "*" | "/" | "-" | "=" | "!" | ">" | "<" | "&" | "|" | "^" | "%" | "~" )+`
 }
 
 /*
