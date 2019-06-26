@@ -110,10 +110,9 @@ type Program struct {
 type Entry struct {
 	Pos lexer.Position
 
-	Package string `  "package" @[ Ident { "." Ident } ]`
-	Import  string `| "import" @String`
-	Method  Method `| @@`
-	//Method  *Method `| @@`
+	Package string  `  "package" @[ Ident { "." Ident } ]`
+	Import  string  `| "import" @String`
+	Method  *Method `| @@`
 	//Enum      *Enum     `| @@`
 	//Class     *Class    `| @@`
 }
@@ -121,12 +120,15 @@ type Entry struct {
 type Method struct {
 	Pos lexer.Position
 
-	Modifier *Modifier `{ @@ }`
-	Return   *Type     `@@`
-	Name     string    `@Ident`
+	Modifier  []*Modifier `{ @@ }`
+	Return    *Type       `@@`
+	Name      string      `@Ident "("`
+	Arguments []*Argument `{ @@ } ")"`
 }
 
 type Modifier struct {
+	Pos lexer.Position
+
 	Static    bool `  @"static"`
 	Public    bool `| @"public"`
 	Protected bool `| @"protected"`
@@ -139,6 +141,13 @@ type Type struct {
 	Scalar Scalar `  @@`
 	//Generic   *GenericType `| @@`
 	Reference string `| @( Ident { "." Ident } )`
+}
+
+type Argument struct {
+	Pos lexer.Position
+
+	Type *Type  `@@`
+	Name string `@Ident`
 }
 
 /*

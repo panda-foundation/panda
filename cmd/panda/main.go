@@ -25,7 +25,7 @@ func main() {
 	input := `
 package main
 import "iostream"
-static public void main()
+public static void main()
 `
 
 	parser := participle.MustBuild(&compiler.Program{}, participle.UseLookahead(2))
