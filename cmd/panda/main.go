@@ -30,6 +30,8 @@ public static map<int, string, bytes> main(int status, int code)
 
 	parser := participle.MustBuild(&compiler.Program{}, participle.UseLookahead(2))
 	program := &compiler.Program{}
-	parser.Parse(strings.NewReader(input), program)
+	if err := parser.Parse(strings.NewReader(input), program); err != nil {
+		panic(err)
+	}
 	repr.Println(program, repr.Hide(&lexer.Position{}))
 }
