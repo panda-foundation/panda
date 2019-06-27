@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
+	"os/exec"
 
 	"github.com/alecthomas/participle"
 	"github.com/alecthomas/participle/lexer"
@@ -21,4 +24,12 @@ func main() {
 		panic(err)
 	}
 	repr.Println(program, repr.Hide(&lexer.Position{}))
+
+	bytes, _ := compiler.Generate(program)
+	ioutil.WriteFile("./sample.cpp", bytes, 0666)
+
+	cmd := exec.Command("gcc", "sample.cpp", "-lstdc++", "-o", "sample")
+	if err := cmd.Run(); err != nil {
+		fmt.Println("compile error:", err.Error())
+	}
 }

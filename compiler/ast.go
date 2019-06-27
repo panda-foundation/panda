@@ -49,7 +49,16 @@ var stringToScalar = map[string]Scalar{
 	"int":    Int, "uint": Uint, "float": Float, "double": Double, "byte": Byte,
 }
 
-func (s Scalar) String() string { return scalarToString[s] }
+var scalarToCpp = map[Scalar]string{
+	Bool: "bool",
+	Int8: "uint8_t", Int16: "i16", Int32: "int32_t", Int64: "i64",
+	Uint8: "u8", Uint16: "u16", Uint32: "u32", Uint64: "u64",
+	Float32: "f32", Float64: "f64",
+	String: "string",
+}
+
+func (s Scalar) String() string  { return scalarToString[s] }
+func (s Scalar) CppType() string { return scalarToCpp[s] }
 
 func (s *Scalar) Parse(lex lexer.PeekingLexer) error {
 	token, err := lex.Peek(0)
@@ -72,7 +81,6 @@ var (
 	pandParser = participle.MustBuild(&Program{})
 )
 
-// Parse a BASIC program.
 func Parse(r io.Reader) (*Program, error) {
 	program := &Program{}
 	err := pandParser.Parse(r, program)
