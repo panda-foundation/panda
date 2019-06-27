@@ -106,7 +106,7 @@ type Entry struct {
 type Method struct {
 	Pos lexer.Position
 
-	Modifier  []string      `@( "static" | "const" | "public" | "protected" | "private" )*`
+	Modifier  []string      `@( "static" | "const" | "public" | "protected" | "private" | "weak" )*`
 	Return    *Type         `@@`
 	Name      *string       `@Ident "("`
 	Arguments []*Argument   `( @@ ( "," @@ )* )? ")"`
@@ -228,3 +228,5 @@ ETry(e:Expr, v:String, ecatch:Expr);
 // TO-DO if has return value
 // Expression
 // TO-DO corroutine (channel, pipe), thread support
+
+//metadata   @author @generate(generate code block) @custom
