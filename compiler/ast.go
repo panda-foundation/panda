@@ -99,6 +99,7 @@ type Entry struct {
 	//Enum      *Enum     `| @@`
 	//Class     *Class    `| @@`
 
+	Emit *Emit `| @@`
 	// for testing
 	Operation *Operation `| @@`
 }
@@ -106,11 +107,11 @@ type Entry struct {
 type Method struct {
 	Pos lexer.Position
 
-	Modifier  []string      `@( "static" | "const" | "public" | "protected" | "private" | "weak" )*`
-	Return    *Type         `@@`
-	Name      *string       `@Ident "("`
-	Arguments []*Argument   `( @@ ( "," @@ )* )? ")"`
-	Body      []*Expression `"{" ( @@ )* "}"`
+	Modifier []string      `@( "static" | "const" | "public" | "protected" | "private" | "weak" )*`
+	Return   *Type         `@@`
+	Name     *string       `@Ident "("`
+	Params   []*Param      `( @@ ( "," @@ )* )? ")"`
+	Body     []*Expression `"{" ( @@ )* "}"`
 	//TO-DO add generic for method
 }
 
@@ -124,7 +125,7 @@ type Type struct {
 	Void      bool         `| @"void"`
 }
 
-type Argument struct {
+type Param struct {
 	Pos lexer.Position
 
 	Type *Type   `@@`
@@ -145,22 +146,29 @@ type Expression struct {
 	Block       []*Expression `  "{" ( @@ )* "}"`
 	Call        *Call         `| @@`
 	Declaration *Declaration  `| @@`
-	Const       *Const        `| @@`
+	Emit        *Emit         `| @@`
 }
 
 type Call struct {
 	Pos lexer.Position
 
-	Callee    *string       `@( Ident ( "." Ident )* ) "("`
-	Arguments []*Expression `( @@ ( "," @@ )* )? ")" ";"`
+	Callee    *string     `@( Ident ( "." Ident )* ) "("`
+	Arguments []*Argument `( @@ ( "," @@ )* )? ")" ";"`
+}
+
+type Argument struct {
+	Pos lexer.Position
+
+	Const *Const      `  @@`
+	Expr  *Expression `| @@`
 }
 
 type Declaration struct {
 	Pos lexer.Position
 
-	Type *Type       `@@`
-	Name *string     `@Ident`
-	Expr *Expression `( "=" @@ )? ";"`
+	Type  *Type     `@@`
+	Name  *string   `@Ident`
+	Value *Argument `( "=" @@ )? ";"`
 }
 
 type Const struct {
@@ -175,6 +183,12 @@ type Operation struct {
 	Pos lexer.Position
 
 	Op *string `@( "+" | "*" | "/" | "-" | "=" | "!" | ">" | "<" | "&" | "|" | "^" | "%" | "~" )+`
+}
+
+type Emit struct {
+	Pos lexer.Position
+
+	Content *string `( "@" "emit" @RawString )`
 }
 
 /*

@@ -2,12 +2,11 @@
 
 package main
 
-#include <iostream>
+@emit `#include <iostream>`
 
 int main()
 {
 	int a = 5;
-
     @emit
     `std::cout << "hello world" << std::endl;`
 
