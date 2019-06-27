@@ -1,0 +1,62 @@
+package
+
+@emit 
+//#include <vector>
+
+@class(std::vector)
+class vector<T>
+{
+    @function(size)
+    u64 size();
+
+    @function(resize)
+    void resize(u64 n);
+
+    @function(capacity)
+    u64 capacity;
+
+    @function(empty)
+    bool empty();
+
+    @function(reserve)
+    void reserve(u64 n);
+
+    @function(shrink_to_fit)
+    void shrink();
+
+    //TO-DO operator[] //reference operator[] (size_type n);
+
+    @function(at)
+    T at(u64 n);
+    
+    @function(front)
+    T front();
+    
+    @function(back)
+    T back();
+
+    @function(assign)
+    void fill(u64 n, T val);
+
+    @function(push_back)
+    void push(T val);
+
+    @macro
+    T pop()
+    {
+        @return @call(back())
+        @call(pop_back())
+    }
+
+    @macro
+    void insert(u64 position, T val)
+    {
+        @call(insert(begin() + position, val))
+    }
+
+    @function(erase)
+    void erase(u64 position);
+
+    @function(clear)
+    void clear();
+}

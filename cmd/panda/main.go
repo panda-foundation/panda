@@ -28,7 +28,7 @@ func main() {
 	bytes, _ := compiler.Generate(program)
 	ioutil.WriteFile("./sample.cpp", bytes, 0666)
 
-	cmd := exec.Command("gcc", "sample.cpp", "-lstdc++", "-o", "sample")
+	cmd := exec.Command("gcc", "sample.cpp", "-lstdc++", "-o", "sample.exe")
 	if err := cmd.Run(); err != nil {
 		fmt.Println("compile error:", err.Error())
 	}
