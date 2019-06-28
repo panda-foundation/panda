@@ -3,6 +3,7 @@ Panda language (compiler and bootstrap)
 
 Roadmap
 
+meta
 os
 container
 filesystem
@@ -18,6 +19,7 @@ net
 binary
 test
 reflection
+runtime/debug
 
 extra
 any (int64,float64,string,shared_ptr<void*>) for reflection
