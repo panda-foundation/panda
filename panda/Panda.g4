@@ -1,154 +1,120 @@
 grammar Panda;
 /*Basic concepts*/
 
-
-translationunit
-   : declarationseq? EOF
+translation_unit
+   : declaration_sequence? EOF
    ;
-/*Expressions*/
 
-
-primaryexpression
+primary_expression
    : literal
    | This
    | '(' expression ')'
-   | idexpression
-   | lambdaexpression
+   | id_expression
+   | lambda_expression
    ;
 
-idexpression
-   : unqualifiedid
-   | qualifiedid
+id_expression
+   : unqualified_id
+   | qualified_id
    ;
 
-unqualifiedid
+unqualified_id
    : Identifier
-   | operatorfunctionid
-   | conversionfunctionid
-   | literaloperatorid
-   | '~' classname
-   | '~' decltypespecifier
-   | templateid
+   | operator_function_id
+   | conversion_function_id
+   | literal_operator_id
+   | '~' class_name
+   | template_id
    ;
 
-qualifiedid
-   : nestednamespecifier Template? unqualifiedid
+qualified_id
+   : nested_name_specifier unqualified_id
    ;
 
-nestednamespecifier
-   : '::'
-   | thetypename '::'
-   | namespacename '::'
-   | decltypespecifier '::'
-   | nestednamespecifier Identifier '::'
-   | nestednamespecifier Template? simpletemplateid '::'
+nested_name_specifier
+   : '.'
+   | type_name '.'
+   | namespace_name '.'
+   | nested_name_specifier Identifier '.'
+   | nested_name_specifier simple_template_id '.'
    ;
 
-lambdaexpression
-   : lambdaintroducer lambdadeclarator? compoundstatement
+lambda_expression
+   : lambda_declarator? compound_statement
    ;
 
-lambdaintroducer
-   : '[' lambdacapture? ']'
+lambda_capture
+   : capture_default
+   | capture_list
+   | capture_default ',' capture_list
    ;
 
-lambdacapture
-   : capturedefault
-   | capturelist
-   | capturedefault ',' capturelist
-   ;
-
-capturedefault
+capture_default
    : '&'
    | '='
    ;
 
-capturelist
+capture_list
    : capture '...'?
-   | capturelist ',' capture '...'?
+   | capture_list ',' capture '...'?
    ;
 
 capture
-   : simplecapture
-   | initcapture
+   : simple_capture
+   | init_capture
    ;
 
-simplecapture
+simple_capture
    : Identifier
    | '&' Identifier
    | This
    ;
 
-initcapture
+init_capture
    : Identifier initializer
    | '&' Identifier initializer
    ;
 
-lambdadeclarator
-   : '(' parameterdeclarationclause ')' Mutable? exceptionspecification? attributespecifierseq? trailingreturntype?
+lambda_declarator
+   : '(' parameter_declaration_clause ')' exception_specification? attribute_specifier_sequence? trailingreturntype?
    ;
 
-postfixexpression
-   : primaryexpression
-   | postfixexpression '[' expression ']'
-   | postfixexpression '[' bracedinitlist ']'
-   | postfixexpression '(' expressionlist? ')'
-   | simpletypespecifier '(' expressionlist? ')'
-   | typenamespecifier '(' expressionlist? ')'
-   | simpletypespecifier bracedinitlist
-   | typenamespecifier bracedinitlist
-   | postfixexpression '.' Template? idexpression
-   | postfixexpression '->' Template? idexpression
-   | postfixexpression '.' pseudodestructorname
-   | postfixexpression '->' pseudodestructorname
-   | postfixexpression '++'
-   | postfixexpression '--'
-   | Dynamic_cast '<' thetypeid '>' '(' expression ')'
-   | Static_cast '<' thetypeid '>' '(' expression ')'
-   | Reinterpret_cast '<' thetypeid '>' '(' expression ')'
-   | Const_cast '<' thetypeid '>' '(' expression ')'
-   | typeidofthetypeid '(' expression ')'
-   | typeidofthetypeid '(' thetypeid ')'
-   ;
-/*
-add a middle layer to eliminate duplicated function declarations
-*/
-
-
-typeidofexpr
-   : Typeid_
+post_fix_expression
+   : primary_expression
+   | post_fix_expression '[' expression ']'
+   | post_fix_expression '[' braced_init_list ']'
+   | post_fix_expression '(' expression_list? ')'
+   | simple_type_specifier '(' expression_list? ')'
+   | type_name_specifier '(' expression_list? ')'
+   | simple_type_specifier braced_init_list
+   | type_name_specifier braced_init_list
+   | post_fix_expression '.' id_expression
+   | post_fix_expression '->' id_expression
+   | post_fix_expression '.' pseudode_structor_name
+   | post_fix_expression '->' pseudode_structor_name
+   | post_fix_expression '++'
+   | post_fix_expression '--'
    ;
 
-typeidofthetypeid
-   : Typeid_
-   ;
-
-expressionlist
+expression_list
    : initializerlist
    ;
 
-pseudodestructorname
-   : nestednamespecifier? thetypename '::' '~' thetypename
-   | nestednamespecifier Template simpletemplateid '::' '~' thetypename
-   | nestednamespecifier? '~' thetypename
-   | '~' decltypespecifier
+pseudode_structor_name
+   : nested_name_specifier? type_name '::' '~' type_name
+   | nested_name_specifier simple_template_id '::' '~' type_name
+   | nested_name_specifier? '~' type_name
    ;
 
-unaryexpression
-   : postfixexpression
-   | '++' castexpression
-   | '--' castexpression
-   | unaryoperator castexpression
-   | Sizeof unaryexpression
-   | Sizeof '(' thetypeid ')'
-   | Sizeof '...' '(' Identifier ')'
-   | Alignof '(' thetypeid ')'
-   | noexceptexpression
-   | newexpression
-   | deleteexpression
+unary_expression
+   : post_fix_expression
+   | '++' cast_expression
+   | '--' cast_expression
+   | unary_operator cast_expression
+   | new_expression
    ;
 
-unaryoperator
+unary_operator
    : '|'
    | '*'
    | '&'
@@ -159,52 +125,43 @@ unaryoperator
    | 'not'
    ;
 
-newexpression
-   : '::'? New newplacement? newtypeid newinitializer?
-   | '::'? New newplacement? '(' thetypeid ')' newinitializer?
+new_expression
+   : New new_placement? new_type_id new_initializer?
+   | New new_placement? '(' type_id ')' new_initializer?
    ;
 
-newplacement
-   : '(' expressionlist ')'
+new_placement
+   : '(' expression_list ')'
    ;
 
-newtypeid
-   : typespecifierseq newdeclarator?
+new_type_id
+   : type_specifier_sequence new_declarator?
    ;
 
-newdeclarator
-   : ptroperator newdeclarator?
-   | noptrnewdeclarator
+new_declarator
+   : reference_operator new_declarator?
+   | noptrnew_declarator
    ;
 
-noptrnewdeclarator
-   : '[' expression ']' attributespecifierseq?
-   | noptrnewdeclarator '[' constantexpression ']' attributespecifierseq?
+noptrnew_declarator
+   : '[' expression ']' attribute_specifier_sequence?
+   | noptrnew_declarator '[' constantexpression ']' attribute_specifier_sequence?
    ;
 
-newinitializer
-   : '(' expressionlist? ')'
-   | bracedinitlist
+new_initializer
+   : '(' expression_list? ')'
+   | braced_init_list
    ;
 
-deleteexpression
-   : '::'? Delete castexpression
-   | '::'? Delete '[' ']' castexpression
-   ;
-
-noexceptexpression
-   : Noexcept '(' expression ')'
-   ;
-
-castexpression
-   : unaryexpression
-   | '(' thetypeid ')' castexpression
+cast_expression
+   : unary_expression
+   | '(' type_id ')' cast_expression
    ;
 
 pmexpression
-   : castexpression
-   | pmexpression '.*' castexpression
-   | pmexpression '->*' castexpression
+   : cast_expression
+   | pmexpression '.*' cast_expression
+   | pmexpression '->*' cast_expression
    ;
 
 multiplicativeexpression
@@ -273,13 +230,13 @@ logicalorexpression
 
 conditionalexpression
    : logicalorexpression
-   | logicalorexpression '?' expression ':' assignmentexpression
+   | logicalorexpression '?' expression ':' assignment_expression
    ;
 
-assignmentexpression
+assignment_expression
    : conditionalexpression
    | logicalorexpression assignmentoperator initializerclause
-   | throwexpression
+   | throw_expression
    ;
 
 assignmentoperator
@@ -297,8 +254,8 @@ assignmentoperator
    ;
 
 expression
-   : assignmentexpression
-   | expression ',' assignmentexpression
+   : assignment_expression
+   | expression ',' assignment_expression
    ;
 
 constantexpression
@@ -309,26 +266,26 @@ constantexpression
 
 statement
    : labeledstatement
-   | attributespecifierseq? expressionstatement
-   | attributespecifierseq? compoundstatement
-   | attributespecifierseq? selectionstatement
-   | attributespecifierseq? iterationstatement
-   | attributespecifierseq? jumpstatement
+   | attribute_specifier_sequence? expressionstatement
+   | attribute_specifier_sequence? compound_statement
+   | attribute_specifier_sequence? selectionstatement
+   | attribute_specifier_sequence? iterationstatement
+   | attribute_specifier_sequence? jumpstatement
    | declarationstatement
-   | attributespecifierseq? tryblock
+   | attribute_specifier_sequence? tryblock
    ;
 
 labeledstatement
-   : attributespecifierseq? Identifier ':' statement
-   | attributespecifierseq? Case constantexpression ':' statement
-   | attributespecifierseq? Default ':' statement
+   : attribute_specifier_sequence? Identifier ':' statement
+   | attribute_specifier_sequence? Case constantexpression ':' statement
+   | attribute_specifier_sequence? Default ':' statement
    ;
 
 expressionstatement
    : expression? ';'
    ;
 
-compoundstatement
+compound_statement
    : '{' statementseq? '}'
    ;
 
@@ -345,13 +302,12 @@ selectionstatement
 
 condition
    : expression
-   | attributespecifierseq? declspecifierseq declarator '=' initializerclause
-   | attributespecifierseq? declspecifierseq declarator bracedinitlist
+   | attribute_specifier_sequence? declspecifierseq declarator '=' initializerclause
+   | attribute_specifier_sequence? declspecifierseq declarator braced_init_list
    ;
 
 iterationstatement
    : While '(' condition ')' statement
-   | Do statement While '(' expression ')' ';'
    | For '(' forinitstatement condition? ';' expression? ')' statement
    | For '(' forrangedeclaration ':' forrangeinitializer ')' statement
    ;
@@ -362,20 +318,19 @@ forinitstatement
    ;
 
 forrangedeclaration
-   : attributespecifierseq? declspecifierseq declarator
+   : attribute_specifier_sequence? declspecifierseq declarator
    ;
 
 forrangeinitializer
    : expression
-   | bracedinitlist
+   | braced_init_list
    ;
 
 jumpstatement
-   : Break ';'
-   | Continue ';'
-   | Return expression? ';'
-   | Return bracedinitlist ';'
-   | Goto Identifier ';'
+   : Break Newline
+   | Continue Newline
+   | Return expression? Newline
+   | Return braced_init_list Newline
    ;
 
 declarationstatement
@@ -384,18 +339,14 @@ declarationstatement
 /*Declarations*/
 
 
-declarationseq
+declaration_sequence
    : declaration
-   | declarationseq declaration
+   | declaration_sequence declaration
    ;
 
 declaration
    : blockdeclaration
    | functiondefinition
-   | templatedeclaration
-   | explicitinstantiation
-   | explicitspecialization
-   | linkagespecification
    | namespacedefinition
    | emptydeclaration
    | attributedeclaration
@@ -403,26 +354,20 @@ declaration
 
 blockdeclaration
    : simpledeclaration
-   | asmdefinition
    | namespacealiasdefinition
    | usingdeclaration
    | usingdirective
-   | static_assertdeclaration
    | aliasdeclaration
    | opaqueenumdeclaration
    ;
 
 aliasdeclaration
-   : Using Identifier attributespecifierseq? '=' thetypeid ';'
+   : Using Identifier attribute_specifier_sequence? '=' type_id ';'
    ;
 
 simpledeclaration
    : declspecifierseq? initdeclaratorlist? ';'
-   | attributespecifierseq declspecifierseq? initdeclaratorlist ';'
-   ;
-
-static_assertdeclaration
-   : Static_assert '(' constantexpression ',' Stringliteral ')' ';'
+   | attribute_specifier_sequence declspecifierseq? initdeclaratorlist ';'
    ;
 
 emptydeclaration
@@ -430,129 +375,114 @@ emptydeclaration
    ;
 
 attributedeclaration
-   : attributespecifierseq ';'
+   : attribute_specifier_sequence ';'
    ;
 
 declspecifier
-   : storageclassspecifier
+   : storageclass_specifier
    | typespecifier
-   | functionspecifier
-   | Friend
-   | Typedef
-   | Constexpr
    ;
 
 declspecifierseq
-   : declspecifier attributespecifierseq?
+   : declspecifier attribute_specifier_sequence?
    | declspecifier declspecifierseq
    ;
 
-storageclassspecifier
-   : Register
-   | Static
-   | Thread_local
-   | Extern
-   | Mutable
+storageclass_specifier
+   : Static
    ;
 
-functionspecifier
-   : Inline
-   | Virtual
-   | Explicit
-   ;
-
-typedefname
+typedef_name
    : Identifier
    ;
 
 typespecifier
-   : trailingtypespecifier
-   | classspecifier
-   | enumspecifier
+   : trailing_type_specifier
+   | class_specifier
+   | enum_specifier
    ;
 
-trailingtypespecifier
-   : simpletypespecifier
+trailing_type_specifier
+   : simple_type_specifier
    | elaboratedtypespecifier
-   | typenamespecifier
-   | cvqualifier
+   | type_name_specifier
    ;
 
-typespecifierseq
-   : typespecifier attributespecifierseq?
-   | typespecifier typespecifierseq
+type_specifier_sequence
+   : typespecifier attribute_specifier_sequence?
+   | typespecifier type_specifier_sequence
    ;
 
-trailingtypespecifierseq
-   : trailingtypespecifier attributespecifierseq?
-   | trailingtypespecifier trailingtypespecifierseq
+trailing_type_specifier_sequence
+   : trailing_type_specifier attribute_specifier_sequence?
+   | trailing_type_specifier trailing_type_specifier_sequence
    ;
 
-simpletypespecifier
-   : nestednamespecifier? thetypename
-   | nestednamespecifier Template simpletemplateid
-   | Char
-   | Char16
-   | Char32
-   | Wchar
+simple_type_specifier
+   : nested_name_specifier? type_name
+   | nested_name_specifier simple_template_id
    | Bool
-   | Short
+   | Int8
+   | Int16
+   | Int32
+   | Int64
+   | Uint8
+   | Uint16
+   | Uint32
+   | Uint64
    | Int
+   | Uint
+   | Short
+   | Ushort
    | Long
-   | Signed
-   | Unsigned
+   | Ulong
+   | F32
+   | F64
    | Float
    | Double
    | Void
    | Auto
-   | decltypespecifier
    ;
 
-thetypename
-   : classname
-   | enumname
-   | typedefname
-   | simpletemplateid
-   ;
-
-decltypespecifier
-   : Decltype '(' expression ')'
-   | Decltype '(' Auto ')'
+type_name
+   : class_name
+   | enum_name
+   | typedef_name
+   | simple_template_id
    ;
 
 elaboratedtypespecifier
-   : classkey attributespecifierseq? nestednamespecifier? Identifier
-   | classkey simpletemplateid
-   | classkey nestednamespecifier Template? simpletemplateid
-   | Enum nestednamespecifier? Identifier
+   : Class attribute_specifier_sequence? nested_name_specifier? Identifier
+   | Class simple_template_id
+   | Class nested_name_specifier simple_template_id
+   | Enum nested_name_specifier? Identifier
    ;
 
-enumname
+enum_name
    : Identifier
    ;
 
-enumspecifier
+enum_specifier
    : enumhead '{' enumeratorlist? '}'
    | enumhead '{' enumeratorlist ',' '}'
    ;
 
 enumhead
-   : enumkey attributespecifierseq? Identifier? enumbase?
-   | enumkey attributespecifierseq? nestednamespecifier Identifier enumbase?
+   : enumkey attribute_specifier_sequence? Identifier? enumbase?
+   | enumkey attribute_specifier_sequence? nested_name_specifier Identifier enumbase?
    ;
 
 opaqueenumdeclaration
-   : enumkey attributespecifierseq? Identifier enumbase? ';'
+   : enumkey attribute_specifier_sequence? Identifier enumbase? ';'
    ;
 
 enumkey
    : Enum
    | Enum Class
-   | Enum Struct
    ;
 
 enumbase
-   : ':' typespecifierseq
+   : ':' type_specifier_sequence
    ;
 
 enumeratorlist
@@ -569,12 +499,12 @@ enumerator
    : Identifier
    ;
 
-namespacename
-   : originalnamespacename
+namespace_name
+   : originalnamespace_name
    | namespacealias
    ;
 
-originalnamespacename
+originalnamespace_name
    : Identifier
    ;
 
@@ -589,19 +519,19 @@ namednamespacedefinition
    ;
 
 originalnamespacedefinition
-   : Inline? Namespace Identifier '{' namespacebody '}'
+   : Namespace Identifier '{' namespacebody '}'
    ;
 
 extensionnamespacedefinition
-   : Inline? Namespace originalnamespacename '{' namespacebody '}'
+   : Namespace originalnamespace_name '{' namespacebody '}'
    ;
 
 unnamednamespacedefinition
-   : Inline? Namespace '{' namespacebody '}'
+   : Namespace '{' namespacebody '}'
    ;
 
 namespacebody
-   : declarationseq?
+   : declaration_sequence?
    ;
 
 namespacealias
@@ -613,40 +543,25 @@ namespacealiasdefinition
    ;
 
 qualifiednamespacespecifier
-   : nestednamespecifier? namespacename
+   : nested_name_specifier? namespace_name
    ;
 
 usingdeclaration
-   : Using Typename_? nestednamespecifier unqualifiedid ';'
-   | Using '::' unqualifiedid ';'
+   : Using nested_name_specifier unqualified_id ';'
+   | Using '::' unqualified_id ';'
    ;
 
 usingdirective
-   : attributespecifierseq? Using Namespace nestednamespecifier? namespacename ';'
+   : attribute_specifier_sequence? Using Namespace nested_name_specifier? namespace_name ';'
    ;
 
-asmdefinition
-   : Asm '(' Stringliteral ')' ';'
-   ;
-
-linkagespecification
-   : Extern Stringliteral '{' declarationseq? '}'
-   | Extern Stringliteral declaration
-   ;
-
-attributespecifierseq
+attribute_specifier_sequence
    : attributespecifier
-   | attributespecifierseq attributespecifier
+   | attribute_specifier_sequence attributespecifier
    ;
 
 attributespecifier
    : '[' '[' attributelist ']' ']'
-   | alignmentspecifier
-   ;
-
-alignmentspecifier
-   : Alignas '(' thetypeid '...'? ')'
-   | Alignas '(' constantexpression '...'? ')'
    ;
 
 attributelist
@@ -706,38 +621,26 @@ declarator
 
 ptrdeclarator
    : noptrdeclarator
-   | ptroperator ptrdeclarator
+   | reference_operator ptrdeclarator
    ;
 
 noptrdeclarator
-   : declaratorid attributespecifierseq?
+   : declaratorid attribute_specifier_sequence?
    | noptrdeclarator parametersandqualifiers
-   | noptrdeclarator '[' constantexpression? ']' attributespecifierseq?
+   | noptrdeclarator '[' constantexpression? ']' attribute_specifier_sequence?
    | '(' ptrdeclarator ')'
    ;
 
 parametersandqualifiers
-   : '(' parameterdeclarationclause ')' cvqualifierseq? refqualifier? exceptionspecification? attributespecifierseq?
+   : '(' parameter_declaration_clause ')' refqualifier? exception_specification? attribute_specifier_sequence?
    ;
 
 trailingreturntype
-   : '->' trailingtypespecifierseq abstractdeclarator?
+   : '->' trailing_type_specifier_sequence abstract_declarator?
    ;
 
-ptroperator
-   : '*' attributespecifierseq? cvqualifierseq?
-   | '&' attributespecifierseq?
-   | '&&' attributespecifierseq?
-   | nestednamespecifier '*' attributespecifierseq? cvqualifierseq?
-   ;
-
-cvqualifierseq
-   : cvqualifier cvqualifierseq?
-   ;
-
-cvqualifier
-   : Const
-   | Volatile
+reference_operator
+   : '&' attribute_specifier_sequence?
    ;
 
 refqualifier
@@ -746,44 +649,44 @@ refqualifier
    ;
 
 declaratorid
-   : '...'? idexpression
+   : '...'? id_expression
    ;
 
-thetypeid
-   : typespecifierseq abstractdeclarator?
+type_id
+   : type_specifier_sequence abstract_declarator?
    ;
 
-abstractdeclarator
-   : ptrabstractdeclarator
-   | noptrabstractdeclarator? parametersandqualifiers trailingreturntype
+abstract_declarator
+   : ptrabstract_declarator
+   | noptrabstract_declarator? parametersandqualifiers trailingreturntype
    | abstractpackdeclarator
    ;
 
-ptrabstractdeclarator
-   : noptrabstractdeclarator
-   | ptroperator ptrabstractdeclarator?
+ptrabstract_declarator
+   : noptrabstract_declarator
+   | reference_operator ptrabstract_declarator?
    ;
 
-noptrabstractdeclarator
-   : noptrabstractdeclarator parametersandqualifiers
+noptrabstract_declarator
+   : noptrabstract_declarator parametersandqualifiers
    | parametersandqualifiers
-   | noptrabstractdeclarator '[' constantexpression? ']' attributespecifierseq?
-   | '[' constantexpression? ']' attributespecifierseq?
-   | '(' ptrabstractdeclarator ')'
+   | noptrabstract_declarator '[' constantexpression? ']' attribute_specifier_sequence?
+   | '[' constantexpression? ']' attribute_specifier_sequence?
+   | '(' ptrabstract_declarator ')'
    ;
 
 abstractpackdeclarator
    : noptrabstractpackdeclarator
-   | ptroperator abstractpackdeclarator
+   | reference_operator abstractpackdeclarator
    ;
 
 noptrabstractpackdeclarator
    : noptrabstractpackdeclarator parametersandqualifiers
-   | noptrabstractpackdeclarator '[' constantexpression? ']' attributespecifierseq?
+   | noptrabstractpackdeclarator '[' constantexpression? ']' attribute_specifier_sequence?
    | '...'
    ;
 
-parameterdeclarationclause
+parameter_declaration_clause
    : parameterdeclarationlist? '...'?
    | parameterdeclarationlist ',' '...'
    ;
@@ -794,36 +697,35 @@ parameterdeclarationlist
    ;
 
 parameterdeclaration
-   : attributespecifierseq? declspecifierseq declarator
-   | attributespecifierseq? declspecifierseq declarator '=' initializerclause
-   | attributespecifierseq? declspecifierseq abstractdeclarator?
-   | attributespecifierseq? declspecifierseq abstractdeclarator? '=' initializerclause
+   : attribute_specifier_sequence? declspecifierseq declarator
+   | attribute_specifier_sequence? declspecifierseq declarator '=' initializerclause
+   | attribute_specifier_sequence? declspecifierseq abstract_declarator?
+   | attribute_specifier_sequence? declspecifierseq abstract_declarator? '=' initializerclause
    ;
 
 functiondefinition
-   : attributespecifierseq? declspecifierseq? declarator virtspecifierseq? functionbody
+   : attribute_specifier_sequence? declspecifierseq? declarator functionbody
    ;
 
 functionbody
-   : ctorinitializer? compoundstatement
+   : ctorinitializer? compound_statement
    | functiontryblock
    | '=' Default ';'
-   | '=' Delete ';'
    ;
 
 initializer
    : braceorequalinitializer
-   | '(' expressionlist ')'
+   | '(' expression_list ')'
    ;
 
 braceorequalinitializer
    : '=' initializerclause
-   | bracedinitlist
+   | braced_init_list
    ;
 
 initializerclause
-   : assignmentexpression
-   | bracedinitlist
+   : assignment_expression
+   | braced_init_list
    ;
 
 initializerlist
@@ -831,39 +733,29 @@ initializerlist
    | initializerlist ',' initializerclause '...'?
    ;
 
-bracedinitlist
+braced_init_list
    : '{' initializerlist ','? '}'
    | '{' '}'
    ;
 /*Classes*/
 
 
-classname
+class_name
    : Identifier
-   | simpletemplateid
+   | simple_template_id
    ;
 
-classspecifier
+class_specifier
    : classhead '{' memberspecification? '}'
    ;
 
 classhead
-   : classkey attributespecifierseq? classheadname classvirtspecifier? baseclause?
-   | classkey attributespecifierseq? baseclause?
+   : Class attribute_specifier_sequence? classheadname baseclause?
+   | Class attribute_specifier_sequence? baseclause?
    ;
 
 classheadname
-   : nestednamespecifier? classname
-   ;
-
-classvirtspecifier
-   : Final
-   ;
-
-classkey
-   : Class
-   | Struct
-   | Union
+   : nested_name_specifier? class_name
    ;
 
 memberspecification
@@ -872,11 +764,9 @@ memberspecification
    ;
 
 memberdeclaration
-   : attributespecifierseq? declspecifierseq? memberdeclaratorlist? ';'
+   : attribute_specifier_sequence? declspecifierseq? memberdeclaratorlist? ';'
    | functiondefinition
    | usingdeclaration
-   | static_assertdeclaration
-   | templatedeclaration
    | aliasdeclaration
    | emptydeclaration
    ;
@@ -887,20 +777,11 @@ memberdeclaratorlist
    ;
 
 memberdeclarator
-   : declarator virtspecifierseq? purespecifier?
+   : declarator purespecifier?
    | declarator braceorequalinitializer?
-   | Identifier? attributespecifierseq? ':' constantexpression
+   | Identifier? attribute_specifier_sequence? ':' constantexpression
    ;
 
-virtspecifierseq
-   : virtspecifier
-   | virtspecifierseq virtspecifier
-   ;
-
-virtspecifier
-   : Override
-   | Final
-   ;
 /*
 purespecifier:
    '=' '0'//Conflicts with the lexer
@@ -909,7 +790,7 @@ purespecifier:
 
 
 purespecifier
-   : Assign val = Octalliteral
+   : Assign val = OctalLiteral
    {if($val.text.compareTo("0")!=0) throw new InputMismatchException(this);}
    ;
 /*Derived classes*/
@@ -925,14 +806,12 @@ basespecifierlist
    ;
 
 basespecifier
-   : attributespecifierseq? basetypespecifier
-   | attributespecifierseq? Virtual accessspecifier? basetypespecifier
-   | attributespecifierseq? accessspecifier Virtual? basetypespecifier
+   : attribute_specifier_sequence? basetypespecifier
+   | attribute_specifier_sequence? accessspecifier basetypespecifier
    ;
 
 classordecltype
-   : nestednamespecifier? classname
-   | decltypespecifier
+   : nested_name_specifier? class_name
    ;
 
 basetypespecifier
@@ -947,16 +826,16 @@ accessspecifier
 /*Special member functions*/
 
 
-conversionfunctionid
+conversion_function_id
    : Operator conversiontypeid
    ;
 
 conversiontypeid
-   : typespecifierseq conversiondeclarator?
+   : type_specifier_sequence conversiondeclarator?
    ;
 
 conversiondeclarator
-   : ptroperator conversiondeclarator?
+   : reference_operator conversiondeclarator?
    ;
 
 ctorinitializer
@@ -969,8 +848,8 @@ meminitializerlist
    ;
 
 meminitializer
-   : meminitializerid '(' expressionlist? ')'
-   | meminitializerid bracedinitlist
+   : meminitializerid '(' expression_list? ')'
+   | meminitializerid braced_init_list
    ;
 
 meminitializerid
@@ -980,20 +859,15 @@ meminitializerid
 /*Overloading*/
 
 
-operatorfunctionid
-   : Operator theoperator
+operator_function_id
+   : Operator operator
    ;
 
-literaloperatorid
-   : Operator Stringliteral Identifier
-   | Operator Userdefinedstringliteral
+literal_operator_id
+   : Operator StringLiteral Identifier
    ;
+
 /*Templates*/
-
-
-templatedeclaration
-   : Template '<' templateparameterlist '>' declaration
-   ;
 
 templateparameterlist
    : templateparameter
@@ -1007,21 +881,21 @@ templateparameter
 
 typeparameter
    : Class '...'? Identifier?
-   | Class Identifier? '=' thetypeid
-   | Typename_ '...'? Identifier?
-   | Typename_ Identifier? '=' thetypeid
-   | Template '<' templateparameterlist '>' Class '...'? Identifier?
-   | Template '<' templateparameterlist '>' Class Identifier? '=' idexpression
+   | Class Identifier? '=' type_id
+   | '...'? Identifier?
+   | Identifier? '=' type_id
+   | '<' templateparameterlist '>' Class '...'? Identifier?
+   | '<' templateparameterlist '>' Class Identifier? '=' id_expression
    ;
 
-simpletemplateid
+simple_template_id
    : templatename '<' templateargumentlist? '>'
    ;
 
-templateid
-   : simpletemplateid
-   | operatorfunctionid '<' templateargumentlist? '>'
-   | literaloperatorid '<' templateargumentlist? '>'
+template_id
+   : simple_template_id
+   | operator_function_id '<' templateargumentlist? '>'
+   | literal_operator_id '<' templateargumentlist? '>'
    ;
 
 templatename
@@ -1034,64 +908,104 @@ templateargumentlist
    ;
 
 templateargument
-   : thetypeid
+   : type_id
    | constantexpression
-   | idexpression
+   | id_expression
    ;
 
-typenamespecifier
-   : Typename_ nestednamespecifier Identifier
-   | Typename_ nestednamespecifier Template? simpletemplateid
+type_name_specifier
+   : nested_name_specifier Identifier
+   | nested_name_specifier simple_template_id
    ;
 
-explicitinstantiation
-   : Extern? Template declaration
-   ;
-
-explicitspecialization
-   : Template '<' '>' declaration
-   ;
 /*Exception handling*/
 
-
 tryblock
-   : Try compoundstatement handlerseq
+   : Try compound_statement handler_sequence
    ;
 
 functiontryblock
-   : Try ctorinitializer? compoundstatement handlerseq
+   : Try ctorinitializer? compound_statement handler_sequence
    ;
 
-handlerseq
-   : handler handlerseq?
+handler_sequence
+   : handler handler_sequence?
    ;
 
 handler
-   : Catch '(' exceptiondeclaration ')' compoundstatement
+   : Catch '(' exception_declaration ')' compound_statement
    ;
 
-exceptiondeclaration
-   : attributespecifierseq? typespecifierseq declarator
-   | attributespecifierseq? typespecifierseq abstractdeclarator?
+exception_declaration
+   : attribute_specifier_sequence? type_specifier_sequence declarator
+   | attribute_specifier_sequence? type_specifier_sequence abstract_declarator?
    | '...'
    ;
 
-throwexpression
-   : Throw assignmentexpression?
+throw_expression
+   : Throw assignment_expression?
    ;
 
-exceptionspecification
-   : dynamicexceptionspecification
-   | noexceptspecification
+exception_specification
+   : Throw '(' type_id_list? ')'
    ;
 
-dynamicexceptionspecification
-   : Throw '(' typeidlist? ')'
+type_id_list
+   : type_id '...'?
+   | type_id_list ',' type_id '...'?
    ;
 
-typeidlist
-   : thetypeid '...'?
-   | typeidlist ',' thetypeid '...'?
+operator
+   : New
+   | '+'
+   | '-'
+   | '*'
+   | '/'
+   | '%'
+   | '^'
+   | '&'
+   | '|'
+   | '~'
+   | '!'
+   | 'not'
+   | '='
+   | '<'
+   | '>'
+   | '+='
+   | '-='
+   | '*='
+   | '/='
+   | '%='
+   | '^='
+   | '&='
+   | '|='
+   | '<<'
+   | '>>'
+   | '>>='
+   | '<<='
+   | '=='
+   | '!='
+   | '<='
+   | '>='
+   | '&&'
+   | 'and'
+   | '||'
+   | 'or'
+   | '++'
+   | '--'
+   | ','
+   | '->*'
+   | '->'
+   | '(' ')'
+   | '[' ']'
+   ;
+
+literal
+   : IntegerLiteral
+   | FloatingLiteral
+   | StringLiteral
+   | BooleanLiteral
+   | PointerLiteral
    ;
 
 /*Keywords*/
@@ -1227,28 +1141,12 @@ Return
    : 'return'
    ;
 
-Short
-   : 'short'
-   ;
-
-Signed
-   : 'signed'
-   ;
-
-Sizeof
-   : 'sizeof'
-   ;
-
 Static
    : 'static'
    ;
 
-Static_assert
-   : 'static_assert'
-   ;
-
-Static_cast
-   : 'static_cast'
+Short
+   : 'short'
    ;
 
 Switch
@@ -1293,6 +1191,10 @@ Uint64
 
 Ulong
    : 'ulong'
+   ;
+
+Ushort
+   : 'ushort'
    ;
 
 Using
@@ -1487,51 +1389,6 @@ Ellipsis
    : '...'
    ;
 
-Operators
-   : New
-   | '+'
-   | '-'
-   | '*'
-   | '/'
-   | '%'
-   | '^'
-   | '&'
-   | '|'
-   | '~'
-   | '!'
-   | 'not'
-   | '='
-   | '<'
-   | '>'
-   | '+='
-   | '-='
-   | '*='
-   | '/='
-   | '%='
-   | '^='
-   | '&='
-   | '|='
-   | '<<'
-   | '>>'
-   | '>>='
-   | '<<='
-   | '=='
-   | '!='
-   | '<='
-   | '>='
-   | '&&'
-   | 'and'
-   | '||'
-   | 'or'
-   | '++'
-   | '--'
-   | ','
-   | '->*'
-   | '->'
-   | '(' ')'
-   | '[' ']'
-   ;
-
 fragment Hexquad
    : HEXADECIMAL_DIGIT HEXADECIMAL_DIGIT HEXADECIMAL_DIGIT HEXADECIMAL_DIGIT
    ;
@@ -1556,15 +1413,6 @@ fragment NONDIGIT
 
 fragment DIGIT
    : [0-9]
-   ;
-
-Literal
-   : IntegerLiteral
-   | CharacterLiteral
-   | FloatingLiteral
-   | StringLiteral
-   | BooleanLiteral
-   | PointerLiteral
    ;
 
 IntegerLiteral
@@ -1606,13 +1454,6 @@ fragment BINARY_DIGIT
    : [01]
    ;
 
-CharacterLiteral
-   : '\'' Char+ '\''
-   | 'u' '\'' Char+ '\''
-   | 'U' '\'' Char+ '\''
-   | 'L' '\'' Char+ '\''
-   ;
-
 fragment EscapeSequence
    : SimpleEscapeSequence
    | OctalEscapeSequence
@@ -1634,13 +1475,13 @@ fragment SimpleEscapeSequence
    ;
 
 fragment OctalEscapeSequence
-   : '\\' OCTALDIGIT
-   | '\\' OCTALDIGIT OCTALDIGIT
-   | '\\' OCTALDIGIT OCTALDIGIT OCTALDIGIT
+   : '\\' OCTAL_DIGIT
+   | '\\' OCTAL_DIGIT OCTAL_DIGIT
+   | '\\' OCTAL_DIGIT OCTAL_DIGIT OCTAL_DIGIT
    ;
 
 fragment HexadecimalEscapeSequence
-   : '\\x' HEXADECIMALDIGIT+
+   : '\\x' HEXADECIMAL_DIGIT+
    ;
 
 fragment FloatingLiteral
