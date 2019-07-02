@@ -361,6 +361,10 @@ Comma
    : ','
    ;
 
+Arrow
+   : '->'
+   ;
+
 Question
    : '?'
    ;

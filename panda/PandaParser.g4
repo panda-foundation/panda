@@ -1,8 +1,6 @@
 parser grammar PandaParser;
 
-options {
-  tokenVocab = PandaLexer;
-}
+options { tokenVocab = PandaLexer; }
 
 /*Basic concepts*/
 
@@ -170,7 +168,6 @@ assignment_expression
 
 assignment_operator
    : '='
-   | '*='
    | '/='
    | '%='
    | '+='
@@ -231,13 +228,13 @@ selection_statement
 
 condition
    : expression
-   | declspecifierseq declarator '=' initializer_clause
-   | declspecifierseq declarator braced_init_list
+   | decl_specifier_sequence declarator '=' initializer_clause
+   | decl_specifier_sequence declarator braced_init_list
    ;
 
 iteration_statement
    : For '(' for_init_statement condition? ';' expression? ')' statement
-   | For '(' for_range_declaration ':' forrangeinitializer ')' statement
+   | For '(' for_range_declaration ':' for_range_initializer ')' statement
    ;
 
 for_init_statement
@@ -246,7 +243,7 @@ for_init_statement
    ;
 
 for_range_declaration
-   : declspecifierseq declarator
+   : decl_specifier_sequence declarator
    ;
 
 for_range_initializer
@@ -274,33 +271,32 @@ declaration_sequence
 
 declaration
    : block_declaration
-   | functiondefinition
-   | namespacedefinition
+   | function_definition
+   | namespace_definition
    | empty_declaration
    ;
 
 block_declaration
    : simple_declaration
-   | namespacealiasdefinition
    | using_namespace
    ;
 
 simple_declaration
-   : declspecifierseq? initdeclaratorlist? ';'
+   : decl_specifier_sequence? init_declarator_list? ';'
    ;
 
 empty_declaration
    : ';'
    ;
 
-declspecifier
+decl_specifier
    : storage_class_specifier
    | type_specifier
    ;
 
-declspecifierseq
-   : declspecifier
-   | declspecifier declspecifierseq
+decl_specifier_sequence
+   : decl_specifier
+   | decl_specifier decl_specifier_sequence
    ;
 
 storage_class_specifier
@@ -315,7 +311,7 @@ type_specifier
 
 trailing_type_specifier
    : simple_type_specifier
-   | elaborated_types_pecifier
+   | elaborated_type_specifier
    | type_name_specifier
    ;
 
@@ -390,11 +386,11 @@ enum_base
    ;
 
 enumerator_list
-   : enumeratordefinition
-   | enumerator_list ',' enumeratordefinition
+   : enumerator_definition
+   | enumerator_list ',' enumerator_definition
    ;
 
-enumeratordefinition
+enumerator_definition
    : enumerator
    | enumerator '=' constant_expression
    ;
@@ -404,49 +400,36 @@ enumerator
    ;
 
 namespace_name
-   : originalnamespace_name
-   | namespacealias
-   ;
-
-originalnamespace_name
    : Identifier
    ;
 
-namespacedefinition
-   : namednamespacedefinition
-   | unnamednamespacedefinition
+namespace_definition
+   : named_namespace_definition
+   | unnamed_namespace_definition
    ;
 
-namednamespacedefinition
-   : originalnamespacedefinition
-   | extensionnamespacedefinition
+named_namespace_definition
+   : original_namespace_definition
+   | extension_namespace_definition
    ;
 
-originalnamespacedefinition
-   : Namespace Identifier '{' namespacebody '}'
+original_namespace_definition
+   : Namespace Identifier '{' namespace_body '}'
    ;
 
-extensionnamespacedefinition
-   : Namespace originalnamespace_name '{' namespacebody '}'
+extension_namespace_definition
+   : Namespace namespace_name '{' namespace_body '}'
    ;
 
-unnamednamespacedefinition
-   : Namespace '{' namespacebody '}'
+unnamed_namespace_definition
+   : Namespace '{' namespace_body '}'
    ;
 
-namespacebody
+namespace_body
    : declaration_sequence?
    ;
 
-namespacealias
-   : Identifier
-   ;
-
-namespacealiasdefinition
-   : Namespace Identifier '=' qualifiednamespacespecifier ';'
-   ;
-
-qualifiednamespacespecifier
+qualified_namespace_specifier
    : nested_name_specifier? namespace_name
    ;
 
@@ -456,50 +439,50 @@ using_namespace
 
 /*Declarators*/
 
-initdeclaratorlist
-   : initdeclarator
-   | initdeclaratorlist ',' initdeclarator
+init_declarator_list
+   : init_declarator
+   | init_declarator_list ',' init_declarator
    ;
 
-initdeclarator
+init_declarator
    : declarator initializer?
    ;
 
 declarator
-   : ptrdeclarator
-   | noptrdeclarator parametersandqualifiers trailing_return_type
+   : ptr_declarator
+   | noptr_declarator parameters_and_qualifiers trailing_return_type
    ;
 
-ptrdeclarator
-   : noptrdeclarator
-   | reference_operator ptrdeclarator
+ptr_declarator
+   : noptr_declarator
+   | ref_operator ptr_declarator
    ;
 
-noptrdeclarator
-   : declaratorid
-   | noptrdeclarator parametersandqualifiers
-   | noptrdeclarator '[' constantexpression? ']'
-   | '(' ptrdeclarator ')'
+noptr_declarator
+   : declarator_id
+   | noptr_declarator parameters_and_qualifiers
+   | noptr_declarator '[' constant_expression? ']'
+   | '(' ptr_declarator ')'
    ;
 
-parametersandqualifiers
-   : '(' parameter_declaration_clause ')' refqualifier? exception_specification?
+parameters_and_qualifiers
+   : '(' parameter_declaration_clause ')' ref_qualifier? exception_specification?
    ;
 
 trailing_return_type
    : '->' trailing_type_specifier_sequence abstract_declarator?
    ;
 
-reference_operator
-   : '&' attribute_specifier_sequence?
+ref_operator
+   : '&'
    ;
 
-refqualifier
+ref_qualifier
    : '&'
    | '&&'
    ;
 
-declaratorid
+declarator_id
    : '...'? id_expression
    ;
 
@@ -508,63 +491,63 @@ type_id
    ;
 
 abstract_declarator
-   : ptrabstract_declarator
-   | noptrabstract_declarator? parametersandqualifiers trailing_return_type
-   | abstractpackdeclarator
+   : noptr_abstract_declarator
+   | noptr_abstract_declarator? parameters_and_qualifiers trailing_return_type
+   | abstract_pack_declarator
    ;
 
-noptrabstract_declarator
-   : noptrabstract_declarator parametersandqualifiers
-   | parametersandqualifiers
-   | noptrabstract_declarator '[' constantexpression? ']' attribute_specifier_sequence?
-   | '[' constantexpression? ']' attribute_specifier_sequence?
-   | '(' ptrabstract_declarator ')'
+noptr_abstract_declarator
+   : noptr_abstract_declarator parameters_and_qualifiers
+   | parameters_and_qualifiers
+   | noptr_abstract_declarator '[' constant_expression? ']'
+   | '[' constant_expression? ']'
+   | '(' noptr_abstract_declarator ')'
    ;
 
-abstractpackdeclarator
-   : noptrabstractpackdeclarator
-   | reference_operator abstractpackdeclarator
+abstract_pack_declarator
+   : noptr_abstract_pack_declarator
+   | ref_operator abstract_pack_declarator
    ;
 
-noptrabstractpackdeclarator
-   : noptrabstractpackdeclarator parametersandqualifiers
-   | noptrabstractpackdeclarator '[' constantexpression? ']' attribute_specifier_sequence?
+noptr_abstract_pack_declarator
+   : noptr_abstract_pack_declarator parameters_and_qualifiers
+   | noptr_abstract_pack_declarator '[' constant_expression? ']'
    | '...'
    ;
 
 parameter_declaration_clause
-   : parameterdeclarationlist? '...'?
-   | parameterdeclarationlist ',' '...'
+   : parameter_declaration_list? '...'?
+   | parameter_declaration_list ',' '...'
    ;
 
-parameterdeclarationlist
-   : parameterdeclaration
-   | parameterdeclarationlist ',' parameterdeclaration
+parameter_declaration_list
+   : parameter_declaration
+   | parameter_declaration_list ',' parameter_declaration
    ;
 
-parameterdeclaration
-   : declspecifierseq declarator
-   | declspecifierseq declarator '=' initializer_clause
-   | declspecifierseq abstract_declarator?
-   | declspecifierseq abstract_declarator? '=' initializer_clause
+parameter_declaration
+   : decl_specifier_sequence declarator
+   | decl_specifier_sequence declarator '=' initializer_clause
+   | decl_specifier_sequence abstract_declarator?
+   | decl_specifier_sequence abstract_declarator? '=' initializer_clause
    ;
 
-functiondefinition
-   : declspecifierseq? declarator functionbody
+function_definition
+   : decl_specifier_sequence? declarator function_body
    ;
 
-functionbody
-   : ctorinitializer? compound_statement
-   | functiontryblock
+function_body
+   : compound_statement
+   | function_try_block
    | '=' Default ';'
    ;
 
 initializer
-   : braceorequalinitializer
+   : brace_or_equal_initializer
    | '(' expression_list ')'
    ;
 
-braceorequalinitializer
+brace_or_equal_initializer
    : '=' initializer_clause
    | braced_init_list
    ;
@@ -605,41 +588,28 @@ class_head_name
    ;
 
 member_specification
-   : memberdeclaration member_specification?
-   | accessspecifier ':' member_specification?
+   : member_declaration member_specification?
+   | access_specifier ':' member_specification?
    ;
 
-memberdeclaration
-   : declspecifierseq? memberdeclaratorlist? ';'
-   | functiondefinition
-   | aliasdeclaration
-   | emptydeclaration
+member_declaration
+   : decl_specifier_sequence? member_declarator_list? ';'
+   | function_definition
+   | empty_declaration
    ;
 
-memberdeclaratorlist
+member_declarator_list
    : memberdeclarator
-   | memberdeclaratorlist ',' memberdeclarator
+   | member_declarator_list ',' memberdeclarator
    ;
 
 memberdeclarator
-   : declarator purespecifier?
-   | declarator braceorequalinitializer?
-   | Identifier? ':' constantexpression
+   : declarator
+   | declarator brace_or_equal_initializer?
+   | Identifier? ':' constant_expression
    ;
 
-/*
-purespecifier:
-   '=' '0'//Conflicts with the lexer
- ;
- */
-
-
-purespecifier
-   : Assign val = OctalLiteral
-   {if($val.text.compareTo("0")!=0) throw new InputMismatchException(this);}
-   ;
 /*Derived classes*/
-
 
 base_clause
    : ':' base_specifier_list
@@ -652,7 +622,7 @@ base_specifier_list
 
 base_specifier
    : base_type_specifier
-   | accessspecifier base_type_specifier
+   | access_specifier base_type_specifier
    ;
 
 class_or_decltype
@@ -663,11 +633,12 @@ base_type_specifier
    : class_or_decltype
    ;
 
-accessspecifier
+access_specifier
    : Private
    | Protected
    | Public
    ;
+
 /*Special member functions*/
 
 
@@ -676,28 +647,24 @@ conversion_function_id
    ;
 
 conversiontypeid
-   : type_specifier_sequence conversiondeclarator?
+   : type_specifier_sequence conversion_declarator?
    ;
 
-conversiondeclarator
-   : reference_operator conversiondeclarator?
+conversion_declarator
+   : ref_operator conversion_declarator?
    ;
 
-ctorinitializer
-   : ':' meminitializerlist
+mem_initializer_list
+   : mem_initializer '...'?
+   | mem_initializer '...'? ',' mem_initializer_list
    ;
 
-meminitializerlist
-   : meminitializer '...'?
-   | meminitializer '...'? ',' meminitializerlist
+mem_initializer
+   : mem_initializer_id '(' expression_list? ')'
+   | mem_initializer_id braced_init_list
    ;
 
-meminitializer
-   : meminitializerid '(' expression_list? ')'
-   | meminitializerid braced_init_list
-   ;
-
-meminitializerid
+mem_initializer_id
    : class_or_decltype
    | Identifier
    ;
@@ -714,14 +681,14 @@ literal_operator_id
 
 /*Templates*/
 
-templateparameterlist
-   : templateparameter
-   | templateparameterlist ',' templateparameter
+template_parameter_list
+   : template_parameter
+   | template_parameter_list ',' template_parameter
    ;
 
-templateparameter
+template_parameter
    : typeparameter
-   | parameterdeclaration
+   | parameter_declaration
    ;
 
 typeparameter
@@ -729,8 +696,8 @@ typeparameter
    | Class Identifier? '=' type_id
    | '...'? Identifier?
    | Identifier? '=' type_id
-   | '<' templateparameterlist '>' Class '...'? Identifier?
-   | '<' templateparameterlist '>' Class Identifier? '=' id_expression
+   | '<' template_parameter_list '>' Class '...'? Identifier?
+   | '<' template_parameter_list '>' Class Identifier? '=' id_expression
    ;
 
 simple_template_id
@@ -770,7 +737,7 @@ try_block
    ;
 
 function_try_block
-   : Try ctorinitializer? compound_statement handler_sequence
+   : Try compound_statement handler_sequence
    ;
 
 handler_sequence
@@ -812,13 +779,11 @@ operator
    | '|'
    | '~'
    | '!'
-   | 'not'
    | '='
    | '<'
    | '>'
    | '+='
    | '-='
-   | '*='
    | '/='
    | '%='
    | '^='
@@ -833,13 +798,10 @@ operator
    | '<='
    | '>='
    | '&&'
-   | 'and'
    | '||'
-   | 'or'
    | '++'
    | '--'
    | ','
-   | '->*'
    | '->'
    | '(' ')'
    | '[' ']'
