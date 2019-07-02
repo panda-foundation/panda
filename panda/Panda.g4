@@ -186,8 +186,8 @@ expression
 constant_expression
    : conditional_expression
    ;
-/*Statements*/
 
+/*Statements*/
 
 statement
    : labeled_statement
@@ -245,20 +245,20 @@ for_range_declaration
    : declspecifierseq declarator
    ;
 
-forrangeinitializer
+for_range_initializer
    : expression
    | braced_init_list
    ;
 
-jumpstatement
+jump_statement
    : Break ';'
    | Continue ';'
    | Return expression? ';'
    | Return braced_init_list ';'
    ;
 
-declarationstatement
-   : blockdeclaration
+declaration_statement
+   : block_declaration
    ;
 
 /*Declarations*/
@@ -269,25 +269,23 @@ declaration_sequence
    ;
 
 declaration
-   : blockdeclaration
+   : block_declaration
    | functiondefinition
    | namespacedefinition
-   | emptydeclaration
+   | empty_declaration
    ;
 
-blockdeclaration
-   : simpledeclaration
+block_declaration
+   : simple_declaration
    | namespacealiasdefinition
-   | usingdeclaration
-   | usingdirective
-   | opaqueenumdeclaration
+   | using_namespace
    ;
 
-simpledeclaration
+simple_declaration
    : declspecifierseq? initdeclaratorlist? ';'
    ;
 
-emptydeclaration
+empty_declaration
    : ';'
    ;
 
@@ -359,7 +357,7 @@ type_name
    | simple_template_id
    ;
 
-elaboratedtypespecifier
+elaborated_type_specifier
    : Class nested_name_specifier? Identifier
    | Class simple_template_id
    | Class nested_name_specifier simple_template_id
@@ -371,31 +369,25 @@ enum_name
    ;
 
 enum_specifier
-   : enumhead '{' enumeratorlist? '}'
-   | enumhead '{' enumeratorlist ',' '}'
+   : enum_head '{' enumerator_list? '}'
+   | enum_head '{' enumerator_list ',' '}'
    ;
 
-enumhead
-   : enumkey Identifier? enumbase?
-   | enumkey nested_name_specifier Identifier enumbase?
+enum_head
+   : enum_key Identifier? enum_base?
    ;
 
-opaqueenumdeclaration
-   : enumkey Identifier enumbase? ';'
-   ;
-
-enumkey
+enum_key
    : Enum
-   | Enum Class
    ;
 
-enumbase
+enum_base
    : ':' type_specifier_sequence
    ;
 
-enumeratorlist
+enumerator_list
    : enumeratordefinition
-   | enumeratorlist ',' enumeratordefinition
+   | enumerator_list ',' enumeratordefinition
    ;
 
 enumeratordefinition
@@ -454,55 +446,11 @@ qualifiednamespacespecifier
    : nested_name_specifier? namespace_name
    ;
 
-usingdeclaration
-   : Using nested_name_specifier unqualified_id ';'
-   | Using '::' unqualified_id ';'
+using_namespace
+   : Using nested_name_specifier? namespace_name ';'
    ;
 
-usingdirective
-   : attribute_specifier_sequence? Using Namespace nested_name_specifier? namespace_name ';'
-   ;
-
-attributelist
-   : attribute?
-   | attributelist ',' attribute?
-   | attribute '...'
-   | attributelist ',' attribute '...'
-   ;
-
-attribute
-   : attributetoken attributeargumentclause?
-   ;
-
-attributetoken
-   : Identifier
-   | attributescopedtoken
-   ;
-
-attributescopedtoken
-   : attributenamespace '::' Identifier
-   ;
-
-attributenamespace
-   : Identifier
-   ;
-
-attributeargumentclause
-   : '(' balancedtokenseq ')'
-   ;
-
-balancedtokenseq
-   : balancedtoken?
-   | balancedtokenseq balancedtoken
-   ;
-
-balancedtoken
-   : '(' balancedtokenseq ')'
-   | '[' balancedtokenseq ']'
-   | '{' balancedtokenseq '}'
-   ;
 /*Declarators*/
-
 
 initdeclaratorlist
    : initdeclarator
@@ -631,8 +579,8 @@ braced_init_list
    : '{' initializer_list ','? '}'
    | '{' '}'
    ;
-/*Classes*/
 
+/*Classes*/
 
 class_name
    : Identifier
@@ -648,19 +596,18 @@ class_head
    | Class base_clause?
    ;
 
-classheadname
+class_head_name
    : nested_name_specifier? class_name
    ;
 
-memberspecification
-   : memberdeclaration memberspecification?
-   | accessspecifier ':' memberspecification?
+member_specification
+   : memberdeclaration member_specification?
+   | accessspecifier ':' member_specification?
    ;
 
 memberdeclaration
    : declspecifierseq? memberdeclaratorlist? ';'
    | functiondefinition
-   | usingdeclaration
    | aliasdeclaration
    | emptydeclaration
    ;
