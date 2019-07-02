@@ -231,7 +231,7 @@ condition
    | declspecifierseq declarator braced_init_list
    ;
 
-iterationstatement
+iteration_statement
    : For '(' for_init_statement condition? ';' expression? ')' statement
    | For '(' for_range_declaration ':' forrangeinitializer ')' statement
    ;
@@ -640,12 +640,12 @@ class_name
    ;
 
 class_specifier
-   : classhead '{' memberspecification? '}'
+   : class_head '{' member_specification? '}'
    ;
 
-classhead
-   : Class classheadname baseclause?
-   | Class baseclause?
+class_head
+   : Class class_head_name base_clause?
+   | Class base_clause?
    ;
 
 classheadname
@@ -690,26 +690,26 @@ purespecifier
 /*Derived classes*/
 
 
-baseclause
-   : ':' basespecifierlist
+base_clause
+   : ':' base_specifier_list
    ;
 
-basespecifierlist
-   : basespecifier '...'?
-   | basespecifierlist ',' basespecifier '...'?
+base_specifier_list
+   : base_specifier
+   | base_specifier_list ',' base_specifier
    ;
 
-basespecifier
-   : basetypespecifier
-   | accessspecifier basetypespecifier
+base_specifier
+   : base_type_specifier
+   | accessspecifier base_type_specifier
    ;
 
-classordecltype
+class_or_decltype
    : nested_name_specifier? class_name
    ;
 
-basetypespecifier
-   : classordecltype
+base_type_specifier
+   : class_or_decltype
    ;
 
 accessspecifier
@@ -747,7 +747,7 @@ meminitializer
    ;
 
 meminitializerid
-   : classordecltype
+   : class_or_decltype
    | Identifier
    ;
 /*Overloading*/
@@ -783,27 +783,27 @@ typeparameter
    ;
 
 simple_template_id
-   : templatename '<' templateargumentlist? '>'
+   : template_name '<' template_argument_list? '>'
    ;
 
 template_id
    : simple_template_id
-   | operator_function_id '<' templateargumentlist? '>'
-   | literal_operator_id '<' templateargumentlist? '>'
+   | operator_function_id '<' template_argument_list? '>'
+   | literal_operator_id '<' template_argument_list? '>'
    ;
 
-templatename
+template_name
    : Identifier
    ;
 
-templateargumentlist
-   : templateargument '...'?
-   | templateargumentlist ',' templateargument '...'?
+template_argument_list
+   : template_argument
+   | template_argument_list ',' template_argument
    ;
 
-templateargument
+template_argument
    : type_id
-   | constantexpression
+   | constant_expression
    | id_expression
    ;
 
@@ -814,11 +814,11 @@ type_name_specifier
 
 /*Exception handling*/
 
-tryblock
+try_block
    : Try compound_statement handler_sequence
    ;
 
-functiontryblock
+function_try_block
    : Try ctorinitializer? compound_statement handler_sequence
    ;
 
@@ -1297,11 +1297,11 @@ Identifier
    ;
 
 fragment IdentifierNonDigit
-   : NONDIGIT
+   : NON_DIGIT
    | UniversalCharacterName
    ;
 
-fragment NONDIGIT
+fragment NON_DIGIT
    : [a-zA-Z_]
    ;
 
