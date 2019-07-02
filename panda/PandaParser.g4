@@ -24,8 +24,6 @@ id_expression
 unqualified_id
    : Identifier
    | operator_function_id
-   | conversion_function_id
-   | literal_operator_id
    | template_id
    ;
 
@@ -34,11 +32,10 @@ qualified_id
    ;
 
 nested_name_specifier
-   : '.'
-   | type_name '.'
+   : type_name '.'
    | namespace_name '.'
    | nested_name_specifier Identifier '.'
-   | nested_name_specifier simple_template_id '.'
+   | nested_name_specifier template_id '.'
    ;
 
 lambda_expression
@@ -290,17 +287,12 @@ empty_declaration
    ;
 
 decl_specifier
-   : storage_class_specifier
-   | type_specifier
+   : type_specifier
    ;
 
 decl_specifier_sequence
    : decl_specifier
    | decl_specifier decl_specifier_sequence
-   ;
-
-storage_class_specifier
-   : Static
    ;
 
 type_specifier
@@ -327,7 +319,7 @@ trailing_type_specifier_sequence
 
 simple_type_specifier
    : nested_name_specifier? type_name
-   | nested_name_specifier simple_template_id
+   | nested_name_specifier template_id
    | Bool
    | Int8
    | Int16
@@ -354,13 +346,13 @@ simple_type_specifier
 type_name
    : class_name
    | enum_name
-   | simple_template_id
+   | template_id
    ;
 
 elaborated_type_specifier
    : Class nested_name_specifier? Identifier
-   | Class simple_template_id
-   | Class nested_name_specifier simple_template_id
+   | Class template_id
+   | Class nested_name_specifier template_id
    | Enum nested_name_specifier? Identifier
    ;
 
@@ -470,7 +462,7 @@ parameters_and_qualifiers
    ;
 
 trailing_return_type
-   : '->' trailing_type_specifier_sequence abstract_declarator?
+   : '->' trailing_type_specifier_sequence
    ;
 
 ref_operator
@@ -487,32 +479,7 @@ declarator_id
    ;
 
 type_id
-   : type_specifier_sequence abstract_declarator?
-   ;
-
-abstract_declarator
-   : noptr_abstract_declarator
-   | noptr_abstract_declarator? parameters_and_qualifiers trailing_return_type
-   | abstract_pack_declarator
-   ;
-
-noptr_abstract_declarator
-   : noptr_abstract_declarator parameters_and_qualifiers
-   | parameters_and_qualifiers
-   | noptr_abstract_declarator '[' constant_expression? ']'
-   | '[' constant_expression? ']'
-   | '(' noptr_abstract_declarator ')'
-   ;
-
-abstract_pack_declarator
-   : noptr_abstract_pack_declarator
-   | ref_operator abstract_pack_declarator
-   ;
-
-noptr_abstract_pack_declarator
-   : noptr_abstract_pack_declarator parameters_and_qualifiers
-   | noptr_abstract_pack_declarator '[' constant_expression? ']'
-   | '...'
+   : type_specifier_sequence
    ;
 
 parameter_declaration_clause
@@ -528,8 +495,8 @@ parameter_declaration_list
 parameter_declaration
    : decl_specifier_sequence declarator
    | decl_specifier_sequence declarator '=' initializer_clause
-   | decl_specifier_sequence abstract_declarator?
-   | decl_specifier_sequence abstract_declarator? '=' initializer_clause
+   | decl_specifier_sequence
+   | decl_specifier_sequence '=' initializer_clause
    ;
 
 function_definition
@@ -571,7 +538,7 @@ braced_init_list
 
 class_name
    : Identifier
-   | simple_template_id
+   | template_id
    ;
 
 class_specifier
@@ -641,19 +608,6 @@ access_specifier
 
 /*Special member functions*/
 
-
-conversion_function_id
-   : Operator conversiontypeid
-   ;
-
-conversiontypeid
-   : type_specifier_sequence conversion_declarator?
-   ;
-
-conversion_declarator
-   : ref_operator conversion_declarator?
-   ;
-
 mem_initializer_list
    : mem_initializer '...'?
    | mem_initializer '...'? ',' mem_initializer_list
@@ -668,15 +622,11 @@ mem_initializer_id
    : class_or_decltype
    | Identifier
    ;
-/*Overloading*/
 
+/*Overloading*/
 
 operator_function_id
    : Operator operator
-   ;
-
-literal_operator_id
-   : Operator StringLiteral Identifier
    ;
 
 /*Templates*/
@@ -687,11 +637,11 @@ template_parameter_list
    ;
 
 template_parameter
-   : typeparameter
+   : type_parameter
    | parameter_declaration
    ;
 
-typeparameter
+type_parameter
    : Class '...'? Identifier?
    | Class Identifier? '=' type_id
    | '...'? Identifier?
@@ -700,14 +650,8 @@ typeparameter
    | '<' template_parameter_list '>' Class Identifier? '=' id_expression
    ;
 
-simple_template_id
-   : template_name '<' template_argument_list? '>'
-   ;
-
 template_id
-   : simple_template_id
-   | operator_function_id '<' template_argument_list? '>'
-   | literal_operator_id '<' template_argument_list? '>'
+   : template_name '<' template_argument_list? '>'
    ;
 
 template_name
@@ -727,7 +671,7 @@ template_argument
 
 type_name_specifier
    : nested_name_specifier Identifier
-   | nested_name_specifier simple_template_id
+   | nested_name_specifier template_id
    ;
 
 /*Exception handling*/
@@ -750,7 +694,7 @@ handler
 
 exception_declaration
    : type_specifier_sequence declarator
-   | type_specifier_sequence abstract_declarator?
+   | type_specifier_sequence
    | '...'
    ;
 
