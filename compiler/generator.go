@@ -1,7 +1,6 @@
 package compiler
 
 import (
-	"bytes"
 	"text/template"
 )
 
@@ -30,10 +29,11 @@ func init() {
 	template.Must(generator.New("encode-expression").Parse(exprTpl))
 }
 
+/*
 func Generate(program *Program) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	if err := generator.Execute(buf, program); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
-}
+}*/

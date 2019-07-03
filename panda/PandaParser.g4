@@ -618,7 +618,7 @@ mem_initializer_id
 /*Overloading*/
 
 operator_function_id
-   : Operator operator
+   : Operator operators
    ;
 
 /*Templates*/
@@ -703,7 +703,7 @@ type_id_list
    | type_id_list ',' type_id '...'?
    ;
 
-operator
+operators
    : New
    | '+'
    | '-'

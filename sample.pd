@@ -1,16 +1,5 @@
 // this panda source code for dev and testing
-
-package main
-
-@emit `#include <iostream>`
-
 int main()
 {
-	int a = 5;
-    @emit
-    `std::cout << "hello world" << std::endl;
-    `
-
-    @emit
-	`return 0;`
+    return 0;
 }
