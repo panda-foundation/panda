@@ -73,6 +73,10 @@ For
    : 'for'
    ;
 
+Include
+   : 'include'
+   ;
+   
 If
    : 'if'
    ;
