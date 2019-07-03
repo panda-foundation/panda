@@ -324,7 +324,7 @@ class_head_name
 member_specification
 member_declaration
 member_declarator_list
-memberdeclarator
+member_declarator
 base_clause
 base_specifier_list
 base_specifier

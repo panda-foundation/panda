@@ -648,11 +648,11 @@ func (s *BasePandaParserListener) EnterMember_declarator_list(ctx *Member_declar
 // ExitMember_declarator_list is called when production member_declarator_list is exited.
 func (s *BasePandaParserListener) ExitMember_declarator_list(ctx *Member_declarator_listContext) {}
 
-// EnterMemberdeclarator is called when production memberdeclarator is entered.
-func (s *BasePandaParserListener) EnterMemberdeclarator(ctx *MemberdeclaratorContext) {}
+// EnterMember_declarator is called when production member_declarator is entered.
+func (s *BasePandaParserListener) EnterMember_declarator(ctx *Member_declaratorContext) {}
 
-// ExitMemberdeclarator is called when production memberdeclarator is exited.
-func (s *BasePandaParserListener) ExitMemberdeclarator(ctx *MemberdeclaratorContext) {}
+// ExitMember_declarator is called when production member_declarator is exited.
+func (s *BasePandaParserListener) ExitMember_declarator(ctx *Member_declaratorContext) {}
 
 // EnterBase_clause is called when production base_clause is entered.
 func (s *BasePandaParserListener) EnterBase_clause(ctx *Base_clauseContext) {}

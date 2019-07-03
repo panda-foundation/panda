@@ -310,8 +310,8 @@ type PandaParserListener interface {
 	// EnterMember_declarator_list is called when entering the member_declarator_list production.
 	EnterMember_declarator_list(c *Member_declarator_listContext)
 
-	// EnterMemberdeclarator is called when entering the memberdeclarator production.
-	EnterMemberdeclarator(c *MemberdeclaratorContext)
+	// EnterMember_declarator is called when entering the member_declarator production.
+	EnterMember_declarator(c *Member_declaratorContext)
 
 	// EnterBase_clause is called when entering the base_clause production.
 	EnterBase_clause(c *Base_clauseContext)
@@ -700,8 +700,8 @@ type PandaParserListener interface {
 	// ExitMember_declarator_list is called when exiting the member_declarator_list production.
 	ExitMember_declarator_list(c *Member_declarator_listContext)
 
-	// ExitMemberdeclarator is called when exiting the memberdeclarator production.
-	ExitMemberdeclarator(c *MemberdeclaratorContext)
+	// ExitMember_declarator is called when exiting the member_declarator production.
+	ExitMember_declarator(c *Member_declaratorContext)
 
 	// ExitBase_clause is called when exiting the base_clause production.
 	ExitBase_clause(c *Base_clauseContext)

@@ -5,7 +5,7 @@ options { tokenVocab = PandaLexer; }
 /*Basic concepts*/
 
 translation_unit
-   : declaration_sequence? EOF
+   : namespace_definition? declaration_sequence? EOF
    ;
 
 primary_expression
@@ -269,7 +269,6 @@ declaration_sequence
 declaration
    : block_declaration
    | function_definition
-   | namespace_definition
    | empty_declaration
    ;
 
@@ -384,33 +383,11 @@ enumerator
    ;
 
 namespace_name
-   : Identifier
+   : Identifier ('.' Identifier)*
    ;
 
 namespace_definition
-   : named_namespace_definition
-   | unnamed_namespace_definition
-   ;
-
-named_namespace_definition
-   : original_namespace_definition
-   | extension_namespace_definition
-   ;
-
-original_namespace_definition
-   : Namespace Identifier '{' namespace_body '}'
-   ;
-
-extension_namespace_definition
-   : Namespace namespace_name '{' namespace_body '}'
-   ;
-
-unnamed_namespace_definition
-   : Namespace '{' namespace_body '}'
-   ;
-
-namespace_body
-   : declaration_sequence?
+   : Namespace namespace_name
    ;
 
 qualified_namespace_specifier
@@ -558,11 +535,11 @@ member_declaration
    ;
 
 member_declarator_list
-   : memberdeclarator
-   | member_declarator_list ',' memberdeclarator
+   : member_declarator
+   | member_declarator_list ',' member_declarator
    ;
 
-memberdeclarator
+member_declarator
    : declarator
    | declarator brace_or_equal_initializer?
    | Identifier? ':' constant_expression
