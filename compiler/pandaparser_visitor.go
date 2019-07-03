@@ -145,9 +145,6 @@ type PandaParserVisitor interface {
 	// Visit a parse tree produced by PandaParser#block_declaration.
 	VisitBlock_declaration(ctx *Block_declarationContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#simple_declaration.
-	VisitSimple_declaration(ctx *Simple_declarationContext) interface{}
-
 	// Visit a parse tree produced by PandaParser#empty_declaration.
 	VisitEmpty_declaration(ctx *Empty_declarationContext) interface{}
 
@@ -205,26 +202,8 @@ type PandaParserVisitor interface {
 	// Visit a parse tree produced by PandaParser#namespace_definition.
 	VisitNamespace_definition(ctx *Namespace_definitionContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#named_namespace_definition.
-	VisitNamed_namespace_definition(ctx *Named_namespace_definitionContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#original_namespace_definition.
-	VisitOriginal_namespace_definition(ctx *Original_namespace_definitionContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#extension_namespace_definition.
-	VisitExtension_namespace_definition(ctx *Extension_namespace_definitionContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#unnamed_namespace_definition.
-	VisitUnnamed_namespace_definition(ctx *Unnamed_namespace_definitionContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#namespace_body.
-	VisitNamespace_body(ctx *Namespace_bodyContext) interface{}
-
 	// Visit a parse tree produced by PandaParser#qualified_namespace_specifier.
 	VisitQualified_namespace_specifier(ctx *Qualified_namespace_specifierContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#using_namespace.
-	VisitUsing_namespace(ctx *Using_namespaceContext) interface{}
 
 	// Visit a parse tree produced by PandaParser#init_declarator_list.
 	VisitInit_declarator_list(ctx *Init_declarator_listContext) interface{}

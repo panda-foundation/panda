@@ -236,7 +236,7 @@ iteration_statement
 
 for_init_statement
    : expression_statement
-   | simple_declaration
+   | block_declaration
    ;
 
 for_range_declaration
@@ -273,11 +273,6 @@ declaration
    ;
 
 block_declaration
-   : simple_declaration
-   | using_namespace
-   ;
-
-simple_declaration
    : decl_specifier_sequence? init_declarator_list? ';'
    ;
 
@@ -338,7 +333,7 @@ simple_type_specifier
    | Float
    | Double
    | Void
-   | Auto
+   | Var
    ;
 
 type_name
@@ -383,7 +378,7 @@ enumerator
    ;
 
 namespace_name
-   : Identifier ('.' Identifier)*
+   : Identifier? ('.' Identifier)*
    ;
 
 namespace_definition
@@ -392,10 +387,6 @@ namespace_definition
 
 qualified_namespace_specifier
    : nested_name_specifier? namespace_name
-   ;
-
-using_namespace
-   : Using nested_name_specifier? namespace_name ';'
    ;
 
 /*Declarators*/

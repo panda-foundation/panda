@@ -145,9 +145,6 @@ type PandaParserListener interface {
 	// EnterBlock_declaration is called when entering the block_declaration production.
 	EnterBlock_declaration(c *Block_declarationContext)
 
-	// EnterSimple_declaration is called when entering the simple_declaration production.
-	EnterSimple_declaration(c *Simple_declarationContext)
-
 	// EnterEmpty_declaration is called when entering the empty_declaration production.
 	EnterEmpty_declaration(c *Empty_declarationContext)
 
@@ -205,26 +202,8 @@ type PandaParserListener interface {
 	// EnterNamespace_definition is called when entering the namespace_definition production.
 	EnterNamespace_definition(c *Namespace_definitionContext)
 
-	// EnterNamed_namespace_definition is called when entering the named_namespace_definition production.
-	EnterNamed_namespace_definition(c *Named_namespace_definitionContext)
-
-	// EnterOriginal_namespace_definition is called when entering the original_namespace_definition production.
-	EnterOriginal_namespace_definition(c *Original_namespace_definitionContext)
-
-	// EnterExtension_namespace_definition is called when entering the extension_namespace_definition production.
-	EnterExtension_namespace_definition(c *Extension_namespace_definitionContext)
-
-	// EnterUnnamed_namespace_definition is called when entering the unnamed_namespace_definition production.
-	EnterUnnamed_namespace_definition(c *Unnamed_namespace_definitionContext)
-
-	// EnterNamespace_body is called when entering the namespace_body production.
-	EnterNamespace_body(c *Namespace_bodyContext)
-
 	// EnterQualified_namespace_specifier is called when entering the qualified_namespace_specifier production.
 	EnterQualified_namespace_specifier(c *Qualified_namespace_specifierContext)
-
-	// EnterUsing_namespace is called when entering the using_namespace production.
-	EnterUsing_namespace(c *Using_namespaceContext)
 
 	// EnterInit_declarator_list is called when entering the init_declarator_list production.
 	EnterInit_declarator_list(c *Init_declarator_listContext)
@@ -535,9 +514,6 @@ type PandaParserListener interface {
 	// ExitBlock_declaration is called when exiting the block_declaration production.
 	ExitBlock_declaration(c *Block_declarationContext)
 
-	// ExitSimple_declaration is called when exiting the simple_declaration production.
-	ExitSimple_declaration(c *Simple_declarationContext)
-
 	// ExitEmpty_declaration is called when exiting the empty_declaration production.
 	ExitEmpty_declaration(c *Empty_declarationContext)
 
@@ -595,26 +571,8 @@ type PandaParserListener interface {
 	// ExitNamespace_definition is called when exiting the namespace_definition production.
 	ExitNamespace_definition(c *Namespace_definitionContext)
 
-	// ExitNamed_namespace_definition is called when exiting the named_namespace_definition production.
-	ExitNamed_namespace_definition(c *Named_namespace_definitionContext)
-
-	// ExitOriginal_namespace_definition is called when exiting the original_namespace_definition production.
-	ExitOriginal_namespace_definition(c *Original_namespace_definitionContext)
-
-	// ExitExtension_namespace_definition is called when exiting the extension_namespace_definition production.
-	ExitExtension_namespace_definition(c *Extension_namespace_definitionContext)
-
-	// ExitUnnamed_namespace_definition is called when exiting the unnamed_namespace_definition production.
-	ExitUnnamed_namespace_definition(c *Unnamed_namespace_definitionContext)
-
-	// ExitNamespace_body is called when exiting the namespace_body production.
-	ExitNamespace_body(c *Namespace_bodyContext)
-
 	// ExitQualified_namespace_specifier is called when exiting the qualified_namespace_specifier production.
 	ExitQualified_namespace_specifier(c *Qualified_namespace_specifierContext)
-
-	// ExitUsing_namespace is called when exiting the using_namespace production.
-	ExitUsing_namespace(c *Using_namespaceContext)
 
 	// ExitInit_declarator_list is called when exiting the init_declarator_list production.
 	ExitInit_declarator_list(c *Init_declarator_listContext)

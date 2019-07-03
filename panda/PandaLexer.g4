@@ -2,10 +2,6 @@ lexer grammar PandaLexer;
 
 /*Keywords*/
 
-Auto
-   : 'auto'
-   ;
-
 Bool
    : 'bool'
    ;
@@ -193,10 +189,10 @@ Ushort
    : 'ushort'
    ;
 
-Using
-   : 'using'
+Var
+   : 'var'
    ;
-
+   
 Void
    : 'void'
    ;

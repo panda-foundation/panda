@@ -1,4 +1,7 @@
 // this panda source code for dev and testing
+
+namespace main
+
 int main()
 {
     return 0;

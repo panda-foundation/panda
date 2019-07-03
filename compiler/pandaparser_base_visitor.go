@@ -191,10 +191,6 @@ func (v *BasePandaParserVisitor) VisitBlock_declaration(ctx *Block_declarationCo
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitSimple_declaration(ctx *Simple_declarationContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 func (v *BasePandaParserVisitor) VisitEmpty_declaration(ctx *Empty_declarationContext) interface{} {
 	return v.VisitChildren(ctx)
 }
@@ -271,31 +267,7 @@ func (v *BasePandaParserVisitor) VisitNamespace_definition(ctx *Namespace_defini
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitNamed_namespace_definition(ctx *Named_namespace_definitionContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitOriginal_namespace_definition(ctx *Original_namespace_definitionContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitExtension_namespace_definition(ctx *Extension_namespace_definitionContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitUnnamed_namespace_definition(ctx *Unnamed_namespace_definitionContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitNamespace_body(ctx *Namespace_bodyContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 func (v *BasePandaParserVisitor) VisitQualified_namespace_specifier(ctx *Qualified_namespace_specifierContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitUsing_namespace(ctx *Using_namespaceContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 

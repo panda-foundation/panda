@@ -298,12 +298,6 @@ func (s *BasePandaParserListener) EnterBlock_declaration(ctx *Block_declarationC
 // ExitBlock_declaration is called when production block_declaration is exited.
 func (s *BasePandaParserListener) ExitBlock_declaration(ctx *Block_declarationContext) {}
 
-// EnterSimple_declaration is called when production simple_declaration is entered.
-func (s *BasePandaParserListener) EnterSimple_declaration(ctx *Simple_declarationContext) {}
-
-// ExitSimple_declaration is called when production simple_declaration is exited.
-func (s *BasePandaParserListener) ExitSimple_declaration(ctx *Simple_declarationContext) {}
-
 // EnterEmpty_declaration is called when production empty_declaration is entered.
 func (s *BasePandaParserListener) EnterEmpty_declaration(ctx *Empty_declarationContext) {}
 
@@ -420,44 +414,6 @@ func (s *BasePandaParserListener) EnterNamespace_definition(ctx *Namespace_defin
 // ExitNamespace_definition is called when production namespace_definition is exited.
 func (s *BasePandaParserListener) ExitNamespace_definition(ctx *Namespace_definitionContext) {}
 
-// EnterNamed_namespace_definition is called when production named_namespace_definition is entered.
-func (s *BasePandaParserListener) EnterNamed_namespace_definition(ctx *Named_namespace_definitionContext) {
-}
-
-// ExitNamed_namespace_definition is called when production named_namespace_definition is exited.
-func (s *BasePandaParserListener) ExitNamed_namespace_definition(ctx *Named_namespace_definitionContext) {
-}
-
-// EnterOriginal_namespace_definition is called when production original_namespace_definition is entered.
-func (s *BasePandaParserListener) EnterOriginal_namespace_definition(ctx *Original_namespace_definitionContext) {
-}
-
-// ExitOriginal_namespace_definition is called when production original_namespace_definition is exited.
-func (s *BasePandaParserListener) ExitOriginal_namespace_definition(ctx *Original_namespace_definitionContext) {
-}
-
-// EnterExtension_namespace_definition is called when production extension_namespace_definition is entered.
-func (s *BasePandaParserListener) EnterExtension_namespace_definition(ctx *Extension_namespace_definitionContext) {
-}
-
-// ExitExtension_namespace_definition is called when production extension_namespace_definition is exited.
-func (s *BasePandaParserListener) ExitExtension_namespace_definition(ctx *Extension_namespace_definitionContext) {
-}
-
-// EnterUnnamed_namespace_definition is called when production unnamed_namespace_definition is entered.
-func (s *BasePandaParserListener) EnterUnnamed_namespace_definition(ctx *Unnamed_namespace_definitionContext) {
-}
-
-// ExitUnnamed_namespace_definition is called when production unnamed_namespace_definition is exited.
-func (s *BasePandaParserListener) ExitUnnamed_namespace_definition(ctx *Unnamed_namespace_definitionContext) {
-}
-
-// EnterNamespace_body is called when production namespace_body is entered.
-func (s *BasePandaParserListener) EnterNamespace_body(ctx *Namespace_bodyContext) {}
-
-// ExitNamespace_body is called when production namespace_body is exited.
-func (s *BasePandaParserListener) ExitNamespace_body(ctx *Namespace_bodyContext) {}
-
 // EnterQualified_namespace_specifier is called when production qualified_namespace_specifier is entered.
 func (s *BasePandaParserListener) EnterQualified_namespace_specifier(ctx *Qualified_namespace_specifierContext) {
 }
@@ -465,12 +421,6 @@ func (s *BasePandaParserListener) EnterQualified_namespace_specifier(ctx *Qualif
 // ExitQualified_namespace_specifier is called when production qualified_namespace_specifier is exited.
 func (s *BasePandaParserListener) ExitQualified_namespace_specifier(ctx *Qualified_namespace_specifierContext) {
 }
-
-// EnterUsing_namespace is called when production using_namespace is entered.
-func (s *BasePandaParserListener) EnterUsing_namespace(ctx *Using_namespaceContext) {}
-
-// ExitUsing_namespace is called when production using_namespace is exited.
-func (s *BasePandaParserListener) ExitUsing_namespace(ctx *Using_namespaceContext) {}
 
 // EnterInit_declarator_list is called when production init_declarator_list is entered.
 func (s *BasePandaParserListener) EnterInit_declarator_list(ctx *Init_declarator_listContext) {}
