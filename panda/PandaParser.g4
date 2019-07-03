@@ -303,7 +303,6 @@ type_specifier
 
 trailing_type_specifier
    : simple_type_specifier
-   | elaborated_type_specifier
    | type_name_specifier
    ;
 
@@ -347,13 +346,6 @@ type_name
    : class_name
    | enum_name
    | template_id
-   ;
-
-elaborated_type_specifier
-   : Class nested_name_specifier? Identifier
-   | Class template_id
-   | Class nested_name_specifier template_id
-   | Enum nested_name_specifier? Identifier
    ;
 
 enum_name
