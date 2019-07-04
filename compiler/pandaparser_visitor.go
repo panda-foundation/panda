@@ -160,14 +160,11 @@ type PandaParserVisitor interface {
 	// Visit a parse tree produced by PandaParser#enum_name.
 	VisitEnum_name(ctx *Enum_nameContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#enum_specifier.
-	VisitEnum_specifier(ctx *Enum_specifierContext) interface{}
+	// Visit a parse tree produced by PandaParser#enum_definition.
+	VisitEnum_definition(ctx *Enum_definitionContext) interface{}
 
 	// Visit a parse tree produced by PandaParser#enum_head.
 	VisitEnum_head(ctx *Enum_headContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#enum_key.
-	VisitEnum_key(ctx *Enum_keyContext) interface{}
 
 	// Visit a parse tree produced by PandaParser#enum_base.
 	VisitEnum_base(ctx *Enum_baseContext) interface{}
@@ -247,8 +244,8 @@ type PandaParserVisitor interface {
 	// Visit a parse tree produced by PandaParser#braced_init_list.
 	VisitBraced_init_list(ctx *Braced_init_listContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#class_specifier.
-	VisitClass_specifier(ctx *Class_specifierContext) interface{}
+	// Visit a parse tree produced by PandaParser#class_definition.
+	VisitClass_definition(ctx *Class_definitionContext) interface{}
 
 	// Visit a parse tree produced by PandaParser#class_name.
 	VisitClass_name(ctx *Class_nameContext) interface{}
@@ -264,6 +261,12 @@ type PandaParserVisitor interface {
 
 	// Visit a parse tree produced by PandaParser#member_declarator.
 	VisitMember_declarator(ctx *Member_declaratorContext) interface{}
+
+	// Visit a parse tree produced by PandaParser#modifier_specifier_sequence.
+	VisitModifier_specifier_sequence(ctx *Modifier_specifier_sequenceContext) interface{}
+
+	// Visit a parse tree produced by PandaParser#modifier_specifier.
+	VisitModifier_specifier(ctx *Modifier_specifierContext) interface{}
 
 	// Visit a parse tree produced by PandaParser#access_specifier.
 	VisitAccess_specifier(ctx *Access_specifierContext) interface{}

@@ -160,14 +160,11 @@ type PandaParserListener interface {
 	// EnterEnum_name is called when entering the enum_name production.
 	EnterEnum_name(c *Enum_nameContext)
 
-	// EnterEnum_specifier is called when entering the enum_specifier production.
-	EnterEnum_specifier(c *Enum_specifierContext)
+	// EnterEnum_definition is called when entering the enum_definition production.
+	EnterEnum_definition(c *Enum_definitionContext)
 
 	// EnterEnum_head is called when entering the enum_head production.
 	EnterEnum_head(c *Enum_headContext)
-
-	// EnterEnum_key is called when entering the enum_key production.
-	EnterEnum_key(c *Enum_keyContext)
 
 	// EnterEnum_base is called when entering the enum_base production.
 	EnterEnum_base(c *Enum_baseContext)
@@ -247,8 +244,8 @@ type PandaParserListener interface {
 	// EnterBraced_init_list is called when entering the braced_init_list production.
 	EnterBraced_init_list(c *Braced_init_listContext)
 
-	// EnterClass_specifier is called when entering the class_specifier production.
-	EnterClass_specifier(c *Class_specifierContext)
+	// EnterClass_definition is called when entering the class_definition production.
+	EnterClass_definition(c *Class_definitionContext)
 
 	// EnterClass_name is called when entering the class_name production.
 	EnterClass_name(c *Class_nameContext)
@@ -264,6 +261,12 @@ type PandaParserListener interface {
 
 	// EnterMember_declarator is called when entering the member_declarator production.
 	EnterMember_declarator(c *Member_declaratorContext)
+
+	// EnterModifier_specifier_sequence is called when entering the modifier_specifier_sequence production.
+	EnterModifier_specifier_sequence(c *Modifier_specifier_sequenceContext)
+
+	// EnterModifier_specifier is called when entering the modifier_specifier production.
+	EnterModifier_specifier(c *Modifier_specifierContext)
 
 	// EnterAccess_specifier is called when entering the access_specifier production.
 	EnterAccess_specifier(c *Access_specifierContext)
@@ -472,14 +475,11 @@ type PandaParserListener interface {
 	// ExitEnum_name is called when exiting the enum_name production.
 	ExitEnum_name(c *Enum_nameContext)
 
-	// ExitEnum_specifier is called when exiting the enum_specifier production.
-	ExitEnum_specifier(c *Enum_specifierContext)
+	// ExitEnum_definition is called when exiting the enum_definition production.
+	ExitEnum_definition(c *Enum_definitionContext)
 
 	// ExitEnum_head is called when exiting the enum_head production.
 	ExitEnum_head(c *Enum_headContext)
-
-	// ExitEnum_key is called when exiting the enum_key production.
-	ExitEnum_key(c *Enum_keyContext)
 
 	// ExitEnum_base is called when exiting the enum_base production.
 	ExitEnum_base(c *Enum_baseContext)
@@ -559,8 +559,8 @@ type PandaParserListener interface {
 	// ExitBraced_init_list is called when exiting the braced_init_list production.
 	ExitBraced_init_list(c *Braced_init_listContext)
 
-	// ExitClass_specifier is called when exiting the class_specifier production.
-	ExitClass_specifier(c *Class_specifierContext)
+	// ExitClass_definition is called when exiting the class_definition production.
+	ExitClass_definition(c *Class_definitionContext)
 
 	// ExitClass_name is called when exiting the class_name production.
 	ExitClass_name(c *Class_nameContext)
@@ -576,6 +576,12 @@ type PandaParserListener interface {
 
 	// ExitMember_declarator is called when exiting the member_declarator production.
 	ExitMember_declarator(c *Member_declaratorContext)
+
+	// ExitModifier_specifier_sequence is called when exiting the modifier_specifier_sequence production.
+	ExitModifier_specifier_sequence(c *Modifier_specifier_sequenceContext)
+
+	// ExitModifier_specifier is called when exiting the modifier_specifier production.
+	ExitModifier_specifier(c *Modifier_specifierContext)
 
 	// ExitAccess_specifier is called when exiting the access_specifier production.
 	ExitAccess_specifier(c *Access_specifierContext)

@@ -258,6 +258,8 @@ declaration_sequence
 declaration
    : block_declaration
    | function_definition
+   | enum_definition
+   | class_definition
    | empty_declaration
    ;
 
@@ -270,7 +272,7 @@ empty_declaration
    ;
 
 decl_specifier
-   : type_specifier
+   : modifier_specifier_sequence? type_specifier
    ;
 
 decl_specifier_sequence
@@ -318,17 +320,13 @@ enum_name
    : Identifier
    ;
 
-enum_specifier
+enum_definition
    : enum_head '{' enumerator_list? '}'
    | enum_head '{' enumerator_list ',' '}'
    ;
 
 enum_head
-   : enum_key Identifier? enum_base?
-   ;
-
-enum_key
-   : Enum
+   : Enum Identifier? enum_base?
    ;
 
 enum_base
@@ -428,7 +426,7 @@ parameter_declaration
    ;
 
 function_definition
-   : decl_specifier_sequence? declarator compound_statement
+   : modifier_specifier_sequence? decl_specifier_sequence? declarator compound_statement
    ;
 
 initializer
@@ -458,8 +456,8 @@ braced_init_list
 
 /*Classes*/
 
-class_specifier
-   : class_name base_clause? '{' member_specification? '}'
+class_definition
+   : Class class_name base_clause? '{' member_specification? '}'
    ;
 
 class_name
@@ -487,6 +485,16 @@ member_declarator
    | declarator brace_or_equal_initializer?
    ;
 
+modifier_specifier_sequence
+   : modifier_specifier
+   | modifier_specifier_sequence modifier_specifier
+   ;
+
+modifier_specifier
+   : Static
+   | Const
+   | access_specifier
+   ;
 access_specifier
    : Private
    | Protected

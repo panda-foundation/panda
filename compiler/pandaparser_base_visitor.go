@@ -211,15 +211,11 @@ func (v *BasePandaParserVisitor) VisitEnum_name(ctx *Enum_nameContext) interface
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitEnum_specifier(ctx *Enum_specifierContext) interface{} {
+func (v *BasePandaParserVisitor) VisitEnum_definition(ctx *Enum_definitionContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
 func (v *BasePandaParserVisitor) VisitEnum_head(ctx *Enum_headContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitEnum_key(ctx *Enum_keyContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
@@ -327,7 +323,7 @@ func (v *BasePandaParserVisitor) VisitBraced_init_list(ctx *Braced_init_listCont
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitClass_specifier(ctx *Class_specifierContext) interface{} {
+func (v *BasePandaParserVisitor) VisitClass_definition(ctx *Class_definitionContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
@@ -348,6 +344,14 @@ func (v *BasePandaParserVisitor) VisitMember_declarator_list(ctx *Member_declara
 }
 
 func (v *BasePandaParserVisitor) VisitMember_declarator(ctx *Member_declaratorContext) interface{} {
+	return v.VisitChildren(ctx)
+}
+
+func (v *BasePandaParserVisitor) VisitModifier_specifier_sequence(ctx *Modifier_specifier_sequenceContext) interface{} {
+	return v.VisitChildren(ctx)
+}
+
+func (v *BasePandaParserVisitor) VisitModifier_specifier(ctx *Modifier_specifierContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 

@@ -4,16 +4,24 @@ namespace sample;
 
 include net.socket;
 
-class base
+void do_nothing()
 {
-    int value_ = 0;
+}
 
-    base(int value)
+class empty
+{
+}
+
+class base_class
+{
+    public static int value_ = 0;
+
+    base_class(int value)
     {
         value_ = value;
     }
 
-    base()
+    base_class()
     {
         value_ = 10;
     }
@@ -22,72 +30,4 @@ class base
     {
         print(value_);
     }
-}
-
-class derive : base
-{
-    derive()
-    {
-        base();
-    }
-
-    derive(int value)
-    {
-        base(value);
-    }
-
-    public void print()
-    {
-        base.print();
-    }
-}
-
-class generic<K, V>
-{
-    K k_;
-    V v_;
-
-    generic(K k, V k)
-    {
-        k_ = k;
-        v_ = v;
-    }
-
-    public void print()
-    {
-
-    }
-}
-
-class derive_generic : generic<int, int>
-{
-
-}
-
-enum color
-{
-    red,
-    green = 10,
-    blue
-}
-
-enum more_color : color
-{
-    yellow
-}
-
-int main()
-{
-    int a = 1;
-    int b = 2;
-    int c = a + b;
-    print(c);
-
-    derive d = new derive;
-    d.print();
-    
-    generic<int, int> g = new generic(1, 2);
-    g.print();
-
-    return 0;
 }

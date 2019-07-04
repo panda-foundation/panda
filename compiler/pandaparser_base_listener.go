@@ -328,23 +328,17 @@ func (s *BasePandaParserListener) EnterEnum_name(ctx *Enum_nameContext) {}
 // ExitEnum_name is called when production enum_name is exited.
 func (s *BasePandaParserListener) ExitEnum_name(ctx *Enum_nameContext) {}
 
-// EnterEnum_specifier is called when production enum_specifier is entered.
-func (s *BasePandaParserListener) EnterEnum_specifier(ctx *Enum_specifierContext) {}
+// EnterEnum_definition is called when production enum_definition is entered.
+func (s *BasePandaParserListener) EnterEnum_definition(ctx *Enum_definitionContext) {}
 
-// ExitEnum_specifier is called when production enum_specifier is exited.
-func (s *BasePandaParserListener) ExitEnum_specifier(ctx *Enum_specifierContext) {}
+// ExitEnum_definition is called when production enum_definition is exited.
+func (s *BasePandaParserListener) ExitEnum_definition(ctx *Enum_definitionContext) {}
 
 // EnterEnum_head is called when production enum_head is entered.
 func (s *BasePandaParserListener) EnterEnum_head(ctx *Enum_headContext) {}
 
 // ExitEnum_head is called when production enum_head is exited.
 func (s *BasePandaParserListener) ExitEnum_head(ctx *Enum_headContext) {}
-
-// EnterEnum_key is called when production enum_key is entered.
-func (s *BasePandaParserListener) EnterEnum_key(ctx *Enum_keyContext) {}
-
-// ExitEnum_key is called when production enum_key is exited.
-func (s *BasePandaParserListener) ExitEnum_key(ctx *Enum_keyContext) {}
 
 // EnterEnum_base is called when production enum_base is entered.
 func (s *BasePandaParserListener) EnterEnum_base(ctx *Enum_baseContext) {}
@@ -512,11 +506,11 @@ func (s *BasePandaParserListener) EnterBraced_init_list(ctx *Braced_init_listCon
 // ExitBraced_init_list is called when production braced_init_list is exited.
 func (s *BasePandaParserListener) ExitBraced_init_list(ctx *Braced_init_listContext) {}
 
-// EnterClass_specifier is called when production class_specifier is entered.
-func (s *BasePandaParserListener) EnterClass_specifier(ctx *Class_specifierContext) {}
+// EnterClass_definition is called when production class_definition is entered.
+func (s *BasePandaParserListener) EnterClass_definition(ctx *Class_definitionContext) {}
 
-// ExitClass_specifier is called when production class_specifier is exited.
-func (s *BasePandaParserListener) ExitClass_specifier(ctx *Class_specifierContext) {}
+// ExitClass_definition is called when production class_definition is exited.
+func (s *BasePandaParserListener) ExitClass_definition(ctx *Class_definitionContext) {}
 
 // EnterClass_name is called when production class_name is entered.
 func (s *BasePandaParserListener) EnterClass_name(ctx *Class_nameContext) {}
@@ -547,6 +541,20 @@ func (s *BasePandaParserListener) EnterMember_declarator(ctx *Member_declaratorC
 
 // ExitMember_declarator is called when production member_declarator is exited.
 func (s *BasePandaParserListener) ExitMember_declarator(ctx *Member_declaratorContext) {}
+
+// EnterModifier_specifier_sequence is called when production modifier_specifier_sequence is entered.
+func (s *BasePandaParserListener) EnterModifier_specifier_sequence(ctx *Modifier_specifier_sequenceContext) {
+}
+
+// ExitModifier_specifier_sequence is called when production modifier_specifier_sequence is exited.
+func (s *BasePandaParserListener) ExitModifier_specifier_sequence(ctx *Modifier_specifier_sequenceContext) {
+}
+
+// EnterModifier_specifier is called when production modifier_specifier is entered.
+func (s *BasePandaParserListener) EnterModifier_specifier(ctx *Modifier_specifierContext) {}
+
+// ExitModifier_specifier is called when production modifier_specifier is exited.
+func (s *BasePandaParserListener) ExitModifier_specifier(ctx *Modifier_specifierContext) {}
 
 // EnterAccess_specifier is called when production access_specifier is entered.
 func (s *BasePandaParserListener) EnterAccess_specifier(ctx *Access_specifierContext) {}
