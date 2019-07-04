@@ -2,6 +2,10 @@ lexer grammar PandaLexer;
 
 /*Keywords*/
 
+Base
+   : 'base'
+   ;
+
 Bool
    : 'bool'
    ;
@@ -76,7 +80,7 @@ For
 Include
    : 'include'
    ;
-   
+
 If
    : 'if'
    ;
@@ -359,10 +363,6 @@ MinusMinus
 
 Comma
    : ','
-   ;
-
-Arrow
-   : '->'
    ;
 
 Question

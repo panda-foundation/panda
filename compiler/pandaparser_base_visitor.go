@@ -31,14 +31,6 @@ func (v *BasePandaParserVisitor) VisitNested_name_specifier(ctx *Nested_name_spe
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitLambda_expression(ctx *Lambda_expressionContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitLambda_declarator(ctx *Lambda_declaratorContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 func (v *BasePandaParserVisitor) VisitPost_fix_expression(ctx *Post_fix_expressionContext) interface{} {
 	return v.VisitChildren(ctx)
 }
@@ -203,23 +195,11 @@ func (v *BasePandaParserVisitor) VisitDecl_specifier_sequence(ctx *Decl_specifie
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitType_specifier(ctx *Type_specifierContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitTrailing_type_specifier(ctx *Trailing_type_specifierContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 func (v *BasePandaParserVisitor) VisitType_specifier_sequence(ctx *Type_specifier_sequenceContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitTrailing_type_specifier_sequence(ctx *Trailing_type_specifier_sequenceContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitSimple_type_specifier(ctx *Simple_type_specifierContext) interface{} {
+func (v *BasePandaParserVisitor) VisitType_specifier(ctx *Type_specifierContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
@@ -267,7 +247,11 @@ func (v *BasePandaParserVisitor) VisitNamespace_definition(ctx *Namespace_defini
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitQualified_namespace_specifier(ctx *Qualified_namespace_specifierContext) interface{} {
+func (v *BasePandaParserVisitor) VisitInclude_definition(ctx *Include_definitionContext) interface{} {
+	return v.VisitChildren(ctx)
+}
+
+func (v *BasePandaParserVisitor) VisitInclude_definition_sequence(ctx *Include_definition_sequenceContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
@@ -295,15 +279,7 @@ func (v *BasePandaParserVisitor) VisitParameters_and_qualifiers(ctx *Parameters_
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitTrailing_return_type(ctx *Trailing_return_typeContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 func (v *BasePandaParserVisitor) VisitRef_operator(ctx *Ref_operatorContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitRef_qualifier(ctx *Ref_qualifierContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
@@ -331,10 +307,6 @@ func (v *BasePandaParserVisitor) VisitFunction_definition(ctx *Function_definiti
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitFunction_body(ctx *Function_bodyContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 func (v *BasePandaParserVisitor) VisitInitializer(ctx *InitializerContext) interface{} {
 	return v.VisitChildren(ctx)
 }
@@ -355,19 +327,11 @@ func (v *BasePandaParserVisitor) VisitBraced_init_list(ctx *Braced_init_listCont
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitClass_name(ctx *Class_nameContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 func (v *BasePandaParserVisitor) VisitClass_specifier(ctx *Class_specifierContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitClass_head(ctx *Class_headContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitClass_head_name(ctx *Class_head_nameContext) interface{} {
+func (v *BasePandaParserVisitor) VisitClass_name(ctx *Class_nameContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
@@ -387,6 +351,10 @@ func (v *BasePandaParserVisitor) VisitMember_declarator(ctx *Member_declaratorCo
 	return v.VisitChildren(ctx)
 }
 
+func (v *BasePandaParserVisitor) VisitAccess_specifier(ctx *Access_specifierContext) interface{} {
+	return v.VisitChildren(ctx)
+}
+
 func (v *BasePandaParserVisitor) VisitBase_clause(ctx *Base_clauseContext) interface{} {
 	return v.VisitChildren(ctx)
 }
@@ -399,43 +367,7 @@ func (v *BasePandaParserVisitor) VisitBase_specifier(ctx *Base_specifierContext)
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitClass_or_decltype(ctx *Class_or_decltypeContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitBase_type_specifier(ctx *Base_type_specifierContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitAccess_specifier(ctx *Access_specifierContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitMem_initializer_list(ctx *Mem_initializer_listContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitMem_initializer(ctx *Mem_initializerContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitMem_initializer_id(ctx *Mem_initializer_idContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 func (v *BasePandaParserVisitor) VisitOperator_function_id(ctx *Operator_function_idContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitTemplate_parameter_list(ctx *Template_parameter_listContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitTemplate_parameter(ctx *Template_parameterContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitType_parameter(ctx *Type_parameterContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
@@ -443,7 +375,7 @@ func (v *BasePandaParserVisitor) VisitTemplate_id(ctx *Template_idContext) inter
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitTemplate_name(ctx *Template_nameContext) interface{} {
+func (v *BasePandaParserVisitor) VisitTemplate_definition(ctx *Template_definitionContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
@@ -459,11 +391,11 @@ func (v *BasePandaParserVisitor) VisitType_name_specifier(ctx *Type_name_specifi
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitTry_block(ctx *Try_blockContext) interface{} {
+func (v *BasePandaParserVisitor) VisitType_id_list(ctx *Type_id_listContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
-func (v *BasePandaParserVisitor) VisitFunction_try_block(ctx *Function_try_blockContext) interface{} {
+func (v *BasePandaParserVisitor) VisitTry_block(ctx *Try_blockContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 
@@ -480,14 +412,6 @@ func (v *BasePandaParserVisitor) VisitException_declaration(ctx *Exception_decla
 }
 
 func (v *BasePandaParserVisitor) VisitThrow_expression(ctx *Throw_expressionContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitException_specification(ctx *Exception_specificationContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BasePandaParserVisitor) VisitType_id_list(ctx *Type_id_listContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 

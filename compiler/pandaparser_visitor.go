@@ -25,12 +25,6 @@ type PandaParserVisitor interface {
 	// Visit a parse tree produced by PandaParser#nested_name_specifier.
 	VisitNested_name_specifier(ctx *Nested_name_specifierContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#lambda_expression.
-	VisitLambda_expression(ctx *Lambda_expressionContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#lambda_declarator.
-	VisitLambda_declarator(ctx *Lambda_declaratorContext) interface{}
-
 	// Visit a parse tree produced by PandaParser#post_fix_expression.
 	VisitPost_fix_expression(ctx *Post_fix_expressionContext) interface{}
 
@@ -154,20 +148,11 @@ type PandaParserVisitor interface {
 	// Visit a parse tree produced by PandaParser#decl_specifier_sequence.
 	VisitDecl_specifier_sequence(ctx *Decl_specifier_sequenceContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#type_specifier.
-	VisitType_specifier(ctx *Type_specifierContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#trailing_type_specifier.
-	VisitTrailing_type_specifier(ctx *Trailing_type_specifierContext) interface{}
-
 	// Visit a parse tree produced by PandaParser#type_specifier_sequence.
 	VisitType_specifier_sequence(ctx *Type_specifier_sequenceContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#trailing_type_specifier_sequence.
-	VisitTrailing_type_specifier_sequence(ctx *Trailing_type_specifier_sequenceContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#simple_type_specifier.
-	VisitSimple_type_specifier(ctx *Simple_type_specifierContext) interface{}
+	// Visit a parse tree produced by PandaParser#type_specifier.
+	VisitType_specifier(ctx *Type_specifierContext) interface{}
 
 	// Visit a parse tree produced by PandaParser#type_name.
 	VisitType_name(ctx *Type_nameContext) interface{}
@@ -202,8 +187,11 @@ type PandaParserVisitor interface {
 	// Visit a parse tree produced by PandaParser#namespace_definition.
 	VisitNamespace_definition(ctx *Namespace_definitionContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#qualified_namespace_specifier.
-	VisitQualified_namespace_specifier(ctx *Qualified_namespace_specifierContext) interface{}
+	// Visit a parse tree produced by PandaParser#include_definition.
+	VisitInclude_definition(ctx *Include_definitionContext) interface{}
+
+	// Visit a parse tree produced by PandaParser#include_definition_sequence.
+	VisitInclude_definition_sequence(ctx *Include_definition_sequenceContext) interface{}
 
 	// Visit a parse tree produced by PandaParser#init_declarator_list.
 	VisitInit_declarator_list(ctx *Init_declarator_listContext) interface{}
@@ -223,14 +211,8 @@ type PandaParserVisitor interface {
 	// Visit a parse tree produced by PandaParser#parameters_and_qualifiers.
 	VisitParameters_and_qualifiers(ctx *Parameters_and_qualifiersContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#trailing_return_type.
-	VisitTrailing_return_type(ctx *Trailing_return_typeContext) interface{}
-
 	// Visit a parse tree produced by PandaParser#ref_operator.
 	VisitRef_operator(ctx *Ref_operatorContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#ref_qualifier.
-	VisitRef_qualifier(ctx *Ref_qualifierContext) interface{}
 
 	// Visit a parse tree produced by PandaParser#declarator_id.
 	VisitDeclarator_id(ctx *Declarator_idContext) interface{}
@@ -250,9 +232,6 @@ type PandaParserVisitor interface {
 	// Visit a parse tree produced by PandaParser#function_definition.
 	VisitFunction_definition(ctx *Function_definitionContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#function_body.
-	VisitFunction_body(ctx *Function_bodyContext) interface{}
-
 	// Visit a parse tree produced by PandaParser#initializer.
 	VisitInitializer(ctx *InitializerContext) interface{}
 
@@ -268,17 +247,11 @@ type PandaParserVisitor interface {
 	// Visit a parse tree produced by PandaParser#braced_init_list.
 	VisitBraced_init_list(ctx *Braced_init_listContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#class_name.
-	VisitClass_name(ctx *Class_nameContext) interface{}
-
 	// Visit a parse tree produced by PandaParser#class_specifier.
 	VisitClass_specifier(ctx *Class_specifierContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#class_head.
-	VisitClass_head(ctx *Class_headContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#class_head_name.
-	VisitClass_head_name(ctx *Class_head_nameContext) interface{}
+	// Visit a parse tree produced by PandaParser#class_name.
+	VisitClass_name(ctx *Class_nameContext) interface{}
 
 	// Visit a parse tree produced by PandaParser#member_specification.
 	VisitMember_specification(ctx *Member_specificationContext) interface{}
@@ -292,6 +265,9 @@ type PandaParserVisitor interface {
 	// Visit a parse tree produced by PandaParser#member_declarator.
 	VisitMember_declarator(ctx *Member_declaratorContext) interface{}
 
+	// Visit a parse tree produced by PandaParser#access_specifier.
+	VisitAccess_specifier(ctx *Access_specifierContext) interface{}
+
 	// Visit a parse tree produced by PandaParser#base_clause.
 	VisitBase_clause(ctx *Base_clauseContext) interface{}
 
@@ -301,41 +277,14 @@ type PandaParserVisitor interface {
 	// Visit a parse tree produced by PandaParser#base_specifier.
 	VisitBase_specifier(ctx *Base_specifierContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#class_or_decltype.
-	VisitClass_or_decltype(ctx *Class_or_decltypeContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#base_type_specifier.
-	VisitBase_type_specifier(ctx *Base_type_specifierContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#access_specifier.
-	VisitAccess_specifier(ctx *Access_specifierContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#mem_initializer_list.
-	VisitMem_initializer_list(ctx *Mem_initializer_listContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#mem_initializer.
-	VisitMem_initializer(ctx *Mem_initializerContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#mem_initializer_id.
-	VisitMem_initializer_id(ctx *Mem_initializer_idContext) interface{}
-
 	// Visit a parse tree produced by PandaParser#operator_function_id.
 	VisitOperator_function_id(ctx *Operator_function_idContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#template_parameter_list.
-	VisitTemplate_parameter_list(ctx *Template_parameter_listContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#template_parameter.
-	VisitTemplate_parameter(ctx *Template_parameterContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#type_parameter.
-	VisitType_parameter(ctx *Type_parameterContext) interface{}
 
 	// Visit a parse tree produced by PandaParser#template_id.
 	VisitTemplate_id(ctx *Template_idContext) interface{}
 
-	// Visit a parse tree produced by PandaParser#template_name.
-	VisitTemplate_name(ctx *Template_nameContext) interface{}
+	// Visit a parse tree produced by PandaParser#template_definition.
+	VisitTemplate_definition(ctx *Template_definitionContext) interface{}
 
 	// Visit a parse tree produced by PandaParser#template_argument_list.
 	VisitTemplate_argument_list(ctx *Template_argument_listContext) interface{}
@@ -346,11 +295,11 @@ type PandaParserVisitor interface {
 	// Visit a parse tree produced by PandaParser#type_name_specifier.
 	VisitType_name_specifier(ctx *Type_name_specifierContext) interface{}
 
+	// Visit a parse tree produced by PandaParser#type_id_list.
+	VisitType_id_list(ctx *Type_id_listContext) interface{}
+
 	// Visit a parse tree produced by PandaParser#try_block.
 	VisitTry_block(ctx *Try_blockContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#function_try_block.
-	VisitFunction_try_block(ctx *Function_try_blockContext) interface{}
 
 	// Visit a parse tree produced by PandaParser#handler_sequence.
 	VisitHandler_sequence(ctx *Handler_sequenceContext) interface{}
@@ -363,12 +312,6 @@ type PandaParserVisitor interface {
 
 	// Visit a parse tree produced by PandaParser#throw_expression.
 	VisitThrow_expression(ctx *Throw_expressionContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#exception_specification.
-	VisitException_specification(ctx *Exception_specificationContext) interface{}
-
-	// Visit a parse tree produced by PandaParser#type_id_list.
-	VisitType_id_list(ctx *Type_id_listContext) interface{}
 
 	// Visit a parse tree produced by PandaParser#operators.
 	VisitOperators(ctx *OperatorsContext) interface{}

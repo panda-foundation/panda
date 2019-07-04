@@ -13,7 +13,6 @@ primary_expression
    | This
    | '(' expression ')'
    | id_expression
-   | lambda_expression
    ;
 
 id_expression
@@ -38,22 +37,13 @@ nested_name_specifier
    | nested_name_specifier template_id '.'
    ;
 
-lambda_expression
-   : lambda_declarator? compound_statement
-   ;
-
-lambda_declarator
-   : '(' parameter_declaration_clause ')' trailing_return_type?
-   ;
-
 post_fix_expression
    : primary_expression
    | post_fix_expression '[' expression ']'
-   | post_fix_expression '[' braced_init_list ']'
    | post_fix_expression '(' expression_list? ')'
-   | simple_type_specifier '(' expression_list? ')'
+   | type_specifier '(' expression_list? ')'
    | type_name_specifier '(' expression_list? ')'
-   | simple_type_specifier braced_init_list
+   | type_specifier braced_init_list
    | type_name_specifier braced_init_list
    | post_fix_expression '.' id_expression
    | post_fix_expression '++'
@@ -288,30 +278,13 @@ decl_specifier_sequence
    | decl_specifier decl_specifier_sequence
    ;
 
-type_specifier
-   : trailing_type_specifier
-   | class_specifier
-   | enum_specifier
-   ;
-
-trailing_type_specifier
-   : simple_type_specifier
-   | type_name_specifier
-   ;
-
 type_specifier_sequence
    : type_specifier
    | type_specifier type_specifier_sequence
    ;
 
-trailing_type_specifier_sequence
-   : trailing_type_specifier
-   | trailing_type_specifier trailing_type_specifier_sequence
-   ;
-
-simple_type_specifier
+type_specifier
    : nested_name_specifier? type_name
-   | nested_name_specifier template_id
    | Bool
    | Int8
    | Int16
@@ -407,7 +380,7 @@ init_declarator
 
 declarator
    : ptr_declarator
-   | noptr_declarator parameters_and_qualifiers trailing_return_type
+   | noptr_declarator parameters_and_qualifiers
    ;
 
 ptr_declarator
@@ -418,25 +391,15 @@ ptr_declarator
 noptr_declarator
    : declarator_id
    | noptr_declarator parameters_and_qualifiers
-   | noptr_declarator '[' constant_expression? ']'
    | '(' ptr_declarator ')'
    ;
 
 parameters_and_qualifiers
-   : '(' parameter_declaration_clause ')' ref_qualifier? exception_specification?
-   ;
-
-trailing_return_type
-   : '->' trailing_type_specifier_sequence
+   : '(' parameter_declaration_clause ')'
    ;
 
 ref_operator
    : '&'
-   ;
-
-ref_qualifier
-   : '&'
-   | '&&'
    ;
 
 declarator_id
@@ -465,13 +428,7 @@ parameter_declaration
    ;
 
 function_definition
-   : decl_specifier_sequence? declarator function_body
-   ;
-
-function_body
-   : compound_statement
-   | function_try_block
-   | '=' Default ';'
+   : decl_specifier_sequence? declarator compound_statement
    ;
 
 initializer
@@ -501,27 +458,17 @@ braced_init_list
 
 /*Classes*/
 
+class_specifier
+   : class_name base_clause? '{' member_specification? '}'
+   ;
+
 class_name
    : Identifier
    | template_id
    ;
 
-class_specifier
-   : class_head '{' member_specification? '}'
-   ;
-
-class_head
-   : Class class_head_name base_clause?
-   | Class base_clause?
-   ;
-
-class_head_name
-   : nested_name_specifier? class_name
-   ;
-
 member_specification
    : member_declaration member_specification?
-   | access_specifier ':' member_specification?
    ;
 
 member_declaration
@@ -538,10 +485,13 @@ member_declarator_list
 member_declarator
    : declarator
    | declarator brace_or_equal_initializer?
-   | Identifier? ':' constant_expression
    ;
 
-/*Derived classes*/
+access_specifier
+   : Private
+   | Protected
+   | Public
+   ;
 
 base_clause
    : ':' base_specifier_list
@@ -553,39 +503,7 @@ base_specifier_list
    ;
 
 base_specifier
-   : base_type_specifier
-   | access_specifier base_type_specifier
-   ;
-
-class_or_decltype
    : nested_name_specifier? class_name
-   ;
-
-base_type_specifier
-   : class_or_decltype
-   ;
-
-access_specifier
-   : Private
-   | Protected
-   | Public
-   ;
-
-/*Special member functions*/
-
-mem_initializer_list
-   : mem_initializer '...'?
-   | mem_initializer '...'? ',' mem_initializer_list
-   ;
-
-mem_initializer
-   : mem_initializer_id '(' expression_list? ')'
-   | mem_initializer_id braced_init_list
-   ;
-
-mem_initializer_id
-   : class_or_decltype
-   | Identifier
    ;
 
 /*Overloading*/
@@ -596,27 +514,12 @@ operator_function_id
 
 /*Templates*/
 
-template_parameter_list
-   : template_parameter
-   | template_parameter_list ',' template_parameter
-   ;
-
-template_parameter
-   : type_parameter
-   | parameter_declaration
-   ;
-
-type_parameter
-   : Class '...'? Identifier?
-   | Class Identifier? '=' type_id
-   | '...'? Identifier?
-   | Identifier? '=' type_id
-   | '<' template_parameter_list '>' Class '...'? Identifier?
-   | '<' template_parameter_list '>' Class Identifier? '=' id_expression
-   ;
-
 template_id
-   : Identifier '<' template_argument_list? '>'
+   : Identifier template_definition
+   ;
+
+template_definition
+   : '<' template_argument_list? '>'
    ;
 
 template_argument_list
@@ -630,18 +533,21 @@ template_argument
    | id_expression
    ;
 
+/*Types*/
+
 type_name_specifier
    : nested_name_specifier Identifier
    | nested_name_specifier template_id
    ;
 
+type_id_list
+   : type_id '...'?
+   | type_id_list ',' type_id '...'?
+   ;
+
 /*Exception handling*/
 
 try_block
-   : Try compound_statement handler_sequence
-   ;
-
-function_try_block
    : Try compound_statement handler_sequence
    ;
 
@@ -661,15 +567,6 @@ exception_declaration
 
 throw_expression
    : Throw assignment_expression?
-   ;
-
-exception_specification
-   : Throw '(' type_id_list? ')'
-   ;
-
-type_id_list
-   : type_id '...'?
-   | type_id_list ',' type_id '...'?
    ;
 
 operators
@@ -707,7 +604,6 @@ operators
    | '++'
    | '--'
    | ','
-   | '->'
    | '(' ')'
    | '[' ']'
    ;

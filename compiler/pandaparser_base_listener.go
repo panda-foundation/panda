@@ -56,18 +56,6 @@ func (s *BasePandaParserListener) EnterNested_name_specifier(ctx *Nested_name_sp
 // ExitNested_name_specifier is called when production nested_name_specifier is exited.
 func (s *BasePandaParserListener) ExitNested_name_specifier(ctx *Nested_name_specifierContext) {}
 
-// EnterLambda_expression is called when production lambda_expression is entered.
-func (s *BasePandaParserListener) EnterLambda_expression(ctx *Lambda_expressionContext) {}
-
-// ExitLambda_expression is called when production lambda_expression is exited.
-func (s *BasePandaParserListener) ExitLambda_expression(ctx *Lambda_expressionContext) {}
-
-// EnterLambda_declarator is called when production lambda_declarator is entered.
-func (s *BasePandaParserListener) EnterLambda_declarator(ctx *Lambda_declaratorContext) {}
-
-// ExitLambda_declarator is called when production lambda_declarator is exited.
-func (s *BasePandaParserListener) ExitLambda_declarator(ctx *Lambda_declaratorContext) {}
-
 // EnterPost_fix_expression is called when production post_fix_expression is entered.
 func (s *BasePandaParserListener) EnterPost_fix_expression(ctx *Post_fix_expressionContext) {}
 
@@ -316,37 +304,17 @@ func (s *BasePandaParserListener) EnterDecl_specifier_sequence(ctx *Decl_specifi
 // ExitDecl_specifier_sequence is called when production decl_specifier_sequence is exited.
 func (s *BasePandaParserListener) ExitDecl_specifier_sequence(ctx *Decl_specifier_sequenceContext) {}
 
-// EnterType_specifier is called when production type_specifier is entered.
-func (s *BasePandaParserListener) EnterType_specifier(ctx *Type_specifierContext) {}
-
-// ExitType_specifier is called when production type_specifier is exited.
-func (s *BasePandaParserListener) ExitType_specifier(ctx *Type_specifierContext) {}
-
-// EnterTrailing_type_specifier is called when production trailing_type_specifier is entered.
-func (s *BasePandaParserListener) EnterTrailing_type_specifier(ctx *Trailing_type_specifierContext) {}
-
-// ExitTrailing_type_specifier is called when production trailing_type_specifier is exited.
-func (s *BasePandaParserListener) ExitTrailing_type_specifier(ctx *Trailing_type_specifierContext) {}
-
 // EnterType_specifier_sequence is called when production type_specifier_sequence is entered.
 func (s *BasePandaParserListener) EnterType_specifier_sequence(ctx *Type_specifier_sequenceContext) {}
 
 // ExitType_specifier_sequence is called when production type_specifier_sequence is exited.
 func (s *BasePandaParserListener) ExitType_specifier_sequence(ctx *Type_specifier_sequenceContext) {}
 
-// EnterTrailing_type_specifier_sequence is called when production trailing_type_specifier_sequence is entered.
-func (s *BasePandaParserListener) EnterTrailing_type_specifier_sequence(ctx *Trailing_type_specifier_sequenceContext) {
-}
+// EnterType_specifier is called when production type_specifier is entered.
+func (s *BasePandaParserListener) EnterType_specifier(ctx *Type_specifierContext) {}
 
-// ExitTrailing_type_specifier_sequence is called when production trailing_type_specifier_sequence is exited.
-func (s *BasePandaParserListener) ExitTrailing_type_specifier_sequence(ctx *Trailing_type_specifier_sequenceContext) {
-}
-
-// EnterSimple_type_specifier is called when production simple_type_specifier is entered.
-func (s *BasePandaParserListener) EnterSimple_type_specifier(ctx *Simple_type_specifierContext) {}
-
-// ExitSimple_type_specifier is called when production simple_type_specifier is exited.
-func (s *BasePandaParserListener) ExitSimple_type_specifier(ctx *Simple_type_specifierContext) {}
+// ExitType_specifier is called when production type_specifier is exited.
+func (s *BasePandaParserListener) ExitType_specifier(ctx *Type_specifierContext) {}
 
 // EnterType_name is called when production type_name is entered.
 func (s *BasePandaParserListener) EnterType_name(ctx *Type_nameContext) {}
@@ -414,12 +382,18 @@ func (s *BasePandaParserListener) EnterNamespace_definition(ctx *Namespace_defin
 // ExitNamespace_definition is called when production namespace_definition is exited.
 func (s *BasePandaParserListener) ExitNamespace_definition(ctx *Namespace_definitionContext) {}
 
-// EnterQualified_namespace_specifier is called when production qualified_namespace_specifier is entered.
-func (s *BasePandaParserListener) EnterQualified_namespace_specifier(ctx *Qualified_namespace_specifierContext) {
+// EnterInclude_definition is called when production include_definition is entered.
+func (s *BasePandaParserListener) EnterInclude_definition(ctx *Include_definitionContext) {}
+
+// ExitInclude_definition is called when production include_definition is exited.
+func (s *BasePandaParserListener) ExitInclude_definition(ctx *Include_definitionContext) {}
+
+// EnterInclude_definition_sequence is called when production include_definition_sequence is entered.
+func (s *BasePandaParserListener) EnterInclude_definition_sequence(ctx *Include_definition_sequenceContext) {
 }
 
-// ExitQualified_namespace_specifier is called when production qualified_namespace_specifier is exited.
-func (s *BasePandaParserListener) ExitQualified_namespace_specifier(ctx *Qualified_namespace_specifierContext) {
+// ExitInclude_definition_sequence is called when production include_definition_sequence is exited.
+func (s *BasePandaParserListener) ExitInclude_definition_sequence(ctx *Include_definition_sequenceContext) {
 }
 
 // EnterInit_declarator_list is called when production init_declarator_list is entered.
@@ -460,23 +434,11 @@ func (s *BasePandaParserListener) EnterParameters_and_qualifiers(ctx *Parameters
 func (s *BasePandaParserListener) ExitParameters_and_qualifiers(ctx *Parameters_and_qualifiersContext) {
 }
 
-// EnterTrailing_return_type is called when production trailing_return_type is entered.
-func (s *BasePandaParserListener) EnterTrailing_return_type(ctx *Trailing_return_typeContext) {}
-
-// ExitTrailing_return_type is called when production trailing_return_type is exited.
-func (s *BasePandaParserListener) ExitTrailing_return_type(ctx *Trailing_return_typeContext) {}
-
 // EnterRef_operator is called when production ref_operator is entered.
 func (s *BasePandaParserListener) EnterRef_operator(ctx *Ref_operatorContext) {}
 
 // ExitRef_operator is called when production ref_operator is exited.
 func (s *BasePandaParserListener) ExitRef_operator(ctx *Ref_operatorContext) {}
-
-// EnterRef_qualifier is called when production ref_qualifier is entered.
-func (s *BasePandaParserListener) EnterRef_qualifier(ctx *Ref_qualifierContext) {}
-
-// ExitRef_qualifier is called when production ref_qualifier is exited.
-func (s *BasePandaParserListener) ExitRef_qualifier(ctx *Ref_qualifierContext) {}
 
 // EnterDeclarator_id is called when production declarator_id is entered.
 func (s *BasePandaParserListener) EnterDeclarator_id(ctx *Declarator_idContext) {}
@@ -518,12 +480,6 @@ func (s *BasePandaParserListener) EnterFunction_definition(ctx *Function_definit
 // ExitFunction_definition is called when production function_definition is exited.
 func (s *BasePandaParserListener) ExitFunction_definition(ctx *Function_definitionContext) {}
 
-// EnterFunction_body is called when production function_body is entered.
-func (s *BasePandaParserListener) EnterFunction_body(ctx *Function_bodyContext) {}
-
-// ExitFunction_body is called when production function_body is exited.
-func (s *BasePandaParserListener) ExitFunction_body(ctx *Function_bodyContext) {}
-
 // EnterInitializer is called when production initializer is entered.
 func (s *BasePandaParserListener) EnterInitializer(ctx *InitializerContext) {}
 
@@ -556,29 +512,17 @@ func (s *BasePandaParserListener) EnterBraced_init_list(ctx *Braced_init_listCon
 // ExitBraced_init_list is called when production braced_init_list is exited.
 func (s *BasePandaParserListener) ExitBraced_init_list(ctx *Braced_init_listContext) {}
 
-// EnterClass_name is called when production class_name is entered.
-func (s *BasePandaParserListener) EnterClass_name(ctx *Class_nameContext) {}
-
-// ExitClass_name is called when production class_name is exited.
-func (s *BasePandaParserListener) ExitClass_name(ctx *Class_nameContext) {}
-
 // EnterClass_specifier is called when production class_specifier is entered.
 func (s *BasePandaParserListener) EnterClass_specifier(ctx *Class_specifierContext) {}
 
 // ExitClass_specifier is called when production class_specifier is exited.
 func (s *BasePandaParserListener) ExitClass_specifier(ctx *Class_specifierContext) {}
 
-// EnterClass_head is called when production class_head is entered.
-func (s *BasePandaParserListener) EnterClass_head(ctx *Class_headContext) {}
+// EnterClass_name is called when production class_name is entered.
+func (s *BasePandaParserListener) EnterClass_name(ctx *Class_nameContext) {}
 
-// ExitClass_head is called when production class_head is exited.
-func (s *BasePandaParserListener) ExitClass_head(ctx *Class_headContext) {}
-
-// EnterClass_head_name is called when production class_head_name is entered.
-func (s *BasePandaParserListener) EnterClass_head_name(ctx *Class_head_nameContext) {}
-
-// ExitClass_head_name is called when production class_head_name is exited.
-func (s *BasePandaParserListener) ExitClass_head_name(ctx *Class_head_nameContext) {}
+// ExitClass_name is called when production class_name is exited.
+func (s *BasePandaParserListener) ExitClass_name(ctx *Class_nameContext) {}
 
 // EnterMember_specification is called when production member_specification is entered.
 func (s *BasePandaParserListener) EnterMember_specification(ctx *Member_specificationContext) {}
@@ -604,6 +548,12 @@ func (s *BasePandaParserListener) EnterMember_declarator(ctx *Member_declaratorC
 // ExitMember_declarator is called when production member_declarator is exited.
 func (s *BasePandaParserListener) ExitMember_declarator(ctx *Member_declaratorContext) {}
 
+// EnterAccess_specifier is called when production access_specifier is entered.
+func (s *BasePandaParserListener) EnterAccess_specifier(ctx *Access_specifierContext) {}
+
+// ExitAccess_specifier is called when production access_specifier is exited.
+func (s *BasePandaParserListener) ExitAccess_specifier(ctx *Access_specifierContext) {}
+
 // EnterBase_clause is called when production base_clause is entered.
 func (s *BasePandaParserListener) EnterBase_clause(ctx *Base_clauseContext) {}
 
@@ -622,65 +572,11 @@ func (s *BasePandaParserListener) EnterBase_specifier(ctx *Base_specifierContext
 // ExitBase_specifier is called when production base_specifier is exited.
 func (s *BasePandaParserListener) ExitBase_specifier(ctx *Base_specifierContext) {}
 
-// EnterClass_or_decltype is called when production class_or_decltype is entered.
-func (s *BasePandaParserListener) EnterClass_or_decltype(ctx *Class_or_decltypeContext) {}
-
-// ExitClass_or_decltype is called when production class_or_decltype is exited.
-func (s *BasePandaParserListener) ExitClass_or_decltype(ctx *Class_or_decltypeContext) {}
-
-// EnterBase_type_specifier is called when production base_type_specifier is entered.
-func (s *BasePandaParserListener) EnterBase_type_specifier(ctx *Base_type_specifierContext) {}
-
-// ExitBase_type_specifier is called when production base_type_specifier is exited.
-func (s *BasePandaParserListener) ExitBase_type_specifier(ctx *Base_type_specifierContext) {}
-
-// EnterAccess_specifier is called when production access_specifier is entered.
-func (s *BasePandaParserListener) EnterAccess_specifier(ctx *Access_specifierContext) {}
-
-// ExitAccess_specifier is called when production access_specifier is exited.
-func (s *BasePandaParserListener) ExitAccess_specifier(ctx *Access_specifierContext) {}
-
-// EnterMem_initializer_list is called when production mem_initializer_list is entered.
-func (s *BasePandaParserListener) EnterMem_initializer_list(ctx *Mem_initializer_listContext) {}
-
-// ExitMem_initializer_list is called when production mem_initializer_list is exited.
-func (s *BasePandaParserListener) ExitMem_initializer_list(ctx *Mem_initializer_listContext) {}
-
-// EnterMem_initializer is called when production mem_initializer is entered.
-func (s *BasePandaParserListener) EnterMem_initializer(ctx *Mem_initializerContext) {}
-
-// ExitMem_initializer is called when production mem_initializer is exited.
-func (s *BasePandaParserListener) ExitMem_initializer(ctx *Mem_initializerContext) {}
-
-// EnterMem_initializer_id is called when production mem_initializer_id is entered.
-func (s *BasePandaParserListener) EnterMem_initializer_id(ctx *Mem_initializer_idContext) {}
-
-// ExitMem_initializer_id is called when production mem_initializer_id is exited.
-func (s *BasePandaParserListener) ExitMem_initializer_id(ctx *Mem_initializer_idContext) {}
-
 // EnterOperator_function_id is called when production operator_function_id is entered.
 func (s *BasePandaParserListener) EnterOperator_function_id(ctx *Operator_function_idContext) {}
 
 // ExitOperator_function_id is called when production operator_function_id is exited.
 func (s *BasePandaParserListener) ExitOperator_function_id(ctx *Operator_function_idContext) {}
-
-// EnterTemplate_parameter_list is called when production template_parameter_list is entered.
-func (s *BasePandaParserListener) EnterTemplate_parameter_list(ctx *Template_parameter_listContext) {}
-
-// ExitTemplate_parameter_list is called when production template_parameter_list is exited.
-func (s *BasePandaParserListener) ExitTemplate_parameter_list(ctx *Template_parameter_listContext) {}
-
-// EnterTemplate_parameter is called when production template_parameter is entered.
-func (s *BasePandaParserListener) EnterTemplate_parameter(ctx *Template_parameterContext) {}
-
-// ExitTemplate_parameter is called when production template_parameter is exited.
-func (s *BasePandaParserListener) ExitTemplate_parameter(ctx *Template_parameterContext) {}
-
-// EnterType_parameter is called when production type_parameter is entered.
-func (s *BasePandaParserListener) EnterType_parameter(ctx *Type_parameterContext) {}
-
-// ExitType_parameter is called when production type_parameter is exited.
-func (s *BasePandaParserListener) ExitType_parameter(ctx *Type_parameterContext) {}
 
 // EnterTemplate_id is called when production template_id is entered.
 func (s *BasePandaParserListener) EnterTemplate_id(ctx *Template_idContext) {}
@@ -688,11 +584,11 @@ func (s *BasePandaParserListener) EnterTemplate_id(ctx *Template_idContext) {}
 // ExitTemplate_id is called when production template_id is exited.
 func (s *BasePandaParserListener) ExitTemplate_id(ctx *Template_idContext) {}
 
-// EnterTemplate_name is called when production template_name is entered.
-func (s *BasePandaParserListener) EnterTemplate_name(ctx *Template_nameContext) {}
+// EnterTemplate_definition is called when production template_definition is entered.
+func (s *BasePandaParserListener) EnterTemplate_definition(ctx *Template_definitionContext) {}
 
-// ExitTemplate_name is called when production template_name is exited.
-func (s *BasePandaParserListener) ExitTemplate_name(ctx *Template_nameContext) {}
+// ExitTemplate_definition is called when production template_definition is exited.
+func (s *BasePandaParserListener) ExitTemplate_definition(ctx *Template_definitionContext) {}
 
 // EnterTemplate_argument_list is called when production template_argument_list is entered.
 func (s *BasePandaParserListener) EnterTemplate_argument_list(ctx *Template_argument_listContext) {}
@@ -712,17 +608,17 @@ func (s *BasePandaParserListener) EnterType_name_specifier(ctx *Type_name_specif
 // ExitType_name_specifier is called when production type_name_specifier is exited.
 func (s *BasePandaParserListener) ExitType_name_specifier(ctx *Type_name_specifierContext) {}
 
+// EnterType_id_list is called when production type_id_list is entered.
+func (s *BasePandaParserListener) EnterType_id_list(ctx *Type_id_listContext) {}
+
+// ExitType_id_list is called when production type_id_list is exited.
+func (s *BasePandaParserListener) ExitType_id_list(ctx *Type_id_listContext) {}
+
 // EnterTry_block is called when production try_block is entered.
 func (s *BasePandaParserListener) EnterTry_block(ctx *Try_blockContext) {}
 
 // ExitTry_block is called when production try_block is exited.
 func (s *BasePandaParserListener) ExitTry_block(ctx *Try_blockContext) {}
-
-// EnterFunction_try_block is called when production function_try_block is entered.
-func (s *BasePandaParserListener) EnterFunction_try_block(ctx *Function_try_blockContext) {}
-
-// ExitFunction_try_block is called when production function_try_block is exited.
-func (s *BasePandaParserListener) ExitFunction_try_block(ctx *Function_try_blockContext) {}
 
 // EnterHandler_sequence is called when production handler_sequence is entered.
 func (s *BasePandaParserListener) EnterHandler_sequence(ctx *Handler_sequenceContext) {}
@@ -747,18 +643,6 @@ func (s *BasePandaParserListener) EnterThrow_expression(ctx *Throw_expressionCon
 
 // ExitThrow_expression is called when production throw_expression is exited.
 func (s *BasePandaParserListener) ExitThrow_expression(ctx *Throw_expressionContext) {}
-
-// EnterException_specification is called when production exception_specification is entered.
-func (s *BasePandaParserListener) EnterException_specification(ctx *Exception_specificationContext) {}
-
-// ExitException_specification is called when production exception_specification is exited.
-func (s *BasePandaParserListener) ExitException_specification(ctx *Exception_specificationContext) {}
-
-// EnterType_id_list is called when production type_id_list is entered.
-func (s *BasePandaParserListener) EnterType_id_list(ctx *Type_id_listContext) {}
-
-// ExitType_id_list is called when production type_id_list is exited.
-func (s *BasePandaParserListener) ExitType_id_list(ctx *Type_id_listContext) {}
 
 // EnterOperators is called when production operators is entered.
 func (s *BasePandaParserListener) EnterOperators(ctx *OperatorsContext) {}

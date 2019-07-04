@@ -25,12 +25,6 @@ type PandaParserListener interface {
 	// EnterNested_name_specifier is called when entering the nested_name_specifier production.
 	EnterNested_name_specifier(c *Nested_name_specifierContext)
 
-	// EnterLambda_expression is called when entering the lambda_expression production.
-	EnterLambda_expression(c *Lambda_expressionContext)
-
-	// EnterLambda_declarator is called when entering the lambda_declarator production.
-	EnterLambda_declarator(c *Lambda_declaratorContext)
-
 	// EnterPost_fix_expression is called when entering the post_fix_expression production.
 	EnterPost_fix_expression(c *Post_fix_expressionContext)
 
@@ -154,20 +148,11 @@ type PandaParserListener interface {
 	// EnterDecl_specifier_sequence is called when entering the decl_specifier_sequence production.
 	EnterDecl_specifier_sequence(c *Decl_specifier_sequenceContext)
 
-	// EnterType_specifier is called when entering the type_specifier production.
-	EnterType_specifier(c *Type_specifierContext)
-
-	// EnterTrailing_type_specifier is called when entering the trailing_type_specifier production.
-	EnterTrailing_type_specifier(c *Trailing_type_specifierContext)
-
 	// EnterType_specifier_sequence is called when entering the type_specifier_sequence production.
 	EnterType_specifier_sequence(c *Type_specifier_sequenceContext)
 
-	// EnterTrailing_type_specifier_sequence is called when entering the trailing_type_specifier_sequence production.
-	EnterTrailing_type_specifier_sequence(c *Trailing_type_specifier_sequenceContext)
-
-	// EnterSimple_type_specifier is called when entering the simple_type_specifier production.
-	EnterSimple_type_specifier(c *Simple_type_specifierContext)
+	// EnterType_specifier is called when entering the type_specifier production.
+	EnterType_specifier(c *Type_specifierContext)
 
 	// EnterType_name is called when entering the type_name production.
 	EnterType_name(c *Type_nameContext)
@@ -202,8 +187,11 @@ type PandaParserListener interface {
 	// EnterNamespace_definition is called when entering the namespace_definition production.
 	EnterNamespace_definition(c *Namespace_definitionContext)
 
-	// EnterQualified_namespace_specifier is called when entering the qualified_namespace_specifier production.
-	EnterQualified_namespace_specifier(c *Qualified_namespace_specifierContext)
+	// EnterInclude_definition is called when entering the include_definition production.
+	EnterInclude_definition(c *Include_definitionContext)
+
+	// EnterInclude_definition_sequence is called when entering the include_definition_sequence production.
+	EnterInclude_definition_sequence(c *Include_definition_sequenceContext)
 
 	// EnterInit_declarator_list is called when entering the init_declarator_list production.
 	EnterInit_declarator_list(c *Init_declarator_listContext)
@@ -223,14 +211,8 @@ type PandaParserListener interface {
 	// EnterParameters_and_qualifiers is called when entering the parameters_and_qualifiers production.
 	EnterParameters_and_qualifiers(c *Parameters_and_qualifiersContext)
 
-	// EnterTrailing_return_type is called when entering the trailing_return_type production.
-	EnterTrailing_return_type(c *Trailing_return_typeContext)
-
 	// EnterRef_operator is called when entering the ref_operator production.
 	EnterRef_operator(c *Ref_operatorContext)
-
-	// EnterRef_qualifier is called when entering the ref_qualifier production.
-	EnterRef_qualifier(c *Ref_qualifierContext)
 
 	// EnterDeclarator_id is called when entering the declarator_id production.
 	EnterDeclarator_id(c *Declarator_idContext)
@@ -250,9 +232,6 @@ type PandaParserListener interface {
 	// EnterFunction_definition is called when entering the function_definition production.
 	EnterFunction_definition(c *Function_definitionContext)
 
-	// EnterFunction_body is called when entering the function_body production.
-	EnterFunction_body(c *Function_bodyContext)
-
 	// EnterInitializer is called when entering the initializer production.
 	EnterInitializer(c *InitializerContext)
 
@@ -268,17 +247,11 @@ type PandaParserListener interface {
 	// EnterBraced_init_list is called when entering the braced_init_list production.
 	EnterBraced_init_list(c *Braced_init_listContext)
 
-	// EnterClass_name is called when entering the class_name production.
-	EnterClass_name(c *Class_nameContext)
-
 	// EnterClass_specifier is called when entering the class_specifier production.
 	EnterClass_specifier(c *Class_specifierContext)
 
-	// EnterClass_head is called when entering the class_head production.
-	EnterClass_head(c *Class_headContext)
-
-	// EnterClass_head_name is called when entering the class_head_name production.
-	EnterClass_head_name(c *Class_head_nameContext)
+	// EnterClass_name is called when entering the class_name production.
+	EnterClass_name(c *Class_nameContext)
 
 	// EnterMember_specification is called when entering the member_specification production.
 	EnterMember_specification(c *Member_specificationContext)
@@ -292,6 +265,9 @@ type PandaParserListener interface {
 	// EnterMember_declarator is called when entering the member_declarator production.
 	EnterMember_declarator(c *Member_declaratorContext)
 
+	// EnterAccess_specifier is called when entering the access_specifier production.
+	EnterAccess_specifier(c *Access_specifierContext)
+
 	// EnterBase_clause is called when entering the base_clause production.
 	EnterBase_clause(c *Base_clauseContext)
 
@@ -301,41 +277,14 @@ type PandaParserListener interface {
 	// EnterBase_specifier is called when entering the base_specifier production.
 	EnterBase_specifier(c *Base_specifierContext)
 
-	// EnterClass_or_decltype is called when entering the class_or_decltype production.
-	EnterClass_or_decltype(c *Class_or_decltypeContext)
-
-	// EnterBase_type_specifier is called when entering the base_type_specifier production.
-	EnterBase_type_specifier(c *Base_type_specifierContext)
-
-	// EnterAccess_specifier is called when entering the access_specifier production.
-	EnterAccess_specifier(c *Access_specifierContext)
-
-	// EnterMem_initializer_list is called when entering the mem_initializer_list production.
-	EnterMem_initializer_list(c *Mem_initializer_listContext)
-
-	// EnterMem_initializer is called when entering the mem_initializer production.
-	EnterMem_initializer(c *Mem_initializerContext)
-
-	// EnterMem_initializer_id is called when entering the mem_initializer_id production.
-	EnterMem_initializer_id(c *Mem_initializer_idContext)
-
 	// EnterOperator_function_id is called when entering the operator_function_id production.
 	EnterOperator_function_id(c *Operator_function_idContext)
-
-	// EnterTemplate_parameter_list is called when entering the template_parameter_list production.
-	EnterTemplate_parameter_list(c *Template_parameter_listContext)
-
-	// EnterTemplate_parameter is called when entering the template_parameter production.
-	EnterTemplate_parameter(c *Template_parameterContext)
-
-	// EnterType_parameter is called when entering the type_parameter production.
-	EnterType_parameter(c *Type_parameterContext)
 
 	// EnterTemplate_id is called when entering the template_id production.
 	EnterTemplate_id(c *Template_idContext)
 
-	// EnterTemplate_name is called when entering the template_name production.
-	EnterTemplate_name(c *Template_nameContext)
+	// EnterTemplate_definition is called when entering the template_definition production.
+	EnterTemplate_definition(c *Template_definitionContext)
 
 	// EnterTemplate_argument_list is called when entering the template_argument_list production.
 	EnterTemplate_argument_list(c *Template_argument_listContext)
@@ -346,11 +295,11 @@ type PandaParserListener interface {
 	// EnterType_name_specifier is called when entering the type_name_specifier production.
 	EnterType_name_specifier(c *Type_name_specifierContext)
 
+	// EnterType_id_list is called when entering the type_id_list production.
+	EnterType_id_list(c *Type_id_listContext)
+
 	// EnterTry_block is called when entering the try_block production.
 	EnterTry_block(c *Try_blockContext)
-
-	// EnterFunction_try_block is called when entering the function_try_block production.
-	EnterFunction_try_block(c *Function_try_blockContext)
 
 	// EnterHandler_sequence is called when entering the handler_sequence production.
 	EnterHandler_sequence(c *Handler_sequenceContext)
@@ -363,12 +312,6 @@ type PandaParserListener interface {
 
 	// EnterThrow_expression is called when entering the throw_expression production.
 	EnterThrow_expression(c *Throw_expressionContext)
-
-	// EnterException_specification is called when entering the exception_specification production.
-	EnterException_specification(c *Exception_specificationContext)
-
-	// EnterType_id_list is called when entering the type_id_list production.
-	EnterType_id_list(c *Type_id_listContext)
 
 	// EnterOperators is called when entering the operators production.
 	EnterOperators(c *OperatorsContext)
@@ -393,12 +336,6 @@ type PandaParserListener interface {
 
 	// ExitNested_name_specifier is called when exiting the nested_name_specifier production.
 	ExitNested_name_specifier(c *Nested_name_specifierContext)
-
-	// ExitLambda_expression is called when exiting the lambda_expression production.
-	ExitLambda_expression(c *Lambda_expressionContext)
-
-	// ExitLambda_declarator is called when exiting the lambda_declarator production.
-	ExitLambda_declarator(c *Lambda_declaratorContext)
 
 	// ExitPost_fix_expression is called when exiting the post_fix_expression production.
 	ExitPost_fix_expression(c *Post_fix_expressionContext)
@@ -523,20 +460,11 @@ type PandaParserListener interface {
 	// ExitDecl_specifier_sequence is called when exiting the decl_specifier_sequence production.
 	ExitDecl_specifier_sequence(c *Decl_specifier_sequenceContext)
 
-	// ExitType_specifier is called when exiting the type_specifier production.
-	ExitType_specifier(c *Type_specifierContext)
-
-	// ExitTrailing_type_specifier is called when exiting the trailing_type_specifier production.
-	ExitTrailing_type_specifier(c *Trailing_type_specifierContext)
-
 	// ExitType_specifier_sequence is called when exiting the type_specifier_sequence production.
 	ExitType_specifier_sequence(c *Type_specifier_sequenceContext)
 
-	// ExitTrailing_type_specifier_sequence is called when exiting the trailing_type_specifier_sequence production.
-	ExitTrailing_type_specifier_sequence(c *Trailing_type_specifier_sequenceContext)
-
-	// ExitSimple_type_specifier is called when exiting the simple_type_specifier production.
-	ExitSimple_type_specifier(c *Simple_type_specifierContext)
+	// ExitType_specifier is called when exiting the type_specifier production.
+	ExitType_specifier(c *Type_specifierContext)
 
 	// ExitType_name is called when exiting the type_name production.
 	ExitType_name(c *Type_nameContext)
@@ -571,8 +499,11 @@ type PandaParserListener interface {
 	// ExitNamespace_definition is called when exiting the namespace_definition production.
 	ExitNamespace_definition(c *Namespace_definitionContext)
 
-	// ExitQualified_namespace_specifier is called when exiting the qualified_namespace_specifier production.
-	ExitQualified_namespace_specifier(c *Qualified_namespace_specifierContext)
+	// ExitInclude_definition is called when exiting the include_definition production.
+	ExitInclude_definition(c *Include_definitionContext)
+
+	// ExitInclude_definition_sequence is called when exiting the include_definition_sequence production.
+	ExitInclude_definition_sequence(c *Include_definition_sequenceContext)
 
 	// ExitInit_declarator_list is called when exiting the init_declarator_list production.
 	ExitInit_declarator_list(c *Init_declarator_listContext)
@@ -592,14 +523,8 @@ type PandaParserListener interface {
 	// ExitParameters_and_qualifiers is called when exiting the parameters_and_qualifiers production.
 	ExitParameters_and_qualifiers(c *Parameters_and_qualifiersContext)
 
-	// ExitTrailing_return_type is called when exiting the trailing_return_type production.
-	ExitTrailing_return_type(c *Trailing_return_typeContext)
-
 	// ExitRef_operator is called when exiting the ref_operator production.
 	ExitRef_operator(c *Ref_operatorContext)
-
-	// ExitRef_qualifier is called when exiting the ref_qualifier production.
-	ExitRef_qualifier(c *Ref_qualifierContext)
 
 	// ExitDeclarator_id is called when exiting the declarator_id production.
 	ExitDeclarator_id(c *Declarator_idContext)
@@ -619,9 +544,6 @@ type PandaParserListener interface {
 	// ExitFunction_definition is called when exiting the function_definition production.
 	ExitFunction_definition(c *Function_definitionContext)
 
-	// ExitFunction_body is called when exiting the function_body production.
-	ExitFunction_body(c *Function_bodyContext)
-
 	// ExitInitializer is called when exiting the initializer production.
 	ExitInitializer(c *InitializerContext)
 
@@ -637,17 +559,11 @@ type PandaParserListener interface {
 	// ExitBraced_init_list is called when exiting the braced_init_list production.
 	ExitBraced_init_list(c *Braced_init_listContext)
 
-	// ExitClass_name is called when exiting the class_name production.
-	ExitClass_name(c *Class_nameContext)
-
 	// ExitClass_specifier is called when exiting the class_specifier production.
 	ExitClass_specifier(c *Class_specifierContext)
 
-	// ExitClass_head is called when exiting the class_head production.
-	ExitClass_head(c *Class_headContext)
-
-	// ExitClass_head_name is called when exiting the class_head_name production.
-	ExitClass_head_name(c *Class_head_nameContext)
+	// ExitClass_name is called when exiting the class_name production.
+	ExitClass_name(c *Class_nameContext)
 
 	// ExitMember_specification is called when exiting the member_specification production.
 	ExitMember_specification(c *Member_specificationContext)
@@ -661,6 +577,9 @@ type PandaParserListener interface {
 	// ExitMember_declarator is called when exiting the member_declarator production.
 	ExitMember_declarator(c *Member_declaratorContext)
 
+	// ExitAccess_specifier is called when exiting the access_specifier production.
+	ExitAccess_specifier(c *Access_specifierContext)
+
 	// ExitBase_clause is called when exiting the base_clause production.
 	ExitBase_clause(c *Base_clauseContext)
 
@@ -670,41 +589,14 @@ type PandaParserListener interface {
 	// ExitBase_specifier is called when exiting the base_specifier production.
 	ExitBase_specifier(c *Base_specifierContext)
 
-	// ExitClass_or_decltype is called when exiting the class_or_decltype production.
-	ExitClass_or_decltype(c *Class_or_decltypeContext)
-
-	// ExitBase_type_specifier is called when exiting the base_type_specifier production.
-	ExitBase_type_specifier(c *Base_type_specifierContext)
-
-	// ExitAccess_specifier is called when exiting the access_specifier production.
-	ExitAccess_specifier(c *Access_specifierContext)
-
-	// ExitMem_initializer_list is called when exiting the mem_initializer_list production.
-	ExitMem_initializer_list(c *Mem_initializer_listContext)
-
-	// ExitMem_initializer is called when exiting the mem_initializer production.
-	ExitMem_initializer(c *Mem_initializerContext)
-
-	// ExitMem_initializer_id is called when exiting the mem_initializer_id production.
-	ExitMem_initializer_id(c *Mem_initializer_idContext)
-
 	// ExitOperator_function_id is called when exiting the operator_function_id production.
 	ExitOperator_function_id(c *Operator_function_idContext)
-
-	// ExitTemplate_parameter_list is called when exiting the template_parameter_list production.
-	ExitTemplate_parameter_list(c *Template_parameter_listContext)
-
-	// ExitTemplate_parameter is called when exiting the template_parameter production.
-	ExitTemplate_parameter(c *Template_parameterContext)
-
-	// ExitType_parameter is called when exiting the type_parameter production.
-	ExitType_parameter(c *Type_parameterContext)
 
 	// ExitTemplate_id is called when exiting the template_id production.
 	ExitTemplate_id(c *Template_idContext)
 
-	// ExitTemplate_name is called when exiting the template_name production.
-	ExitTemplate_name(c *Template_nameContext)
+	// ExitTemplate_definition is called when exiting the template_definition production.
+	ExitTemplate_definition(c *Template_definitionContext)
 
 	// ExitTemplate_argument_list is called when exiting the template_argument_list production.
 	ExitTemplate_argument_list(c *Template_argument_listContext)
@@ -715,11 +607,11 @@ type PandaParserListener interface {
 	// ExitType_name_specifier is called when exiting the type_name_specifier production.
 	ExitType_name_specifier(c *Type_name_specifierContext)
 
+	// ExitType_id_list is called when exiting the type_id_list production.
+	ExitType_id_list(c *Type_id_listContext)
+
 	// ExitTry_block is called when exiting the try_block production.
 	ExitTry_block(c *Try_blockContext)
-
-	// ExitFunction_try_block is called when exiting the function_try_block production.
-	ExitFunction_try_block(c *Function_try_blockContext)
 
 	// ExitHandler_sequence is called when exiting the handler_sequence production.
 	ExitHandler_sequence(c *Handler_sequenceContext)
@@ -732,12 +624,6 @@ type PandaParserListener interface {
 
 	// ExitThrow_expression is called when exiting the throw_expression production.
 	ExitThrow_expression(c *Throw_expressionContext)
-
-	// ExitException_specification is called when exiting the exception_specification production.
-	ExitException_specification(c *Exception_specificationContext)
-
-	// ExitType_id_list is called when exiting the type_id_list production.
-	ExitType_id_list(c *Type_id_listContext)
 
 	// ExitOperators is called when exiting the operators production.
 	ExitOperators(c *OperatorsContext)
