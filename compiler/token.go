@@ -1,7 +1,7 @@
 package compiler
 
 // Token is keywords and operators
-type Token int
+type Token rune
 
 // Tokens defined here
 const (
@@ -109,6 +109,7 @@ const (
 var (
 	keyToToken map[string]Token
 	tokenToKey map[Token]string
+	operators  [128]bool
 )
 
 func init() {
@@ -216,17 +217,55 @@ func init() {
 	for k, v := range tokenToKey {
 		keyToToken[v] = k
 	}
+
+	operators['('] = true
+	operators[')'] = true
+	operators['['] = true
+	operators[']'] = true
+	operators['{'] = true
+	operators['}'] = true
+	operators['+'] = true
+	operators['-'] = true
+	operators['*'] = true
+	operators['/'] = true
+	operators['%'] = true
+	operators['^'] = true
+	operators['&'] = true
+	operators['|'] = true
+	operators['~'] = true
+	operators['!'] = true
+	operators['='] = true
+	operators['<'] = true
+	operators['>'] = true
+	operators[','] = true
+	operators[':'] = true
+	operators['?'] = true
+	operators[';'] = true
+	operators['.'] = true
 }
 
 // KeyToToken convert key to token
-func KeyToToken(key string) (Token, bool) {
-	token, ok := keyToToken[key]
-	return token, ok
+func KeyToToken(key string) Token {
+	return keyToToken[key]
 }
 
-// TokenToKey convert token to key
-func TokenToKey(token Token) string {
+// TokenToKen convert token to key
+func TokenToKen(token Token) string {
 	return tokenToKey[token]
+}
+
+// HasToken return if it is keyword
+func HasToken(key string) bool {
+	_, ok := keyToToken[key]
+	return ok
+}
+
+// IsOperator return if the char is need operator
+func IsOperator(char rune) bool {
+	if char >= 128 || char < 0 {
+		return false
+	}
+	return operators[char]
 }
 
 /*

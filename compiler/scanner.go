@@ -30,36 +30,48 @@ func (pos Position) String() string {
 	return s
 }
 
-// Tokens for scanner
+// Type for scanner
+type Type rune
+
+// Token types
 const (
-	EOF = -(iota + 1)
-	Identifier
-	TokenValue
-	IntValue
-	FloatValue
-	CharValue
-	StringValue
-	RawString
-	NewLine
-	Comment
-	MetaIdentifier
+	TypeInvalid Type = iota
+	TypeEOF
+	TypeIdentifier
+	TypeToken
+	TypeInt
+	TypeFloat
+	TypeChar
+	TypeString
+	TypeRawString
+	TypeNewLine
+	TypeComment
+	TypeMetaIdentifier
+	TypeIgnored
 )
 
-var tokenString = map[rune]string{
-	EOF:            "EOF",
-	Identifier:     "Identifier",
-	TokenValue:     "Token",
-	IntValue:       "Int",
-	FloatValue:     "Float",
-	CharValue:      "Char",
-	StringValue:    "String",
-	RawString:      "RawString",
-	NewLine:        "NewLine",
-	Comment:        "Comment",
-	MetaIdentifier: "MetaIdentifier",
+const (
+	EOFChar     = -1
+	InvalidChar = -2
+)
+
+var tokenString = map[Type]string{
+	TypeInvalid:        "Invalid",
+	TypeEOF:            "EOF",
+	TypeIdentifier:     "Identifier",
+	TypeToken:          "Token",
+	TypeInt:            "Int",
+	TypeFloat:          "Float",
+	TypeChar:           "Char",
+	TypeString:         "String",
+	TypeRawString:      "RawString",
+	TypeNewLine:        "NewLine",
+	TypeComment:        "Comment",
+	TypeMetaIdentifier: "MetaIdentifier",
+	TypeIgnored:        "Ignored", // by conditional compile
 }
 
-func TokenToString(token rune) string {
+func TokenToString(token Type) string {
 	return tokenString[token]
 }
 
@@ -91,8 +103,6 @@ type Scanner struct {
 	Error      func(s *Scanner, msg string)
 	ErrorCount int
 
-	Whitespace uint64
-
 	Position
 }
 
@@ -114,12 +124,11 @@ func (s *Scanner) Init(src io.Reader, skipComment bool) *Scanner {
 	s.tokenPos = -1
 
 	// initialize one character look-ahead
-	s.char = -2 // no char read yet, not EOF
+	s.char = InvalidChar // no char read yet, not EOF
 
 	// initialize public fields
 	s.Error = nil
 	s.ErrorCount = 0
-	s.Whitespace = 1<<'\t' | 1<<' ' | 1<<'\r'
 	s.Line = 0 // invalidate token position
 
 	return s
@@ -153,7 +162,7 @@ func (s *Scanner) next() rune {
 						s.column++
 					}
 					s.lastCharLen = 0
-					return EOF
+					return EOFChar
 				}
 				break
 			}
@@ -197,14 +206,14 @@ func (s *Scanner) Next() rune {
 	s.tokenPos = -1 // don't collect token text
 	s.Line = 0      // invalidate token position
 	char := s.Peek()
-	if char != EOF {
+	if char != EOFChar {
 		s.char = s.next()
 	}
 	return char
 }
 
 func (s *Scanner) Peek() rune {
-	if s.char == -2 {
+	if s.char == InvalidChar {
 		s.char = s.next()
 		if s.char == '\uFEFF' {
 			s.char = s.next()
@@ -214,7 +223,6 @@ func (s *Scanner) Peek() rune {
 }
 
 func (s *Scanner) error(msg string) {
-	//TO-DO check it later
 	s.tokenEnd = s.srcPos - s.lastCharLen // make sure token text is terminated
 	s.ErrorCount++
 	if s.Error != nil {
@@ -271,15 +279,15 @@ func (s *Scanner) digits(char0 rune, base int, invalid *rune) rune {
 	return char
 }
 
-func (s *Scanner) scanNumber(char rune, seenDot bool) (rune, rune) {
+func (s *Scanner) scanNumber(char rune, seenDot bool) (Type, rune) {
 	base := 10         // number base
 	prefix := rune(0)  // one of 0 (decimal), '0' (0-octal), 'x', 'o', or 'b'
 	invalid := rune(0) // invalid digit in literal, or 0
 
 	// integer part
-	var token rune
+	var token Type
 	if !seenDot {
-		token = Int
+		token = TypeInt
 		if char == '0' {
 			char = s.next()
 			switch lower(char) {
@@ -305,7 +313,7 @@ func (s *Scanner) scanNumber(char rune, seenDot bool) (rune, rune) {
 
 	// fractional part
 	if seenDot {
-		token = Float
+		token = TypeFloat
 		if prefix == 'o' || prefix == 'b' {
 			s.error("invalid radix point in " + literalNumberName(prefix))
 		}
@@ -318,16 +326,16 @@ func (s *Scanner) scanNumber(char rune, seenDot bool) (rune, rune) {
 			s.errorf("%q exponent requires decimal mantissa", char)
 		}
 		char = s.next()
-		token = Float
+		token = TypeFloat
 		if char == '+' || char == '-' {
 			char = s.next()
 		}
 		char = s.digits(char, 10, nil)
-	} else if prefix == 'x' && token == Float {
+	} else if prefix == 'x' && token == TypeFloat {
 		s.error("hexadecimal mantissa requires a 'p' exponent")
 	}
 
-	if token == Int && invalid != 0 {
+	if token == TypeInt && invalid != 0 {
 		s.errorf("invalid digit %q in %s", invalid, literalNumberName(prefix))
 	}
 
@@ -394,7 +402,7 @@ func (s *Scanner) scanString(quote rune) (n int) {
 	char := s.next() // read character after quote
 	for char != quote {
 		if char == '\n' || char < 0 {
-			s.error("literal not terminated")
+			s.error("string not terminated")
 			return
 		}
 		if char == '\\' {
@@ -407,25 +415,33 @@ func (s *Scanner) scanString(quote rune) (n int) {
 	return
 }
 
-func (s *Scanner) scanRawString() {
-	char := s.next() // read character after '@('
+func (s *Scanner) scanRawString() rune {
+	char := s.next() // read character after '@("'
 	for {
 		if char < 0 {
-			s.error("literal not terminated")
+			s.error("raw string not terminated")
 			break
 		}
 		char0 := char
 		char = s.next()
-		if char0 == ')' && char == '"' {
+		if char0 == '"' && char == ')' {
 			char = s.next()
 			break
 		}
 	}
+	return char
 }
 
 func (s *Scanner) scanChar() {
 	if s.scanString('\'') != 1 {
 		s.error("invalid char literal")
+	}
+}
+
+func (s *Scanner) scanOperators() {
+	char := s.next() // read character after '`'
+	for IsOperator(char) {
+		char = s.next()
 	}
 }
 
@@ -459,7 +475,7 @@ func (s *Scanner) scanComment(char rune) rune {
 	return char
 }
 
-func (s *Scanner) Scan() rune {
+func (s *Scanner) Scan() Type {
 	char := s.Peek()
 
 	// reset token text position
@@ -467,8 +483,7 @@ func (s *Scanner) Scan() rune {
 	s.Line = 0
 
 redo:
-	// skip white space // why not overflow?
-	for s.Whitespace&(1<<uint(char)) != 0 {
+	for char == ' ' || char == '\t' || char == '\r' {
 		char = s.next()
 	}
 	s.tokenBuf.Reset()
@@ -489,28 +504,31 @@ redo:
 
 	// todo NewLine
 	// determine token value
-	token := char
+	token := TypeInvalid
 	switch {
 	case s.isIdentifierRune(char, 0):
-		token = Identifier
+		token = TypeIdentifier
 		char = s.scanIdentifier()
-		//TO-DO check keyword
 	case isDecimal(char):
 		token, char = s.scanNumber(char, false)
 	default:
 		switch char {
-		case EOF:
+		case EOFChar:
+			token = TypeEOF
 			break
 		case '"':
 			s.scanString('"')
-			token = String
+			token = TypeString
 		case '\'':
 			s.scanChar()
-			token = Char
-		case '.':
+			token = TypeChar
+		case '.': //start with .
 			char = s.next()
 			if isDecimal(char) {
 				token, char = s.scanNumber(char, true)
+			} else {
+				token = TypeToken
+				s.scanOperators()
 			}
 		case '/':
 			char = s.next()
@@ -521,30 +539,53 @@ redo:
 					goto redo
 				}
 				char = s.scanComment(char)
-				token = Comment
+				token = TypeComment
 			}
 		case '@':
 			char = s.next()
 			if char == '(' {
-				s.scanRawString()
-				token = RawString
+				char = s.next()
+				if char == '"' {
+					char = s.scanRawString()
+					token = TypeRawString
+				}
 			} else if s.isIdentifierRune(char, 0) {
-				//TO-DO scan meta identifier
-			} else {
-				// error
+				token = TypeMetaIdentifier
+				char = s.scanIdentifier()
 			}
-		default:
+		case '\n':
 			char = s.next()
+			token = TypeNewLine
+		default:
+			if IsOperator(char) {
+				token = TypeToken
+				s.scanOperators()
+			} else {
+				// invalid
+				char = s.next()
+			}
 		}
 	}
 
 	// end of token text
 	s.tokenEnd = s.srcPos - s.lastCharLen
 
+	// check if valid operator tokens
+	if token == TypeToken {
+		if !HasToken(s.TokenText()) {
+			token = TypeInvalid
+		}
+	}
+
+	if token == TypeIdentifier && HasToken(s.TokenText()) {
+		token = TypeToken
+	}
+
 	s.char = char
 	return token
 }
 
+// Pos return position info of scanner
 func (s *Scanner) Pos() (pos Position) {
 	pos.Filename = s.Filename
 	pos.Offset = s.srcBufOffset + s.srcPos - s.lastCharLen
