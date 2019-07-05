@@ -7,13 +7,17 @@ import (
 	"github.com/panda-foundation/panda/compiler"
 )
 
-func main() {
-	const src = `
+/*
 	// this is line comment.
-	/* here are 
-	block comment */
 	string str = @("raw string here")
-	if a > 10 { }
+	if a > 10 {}
+*/
+
+func main() {
+	const src = ` *
+	#== * +	@("raw string")
+	a = 1
+	if a > 10 {}
 	`
 
 	var s compiler.Scanner

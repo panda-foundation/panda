@@ -265,7 +265,7 @@ func IsOperator(char rune) bool {
 	if char >= 128 || char < 0 {
 		return false
 	}
-	return operators[char]
+	return operators[char] == true
 }
 
 /*

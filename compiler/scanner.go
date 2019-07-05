@@ -438,11 +438,15 @@ func (s *Scanner) scanChar() {
 	}
 }
 
-func (s *Scanner) scanOperators() {
-	char := s.next() // read character after '`'
-	for IsOperator(char) {
+func (s *Scanner) scanOperators() rune {
+	char := s.Peek()
+	str := string(char)
+	for HasToken(str) {
 		char = s.next()
+		str += string(char)
 	}
+	char = s.next()
+	return char
 }
 
 //TO-DO scan operators
@@ -528,7 +532,7 @@ redo:
 				token, char = s.scanNumber(char, true)
 			} else {
 				token = TypeToken
-				s.scanOperators()
+				char = s.scanOperators()
 			}
 		case '/':
 			char = s.next()
@@ -559,7 +563,7 @@ redo:
 		default:
 			if IsOperator(char) {
 				token = TypeToken
-				s.scanOperators()
+				char = s.scanOperators()
 			} else {
 				// invalid
 				char = s.next()
@@ -569,13 +573,6 @@ redo:
 
 	// end of token text
 	s.tokenEnd = s.srcPos - s.lastCharLen
-
-	// check if valid operator tokens
-	if token == TypeToken {
-		if !HasToken(s.TokenText()) {
-			token = TypeInvalid
-		}
-	}
 
 	if token == TypeIdentifier && HasToken(s.TokenText()) {
 		token = TypeToken
