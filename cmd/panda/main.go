@@ -1,20 +1,24 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+	"text/scanner"
+
 	"github.com/panda-foundation/panda/compiler"
 )
 
-type cli struct {
-	Files []string `required existingfile arg help:"Protobuf files."`
-}
-
 func main() {
-	compiler.Parse()
-	/*
-		ioutil.WriteFile("./sample.cpp", bytes, 0666)
+	const src = `
+	// This is scanned code.
+	if a > 10 {
+		someParsable = text
+	}`
 
-		cmd := exec.Command("gcc", "sample.cpp", "-lstdc++", "-o", "sample.exe")
-		if err := cmd.Run(); err != nil {
-			fmt.Println("compile error:", err.Error())
-		}*/
+	var s compiler.Scanner
+	s.Init(strings.NewReader(src), false)
+	s.Filename = "example"
+	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
+		fmt.Printf("%s: %s\n", s.Position, s.TokenText())
+	}
 }

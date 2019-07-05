@@ -41,6 +41,8 @@ post_fix_expression
    : primary_expression
    | post_fix_expression '[' expression ']'
    | post_fix_expression '(' expression_list? ')'
+   | Base '(' expression_list? ')'
+   | Base '.' Identifier '(' expression_list? ')'
    | type_specifier '(' expression_list? ')'
    | type_name_specifier '(' expression_list? ')'
    | type_specifier braced_init_list

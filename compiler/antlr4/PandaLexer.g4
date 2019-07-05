@@ -2,6 +2,10 @@ lexer grammar PandaLexer;
 
 /*Keywords*/
 
+Auto
+   : 'auto'
+   ;
+
 Base
    : 'base'
    ;
@@ -12,9 +16,6 @@ Bool
 
 Break
    : 'break'
-   ;
-Byte
-   : 'byte'
    ;
 
 Case
@@ -27,6 +28,10 @@ Cast
 
 Catch
    : 'catch'
+   ;
+   
+Char
+   : 'char'
    ;
 
 Class
@@ -195,10 +200,6 @@ Ulong
 
 Ushort
    : 'ushort'
-   ;
-
-Var
-   : 'var'
    ;
    
 Void

@@ -1,33 +1,130 @@
-// this panda source code for dev and testing
+// this is comment
+/* here the block comment
 
-namespace sample;
+// namespace define, empty namespace and no namespace mean global
+namespace sample
 
-include net.socket;
+// include define, can include single file or everything under some namespace
+include net.socket
 
+// global variable, this is not recommended but allowed
+int a, b
+
+// global function
 void do_nothing()
 {
 }
 
+// empty class
 class empty
 {
 }
 
+// interface define, must have something
+interface must_do
+{
+    void string()
+}
+
+// enum define
+enum color
+{
+    red,
+    green = 10,
+    blue,
+}
+
+// more enum
+enum more_color : color
+{
+    yellow,
+}
+
+// base class ("base" is keyword)
 class base_class
 {
-    public static int value_ = 0;
+    // private member
+    private int value_ = 0;
 
+    // constructor
     base_class(int value)
     {
         value_ = value;
     }
 
+    // also constructor
     base_class()
     {
         value_ = 10;
     }
 
+    // public member function
     public void print()
     {
         print(value_);
     }
+}
+
+// derived class
+class derive_class : base_class, must_do
+{
+    derive_class()
+    {
+        base();
+    }
+
+    derive_class(int value)
+    {
+        base(value);
+    }
+
+    // all function will be virtual, can be override
+    public void print()
+    {
+        base.print();
+    }
+}
+
+// generic
+class generic<K, V>
+{
+    K k_;
+    V v_;
+
+    generic(K k, V k)
+    {
+        k_ = k;
+        v_ = v;
+    }
+
+    public void print()
+    {
+
+    }
+}
+
+// derive from generic
+class derive_generic : generic<int, int>
+{
+
+}
+
+// program entry
+void main()
+{
+    int a = 1
+    int b = 2
+    int c = a + b
+    print(c)
+
+    base_class b = new base_class()
+    b.print()
+
+    derive_class d = new derive_class
+    d.print()
+
+    generic<int, int> g = new generic(1, 2);
+    g.print()
+
+    // return 0 // will auto add it
 }
