@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"strings"
-	"text/scanner"
 
 	"github.com/panda-foundation/panda/compiler"
 )
@@ -18,7 +17,7 @@ func main() {
 	var s compiler.Scanner
 	s.Init(strings.NewReader(src), false)
 	s.Filename = "example"
-	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-		fmt.Printf("%s: %s\n", s.Position, s.TokenText())
+	for tok := s.Scan(); tok != compiler.EOF; tok = s.Scan() {
+		fmt.Printf("type %s %s: %s\n", compiler.TokenToString(tok), s.Position, s.TokenText())
 	}
 }

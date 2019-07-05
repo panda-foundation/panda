@@ -45,7 +45,7 @@ const (
 	MetaIdentifier
 )
 
-var tokenString = map[int]string{
+var tokenString = map[rune]string{
 	EOF:            "EOF",
 	Identifier:     "Identifier",
 	TokenValue:     "Token",
@@ -57,6 +57,10 @@ var tokenString = map[int]string{
 	NewLine:        "NewLine",
 	Comment:        "Comment",
 	MetaIdentifier: "MetaIdentifier",
+}
+
+func TokenToString(token rune) string {
+	return tokenString[token]
 }
 
 const bufLen = 1024 // at least utf8.UTFMax
@@ -483,6 +487,7 @@ redo:
 		s.Column = s.lastLineLen
 	}
 
+	// todo NewLine
 	// determine token value
 	token := char
 	switch {
@@ -494,7 +499,7 @@ redo:
 		token, char = s.scanNumber(char, false)
 	default:
 		switch char {
-		case EOF, '\n':
+		case EOF:
 			break
 		case '"':
 			s.scanString('"')
