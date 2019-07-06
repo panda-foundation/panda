@@ -75,7 +75,7 @@ func TokenToString(token Type) string {
 	return tokenString[token]
 }
 
-const bufLen = 1024 // at least utf8.UTFMax
+const bufLen = 4 // 1024 // at least utf8.UTFMax
 
 // A Scanner implements reading of Unicode characters and tokens from an io.Reader.
 type Scanner struct {
@@ -285,7 +285,8 @@ func (s *Scanner) scanPreprossesor() (rune, bool) {
 	}
 	result := false
 	s.tokenEnd = s.srcPos - s.lastCharLen
-	if _, ok := s.flags[s.TokenText()]; ok {
+	text := s.TokenText()
+	if _, ok := s.flags[text]; ok {
 		result = true
 	}
 	if notOp {
@@ -307,9 +308,9 @@ func (s *Scanner) skipPreprossesor() {
 				char = s.next()
 				break
 			}
+			char = s.next()
 		}
 		if s.isIdentifierRune(char, 0) {
-			s.tokenPos = -1
 			char = s.scanIdentifier()
 			s.tokenEnd = s.srcPos - s.lastCharLen
 			text := s.TokenText()
@@ -643,10 +644,8 @@ redo:
 				} else if text != "#elif" {
 					s.error("unexpected: " + text)
 				}
-
 				if text == "#if" || text == "#elif" {
 					result := false
-					s.tokenPos = -1
 					char, result = s.scanPreprossesor()
 					if !result {
 						s.skipPreprossesor()
