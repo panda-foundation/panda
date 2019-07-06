@@ -294,6 +294,38 @@ func (s *Scanner) scanPreprossesor() (rune, bool) {
 	return char, result
 }
 
+func (s *Scanner) skipPreprossesor() {
+	startedPreprossesor := s.startedPreprocessor
+	for s.startedPreprocessor >= startedPreprossesor {
+		/*
+					char = s.next()
+			if s.isIdentifierRune(char, 0) {
+				char = s.scanIdentifier()
+				s.tokenEnd = s.srcPos - s.lastCharLen
+				text := s.TokenText()
+				if text == "#if" {
+					s.startedPreprocessor++
+				} else if text == "#end" {
+					s.startedPreprocessor--
+				} else if text != "#elif" {
+					s.error("unexpected: " + text)
+				}
+
+				if text == "#if" || text == "#elif" {
+					result := false
+					char, result = s.scanPreprossesor()
+					if !result {
+						s.skipPreprossesor()
+					}
+				}
+				goto redo
+			} else {
+				s.error("unexpected: " + string(char))
+			}
+		*/
+	}
+}
+
 func (s *Scanner) digits(char0 rune, base int, invalid *rune) rune {
 	char := char0
 	if base <= 10 {
@@ -616,8 +648,7 @@ redo:
 					result := false
 					char, result = s.scanPreprossesor()
 					if !result {
-						//TO-DO skip to next #
-						fmt.Println("---------to skip code-----------nested-------")
+						s.skipPreprossesor()
 					}
 				}
 				goto redo
