@@ -53,3 +53,4 @@ dkms.conf
 sample
 
 panda/.antlr
+cmd/panda/debug

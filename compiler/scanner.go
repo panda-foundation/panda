@@ -98,7 +98,9 @@ type Scanner struct {
 
 	char rune // character before current srcPos
 
-	skipComment bool
+	skipComment         bool
+	flags               map[string]bool
+	startedPreprocessor int
 
 	Error      func(s *Scanner, msg string)
 	ErrorCount int
@@ -106,8 +108,12 @@ type Scanner struct {
 	Position
 }
 
-func (s *Scanner) Init(src io.Reader, skipComment bool) *Scanner {
+func (s *Scanner) Init(src io.Reader, skipComment bool, flags []string) *Scanner {
 	s.skipComment = skipComment
+	s.flags = make(map[string]bool)
+	for _, v := range flags {
+		s.flags[v] = true
+	}
 
 	s.src = src
 	s.srcBuf[0] = utf8.RuneSelf // sentinel
@@ -259,6 +265,33 @@ func (s *Scanner) scanIdentifier() rune {
 		char = s.next()
 	}
 	return char
+}
+
+func (s *Scanner) scanPreprossesor() (rune, bool) {
+	char := s.next()
+	notOp := false
+	if char == '!' {
+		notOp = true
+		char = s.next()
+	}
+	if !s.isIdentifierRune(char, 0) {
+		s.error("unexpected " + string(char))
+	}
+	for i := 1; s.isIdentifierRune(char, i); i++ {
+		char = s.next()
+	}
+	if char != '\n' {
+		s.error("unexpected " + string(char))
+	}
+	result := false
+	s.tokenEnd = s.srcPos - s.lastCharLen
+	if _, ok := s.flags[s.TokenText()]; ok {
+		result = true
+	}
+	if notOp {
+		result = !result
+	}
+	return char, result
 }
 
 func (s *Scanner) digits(char0 rune, base int, invalid *rune) rune {
@@ -445,7 +478,6 @@ func (s *Scanner) scanOperators() rune {
 		char = s.next()
 		str += string(char)
 	}
-	char = s.next()
 	return char
 }
 
@@ -513,15 +545,24 @@ redo:
 	case s.isIdentifierRune(char, 0):
 		token = TypeIdentifier
 		char = s.scanIdentifier()
+
+		s.tokenEnd = s.srcPos - s.lastCharLen
+		if HasToken(s.TokenText()) {
+			token = TypeToken
+		}
 	case isDecimal(char):
 		token, char = s.scanNumber(char, false)
 	default:
 		switch char {
 		case EOFChar:
 			token = TypeEOF
+			if s.startedPreprocessor != 0 {
+				s.error("preprocessor not terminated")
+			}
 			break
 		case '"':
 			s.scanString('"')
+			char = s.next()
 			token = TypeString
 		case '\'':
 			s.scanChar()
@@ -557,6 +598,32 @@ redo:
 				token = TypeMetaIdentifier
 				char = s.scanIdentifier()
 			}
+		case '#': //#if #elif #else #end
+			char = s.next()
+			if s.isIdentifierRune(char, 0) {
+				char = s.scanIdentifier()
+				s.tokenEnd = s.srcPos - s.lastCharLen
+				text := s.TokenText()
+				if text == "#if" {
+					s.startedPreprocessor++
+				} else if text == "#end" {
+					s.startedPreprocessor--
+				} else if text != "#elif" {
+					s.error("unexpected: " + text)
+				}
+
+				if text == "#if" || text == "#elif" {
+					result := false
+					char, result = s.scanPreprossesor()
+					if !result {
+						//TO-DO skip to next #
+						fmt.Println("---------to skip code-----------nested-------")
+					}
+				}
+				goto redo
+			} else {
+				s.error("unexpected: " + string(char))
+			}
 		case '\n':
 			char = s.next()
 			token = TypeNewLine
@@ -566,6 +633,7 @@ redo:
 				char = s.scanOperators()
 			} else {
 				// invalid
+				s.error("invalid token")
 				char = s.next()
 			}
 		}
@@ -573,10 +641,6 @@ redo:
 
 	// end of token text
 	s.tokenEnd = s.srcPos - s.lastCharLen
-
-	if token == TypeIdentifier && HasToken(s.TokenText()) {
-		token = TypeToken
-	}
 
 	s.char = char
 	return token

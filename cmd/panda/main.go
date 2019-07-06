@@ -8,21 +8,23 @@ import (
 )
 
 /*
+	@("raw string")
+	"windows"
 	// this is line comment.
 	string str = @("raw string here")
 	if a > 10 {}
 */
 
 func main() {
-	const src = ` *
-	#== * +	@("raw string")
-	a = 1
-	if a > 10 {}
+	const src = `
+	#if windows
+	print("windows")
+	#end
 	`
 
 	var s compiler.Scanner
-	s.Init(strings.NewReader(src), false)
-	for token := s.Scan(); token != compiler.TypeEOF; token = s.Scan() {
+	s.Init(strings.NewReader(src), false, []string{})
+	for token := s.Scan(); token != compiler.TypeEOF && s.ErrorCount == 0; token = s.Scan() {
 		newLine := "\n"
 		if token == compiler.TypeNewLine {
 			newLine = ""
