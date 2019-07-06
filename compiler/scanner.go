@@ -297,9 +297,19 @@ func (s *Scanner) scanPreprossesor() (rune, bool) {
 func (s *Scanner) skipPreprossesor() {
 	startedPreprossesor := s.startedPreprocessor
 	for s.startedPreprocessor >= startedPreprossesor {
-		s.scanString('#')
-		char := s.next()
+		char := s.next() // read character after '@("'
+		for {
+			if char < 0 {
+				s.error("preprossesor not terminated")
+				return
+			}
+			if char == '#' {
+				char = s.next()
+				break
+			}
+		}
 		if s.isIdentifierRune(char, 0) {
+			s.tokenPos = -1
 			char = s.scanIdentifier()
 			s.tokenEnd = s.srcPos - s.lastCharLen
 			text := s.TokenText()
@@ -636,6 +646,7 @@ redo:
 
 				if text == "#if" || text == "#elif" {
 					result := false
+					s.tokenPos = -1
 					char, result = s.scanPreprossesor()
 					if !result {
 						s.skipPreprossesor()

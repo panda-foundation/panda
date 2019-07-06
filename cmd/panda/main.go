@@ -16,14 +16,17 @@ import (
 */
 
 func main() {
-	const src = `//#if windows
+	const src = `#if windows
 	print("windows")
-	//#end
+	#end
 	`
 
 	var s compiler.Scanner
-	s.Init(strings.NewReader(src), false, []string{})
-	for token := s.Scan(); token != compiler.TypeEOF && s.ErrorCount == 0; token = s.Scan() {
+	s.Init(strings.NewReader(src), false, []string{"windows"})
+	for token := s.Scan(); token != compiler.TypeEOF; token = s.Scan() {
+		if s.ErrorCount > 0 {
+			break
+		}
 		newLine := "\n"
 		if token == compiler.TypeNewLine {
 			newLine = ""
