@@ -16,10 +16,9 @@ import (
 */
 
 func main() {
-	const src = `
-	#if windows
+	const src = `//#if windows
 	print("windows")
-	#end
+	//#end
 	`
 
 	var s compiler.Scanner
