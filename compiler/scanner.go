@@ -144,16 +144,14 @@ func NewScanner(src io.Reader, skipComment bool, flags []string) *Scanner {
 // TO-DO refactor
 func (s *Scanner) next() rune {
 	// check if need to load some buf first
-	needToLoad := false
-	if s.srcPos >= s.srcEnd {
-		needToLoad = true
-	} else {
+	shouldRead := s.srcPos >= s.srcEnd
+	if !shouldRead {
 		char := rune(s.srcBuf[s.srcPos])
 		if char >= utf8.RuneSelf && s.srcPos+utf8.UTFMax > s.srcEnd && !utf8.FullRune(s.srcBuf[s.srcPos:s.srcEnd]) {
-			needToLoad = true
+			shouldRead = true
 		}
 	}
-	if needToLoad {
+	if shouldRead {
 		if s.tokenPos >= 0 {
 			s.tokenBuf.Write(s.srcBuf[s.tokenPos:s.srcPos])
 			s.tokenPos = 0
