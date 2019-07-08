@@ -407,8 +407,6 @@ func (s *Scanner) scanBlockComment() rune {
 	return char
 }
 
-/*
-// TO-DO bug fixing and refactor
 func (s *Scanner) scanPreprossesor() (rune, bool) {
 	char := s.next()
 	notOp := false
@@ -416,18 +414,19 @@ func (s *Scanner) scanPreprossesor() (rune, bool) {
 		notOp = true
 		char = s.next()
 	}
+	s.resetToken()
 	if !s.isIdentifierRune(char, 0) {
-		s.error("unexpected " + string(char))
+		s.error(fmt.Sprintf("unexpected %s \n", string(char)))
 	}
-	for i := 1; s.isIdentifierRune(char, i); i++ {
+	char = s.scanIdentifier()
+	for char == ' ' || char == '\t' || char == '\r' {
 		char = s.next()
 	}
 	if char != '\n' {
 		s.error("unexpected " + string(char))
 	}
 	result := false
-	s.tokenEnd = s.srcPos - s.lastCharLen
-	text := s.Token()
+	text := s.currentToken()
 	if _, ok := s.flags[text]; ok {
 		result = true
 	}
@@ -437,38 +436,21 @@ func (s *Scanner) scanPreprossesor() (rune, bool) {
 	return char, result
 }
 
-// TO-DO bug fixing and refactor
-func (s *Scanner) skipPreprossesor() {
-	startedPreprossesor := s.startedPreprocessor
-	for s.startedPreprocessor >= startedPreprossesor {
-		char := s.next() // read character after '@("'
-		for {
-			if char < 0 {
-				s.error("preprossesor not terminated")
-				return
-			}
-			if char == '#' {
-				char = s.next()
-				break
-			}
-			char = s.next()
+func (s *Scanner) skipPreprossesor() rune {
+	s.scanUntil('#')
+	char := s.next()
+	if s.isIdentifierRune(char, 0) {
+		s.resetToken()
+		char = s.scanIdentifier()
+		text := s.currentToken()
+		if text != "end" {
+			s.error(fmt.Sprintf("unexpected: %s" + text))
 		}
-		if s.isIdentifierRune(char, 0) {
-			char = s.scanIdentifier()
-			s.tokenEnd = s.srcPos - s.lastCharLen
-			text := s.Token()
-			if text == "#if" {
-				s.startedPreprocessor++
-			} else if text == "#end" {
-				s.startedPreprocessor--
-			} else {
-				s.error("unexpected: " + text)
-			}
-		} else {
-			s.error("unexpected: " + string(char))
-		}
+	} else {
+		s.error("unexpected: " + string(char))
 	}
-}*/
+	return char
+}
 
 func (s *Scanner) scanUntil(quote rune) (rune, int) {
 	char := s.next() // read character after quote
@@ -528,12 +510,7 @@ func (s *Scanner) Scan() Type {
 	s.tokenPos = InvalidPos
 	s.Line = 0
 
-	return s.scan()
-}
-
-func (s *Scanner) scan() Type {
 	char := s.peek()
-
 	// whitespace
 	for char == ' ' || char == '\t' || char == '\r' {
 		char = s.next()
@@ -601,9 +578,8 @@ func (s *Scanner) scan() Type {
 				}
 				char = s.next()
 				if s.skipComment {
-					s.tokenPos = InvalidPos // don't collect token text
 					s.char = char
-					return s.scan()
+					return s.Scan()
 				}
 				token = TypeComment
 			} else {
@@ -648,19 +624,19 @@ func (s *Scanner) scan() Type {
 				} else {
 					s.error("unexpected: " + text)
 				}
-				/*
-					if text == "#if" {
-						result := false
-						char, result = s.scanPreprossesor()
-						if !result {
-							s.skipPreprossesor()
-							char = s.next()
-						}
+
+				if text == "if" {
+					result := false
+					char, result = s.scanPreprossesor()
+					if !result {
+						char = s.skipPreprossesor()
+						char = s.next()
+						s.conditionStarted = false
 					}
-				*/
-				s.tokenPos = InvalidPos
+				}
+
 				s.char = char
-				return s.scan()
+				return s.Scan()
 			}
 			s.error("unexpected: " + string(char))
 		case '\n':
