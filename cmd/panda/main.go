@@ -13,16 +13,14 @@ import (
 	// this is line comment.
 	string str = @("raw string here")
 	if a > 10 {}
+	#if windows
+	print("windows")
+	#end
 */
 
 func main() {
-	const src = `#if windows
-	print("windows")
-	#end
-	`
-
-	var s compiler.Scanner
-	s.Init(strings.NewReader(src), false, []string{"windows"})
+	const src = `"hello world (你好！)"`
+	s := compiler.NewScanner(strings.NewReader(src), false, []string{"windows"})
 	for token := s.Scan(); token != compiler.TypeEOF; token = s.Scan() {
 		if s.ErrorCount > 0 {
 			break
@@ -31,6 +29,6 @@ func main() {
 		if token == compiler.TypeNewLine {
 			newLine = ""
 		}
-		fmt.Printf("type %s %s: %s%s", compiler.TokenToString(token), s.Position, s.TokenText(), newLine)
+		fmt.Printf("type %s %s: %s%s", compiler.TokenType(token), s.Position, s.Token(), newLine)
 	}
 }
