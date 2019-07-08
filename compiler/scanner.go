@@ -381,16 +381,13 @@ func (s *Scanner) scanChar() rune {
 	return char
 }
 
-/* TO-DO
-func (s *Scanner) scanOperators() rune {
-	char := s.Peek()
-	str := string(char)
-	for HasToken(str) {
+func (s *Scanner) scanOperators(char rune) rune {
+	// TO-DO optimization later with tree, and opt info stored in scanner
+	for HasToken(s.currentToken() + string(char)) {
 		char = s.next()
-		str += string(char)
 	}
 	return char
-}*/
+}
 
 func (s *Scanner) scanLineComment() rune {
 	// '/'
@@ -492,7 +489,7 @@ func (s *Scanner) ensureChar(char rune) (rune, bool) {
 	return result, char == result
 }
 
-//TO-DO add: ensureIdentifier, resetToken
+//TO-DO add: ensureIdentifier
 
 func (s *Scanner) isIdentifierRune(char rune, i int) bool {
 	return char == '_' || s.isLetter(char) || (s.isDigit(char) && i > 0)
@@ -587,32 +584,31 @@ func (s *Scanner) scan() Type {
 			s.scanChar()
 			char = s.next()
 			token = TypeChar
-		case '.': //start with . // alse maybe operator /
+		case '.': //start with . can maybe operator
 			char = s.next()
 			if isDecimal(char) {
 				char, token = s.scanNumber(char, true)
 			} else {
-				//TO-DO
-				//token = TypeToken
-				//char = s.scanOperators()
+				token = TypeToken
+				char = s.scanOperators(char)
 			}
 		case '/': // alse maybe operator /
 			char = s.next()
-			if char == '/' {
-				char = s.scanLineComment()
-			} else if char == '*' {
-				char = s.scanBlockComment()
-			} else {
-				//TO-DO
-				//token = TypeToken
-				//char = s.scanOperators()
-			}
 			if char == '/' || char == '*' {
+				if char == '/' {
+					char = s.scanLineComment()
+				} else {
+					char = s.scanBlockComment()
+				}
+				char = s.next()
 				if s.skipComment {
 					s.tokenPos = -1 // don't collect token text
 					return s.scan()
 				}
 				token = TypeComment
+			} else {
+				token = TypeToken
+				char = s.scanOperators(char)
 			}
 		case '@':
 			char = s.next()
@@ -661,15 +657,15 @@ func (s *Scanner) scan() Type {
 			char = s.next()
 			token = TypeNewLine
 		default:
-			/*
-				if IsOperator(char) {
-					token = TypeToken
-					char = s.scanOperators()
-				} else {*/
-			// invalid
-			s.error("invalid token")
-			char = s.next()
-			//}
+			if IsOperator(char) {
+				token = TypeToken
+				char = s.next()
+				char = s.scanOperators(char)
+			} else {
+				// invalid
+				s.error("invalid token")
+				char = s.next()
+			}
 		}
 	}
 

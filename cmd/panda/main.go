@@ -8,27 +8,28 @@ import (
 )
 
 /*
-	@("raw string")
-	"windows"
-	// this is line comment.
-	string str = @("raw string here")
-	if a > 10 {}
 	#if windows
 	print("windows")
 	#end
 */
 
 func main() {
-	const src = `"hello world (你好！)"`
+	const src = `// test program
+/* panda language */
+.5 5 0xabcdef 01 0b01010101
+keyword 'a'
+1/2*3+4
+a.b.c/d
+if (a > 10) {}
+if else try catch
+"hello world (你好！)"
+@("我是 raw string")
+@meta`
 	s := compiler.NewScanner(strings.NewReader(src), false, []string{"windows"})
 	for token := s.Scan(); token != compiler.TypeEOF; token = s.Scan() {
 		if s.ErrorCount > 0 {
 			break
 		}
-		newLine := "\n"
-		if token == compiler.TypeNewLine {
-			newLine = ""
-		}
-		fmt.Printf("type %s %s: %s%s", compiler.TokenType(token), s.Position, s.Token(), newLine)
+		fmt.Printf("type %s %s: %s \n", compiler.TokenType(token), s.Position, s.Token())
 	}
 }
