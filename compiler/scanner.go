@@ -100,9 +100,9 @@ type Scanner struct {
 
 	char rune // character before current srcPos
 
-	skipComment         bool            // if skip to store comment info
-	flags               map[string]bool // flags for condition compiler
-	startedPreprocessor int             // deal with nested '#'
+	skipComment      bool            // if skip to store comment info
+	flags            map[string]bool // flags for condition compiler
+	conditionStarted bool            // if #if is true
 
 	Error      func(s *Scanner, msg string) // hook error function
 	ErrorCount int                          // total errors
@@ -504,8 +504,8 @@ func (s *Scanner) isDigit(char rune) bool {
 }
 
 func (s *Scanner) resetToken() {
-	s.tokenPos = InvalidPos
 	s.tokenBuf.Reset()
+	s.tokenPos = s.srcPos - s.lastCharLen
 }
 
 // returns lower-case char if char is ASCII letter
@@ -525,7 +525,7 @@ func isHex(char rune) bool {
 // Scan next token
 func (s *Scanner) Scan() Type {
 	// reset token text position
-	s.tokenPos = -1
+	s.tokenPos = InvalidPos
 	s.Line = 0
 
 	return s.scan()
@@ -541,7 +541,6 @@ func (s *Scanner) scan() Type {
 
 	// reset token
 	s.resetToken()
-	s.tokenPos = s.srcPos - s.lastCharLen
 	s.Offset = s.srcBufOffset + s.tokenPos
 
 	if s.column > 0 {
@@ -572,8 +571,8 @@ func (s *Scanner) scan() Type {
 		switch char {
 		case EOFChar:
 			token = TypeEOF
-			if s.startedPreprocessor != 0 {
-				s.error("preprocessor not terminated")
+			if s.conditionStarted {
+				s.error("#if not terminated, expecting #end")
 			}
 			break
 		case '"':
@@ -602,7 +601,8 @@ func (s *Scanner) scan() Type {
 				}
 				char = s.next()
 				if s.skipComment {
-					s.tokenPos = -1 // don't collect token text
+					s.tokenPos = InvalidPos // don't collect token text
+					s.char = char
 					return s.scan()
 				}
 				token = TypeComment
@@ -626,33 +626,43 @@ func (s *Scanner) scan() Type {
 				token = TypeMetaIdentifier
 				char = s.scanIdentifier()
 			}
-			/*
-				case '#': //#if #end, before flag can add '!' for not operation
-					char = s.next()
-					if s.isIdentifierRune(char, 0) {
-						char = s.scanIdentifier()
-						s.tokenEnd = s.srcPos - s.lastCharLen
-						text := s.Token()
-						if text == "#if" {
-							s.startedPreprocessor++
-						} else if text == "#end" {
-							s.startedPreprocessor--
-						} else if text != "#elif" {
-							s.error("unexpected: " + text)
+
+		case '#':
+			//#if #end, before flag can add '!' for not operation
+			//nested # is not supported
+			char = s.next()
+			if s.isIdentifierRune(char, 0) {
+				s.resetToken()
+				char = s.scanIdentifier()
+				text := s.currentToken()
+				if text == "if" {
+					if s.conditionStarted {
+						s.error("unexpected #if")
+					}
+					s.conditionStarted = true
+				} else if text == "end" {
+					if !s.conditionStarted {
+						s.error("unexpected #end")
+					}
+					s.conditionStarted = false
+				} else {
+					s.error("unexpected: " + text)
+				}
+				/*
+					if text == "#if" {
+						result := false
+						char, result = s.scanPreprossesor()
+						if !result {
+							s.skipPreprossesor()
+							char = s.next()
 						}
-						if text == "#if" || text == "#elif" {
-							result := false
-							char, result = s.scanPreprossesor()
-							if !result {
-								s.skipPreprossesor()
-								char = s.next()
-							}
-						}
-						s.tokenPos = -1
-						goto redo
-					} else {
-						s.error("unexpected: " + string(char))
-					}*/
+					}
+				*/
+				s.tokenPos = InvalidPos
+				s.char = char
+				return s.scan()
+			}
+			s.error("unexpected: " + string(char))
 		case '\n':
 			char = s.next()
 			token = TypeNewLine

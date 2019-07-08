@@ -24,8 +24,14 @@ if (a > 10) {}
 if else try catch
 "hello world (你好！)"
 @("我是 raw string")
-@meta`
-	s := compiler.NewScanner(strings.NewReader(src), false, []string{"windows"})
+@meta(json(id, omit_empty))
+#if windows
+windows
+#end
+#if linux
+linux
+#end`
+	s := compiler.NewScanner(strings.NewReader(src), true, []string{"windows"})
 	for token := s.Scan(); token != compiler.TypeEOF; token = s.Scan() {
 		if s.ErrorCount > 0 {
 			break
