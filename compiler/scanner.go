@@ -141,7 +141,6 @@ func NewScanner(src io.Reader, skipComment bool, flags []string) *Scanner {
 	return s
 }
 
-// TO-DO refactor
 func (s *Scanner) next() rune {
 	// check if need to load some buf first
 	shouldRead := s.srcPos >= s.srcEnd
