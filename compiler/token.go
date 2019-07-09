@@ -6,7 +6,7 @@ type Token rune
 // Tokens defined here
 const (
 	// keywords
-	Auto = iota
+	Auto Token = iota
 	Base
 	Bool
 	Break
@@ -249,8 +249,8 @@ func KeyToToken(key string) Token {
 	return keyToToken[key]
 }
 
-// TokenToKen convert token to key
-func TokenToKen(token Token) string {
+// TokenToKey convert token to key
+func TokenToKey(token Token) string {
 	return tokenToKey[token]
 }
 

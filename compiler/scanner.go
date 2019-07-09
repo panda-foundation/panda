@@ -36,13 +36,12 @@ const (
 	TypeInvalid Type = iota
 	TypeEOF
 	TypeIdentifier
-	TypeToken
+	TypeToken //TO-DO opti store token directly
 	TypeInt
 	TypeFloat
 	TypeChar
 	TypeString
 	TypeRawString
-	TypeNewLine
 	TypeComment
 	TypeMetaIdentifier
 	TypeIgnored
@@ -67,7 +66,6 @@ var tokenString = map[Type]string{
 	TypeChar:           "Char",
 	TypeString:         "String",
 	TypeRawString:      "RawString",
-	TypeNewLine:        "NewLine",
 	TypeComment:        "Comment",
 	TypeMetaIdentifier: "MetaIdentifier",
 	TypeIgnored:        "Ignored", // by conditional compile
@@ -398,9 +396,11 @@ func (s *Scanner) scanBlockComment() rune {
 	// '*'
 	char, _ := s.scanUntil('*')
 	terminated := false
+	//TO-DO check error
 	char, terminated = s.ensureChar('/')
 	for terminated != true {
 		char, _ = s.scanUntil('*')
+		//TO-DO check error
 		char, terminated = s.ensureChar('/')
 	}
 	return char
@@ -511,7 +511,7 @@ func (s *Scanner) Scan() Type {
 
 	char := s.peek()
 	// whitespace
-	for char == ' ' || char == '\t' || char == '\r' {
+	for char == ' ' || char == '\t' || char == '\r' || char == '\n' {
 		char = s.next()
 	}
 
@@ -638,9 +638,6 @@ func (s *Scanner) Scan() Type {
 				return s.Scan()
 			}
 			s.error("unexpected: " + string(char))
-		case '\n':
-			char = s.next()
-			token = TypeNewLine
 		default:
 			if IsOperator(char) {
 				token = TypeToken

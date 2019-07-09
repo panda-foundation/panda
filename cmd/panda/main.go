@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/panda-foundation/panda/compiler"
@@ -34,11 +35,16 @@ windows
 #if linux
 linux
 #end`
-	s := compiler.NewScanner(strings.NewReader(src), false, []string{"windows"})
-	for token := s.Scan(); token != compiler.TypeEOF; token = s.Scan() {
-		if s.ErrorCount > 0 {
+	s0 := compiler.NewScanner(strings.NewReader(src), false, []string{})
+	for token := s0.Scan(); token != compiler.TypeEOF; token = s0.Scan() {
+		if s0.ErrorCount > 0 {
 			break
 		}
-		fmt.Printf("type %s %s: %s \n", compiler.TokenType(token), s.Position, s.Token())
+		fmt.Printf("type %s %s: %s \n", compiler.TokenType(token), s0.Position, s0.Token())
 	}
+
+	file, _ := os.Open("./sample.pd")
+	s := compiler.NewScanner(file, true, []string{})
+	p := compiler.NewParser()
+	p.Parse(s)
 }

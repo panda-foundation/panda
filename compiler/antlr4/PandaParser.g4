@@ -289,6 +289,7 @@ type_specifier_sequence
 
 type_specifier
    : nested_name_specifier? type_name
+   | Auto
    | Bool
    | Int8
    | Int16
@@ -309,7 +310,6 @@ type_specifier
    | Float
    | Double
    | Void
-   | Var
    ;
 
 type_name
