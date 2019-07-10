@@ -9,7 +9,8 @@ include serializer.json;
 include network.*;
 
 // global variable, this is not recommended but allowed
-int a, b;
+public int a, b;
+public static const string c;
 
 // global function
 void do_nothing()

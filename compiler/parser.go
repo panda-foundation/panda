@@ -13,6 +13,10 @@ type Parser struct {
 
 	Token     Token
 	Modifiers []Token
+
+	InClass    bool
+	InFunction bool
+	InEnum     bool
 }
 
 func NewParser() *Parser {
@@ -25,6 +29,7 @@ func (parser *Parser) Parse(scanner *Scanner) {
 
 	parser.parseNamespace()
 	parser.parseIncludes()
+	parser.parseDefinitions()
 }
 
 // return the first cached token
@@ -50,6 +55,10 @@ func (parser *Parser) ensure(token Token) {
 func (parser *Parser) isModifier(token Token) bool {
 	return token == Private || token == Protected || token == Public ||
 		token == Static || token == Const
+}
+
+func (parser *Parser) isAccessModifier(token Token) bool {
+	return token == Private || token == Protected || token == Public
 }
 
 func (parser *Parser) parseNamespace() {
@@ -81,6 +90,30 @@ func (parser *Parser) parseIncludes() {
 }
 
 func (parser *Parser) parseModifiers() {
+	parser.Modifiers = parser.Modifiers[:0]
+	for {
+		parser.peek()
+		if parser.isModifier(parser.Token) {
+			if parser.Token == Static {
+				if !parser.InClass {
+					parser.Scanner.error("unexpected static")
+				}
+			}
+			for _, v := range parser.Modifiers {
+				if v == parser.Token {
+					parser.Scanner.error("dupilicate modifier: " + TokenToKey(parser.Token))
+				}
+				if parser.isAccessModifier(parser.Token) && parser.isAccessModifier(v) {
+					parser.Scanner.error("dupilicate access modifier: " + TokenToKey(parser.Token))
+				}
+			}
+			parser.Modifiers = append(parser.Modifiers, parser.Token)
+			parser.consume()
+		} else {
+			break
+		}
+	}
+	fmt.Println("modifiers:", parser.Modifiers)
 }
 
 func (parser *Parser) parseQualifiedId(allowStar bool) string {
@@ -110,4 +143,20 @@ func (parser *Parser) parseQualifiedId(allowStar bool) string {
 		}
 	}
 	return id
+}
+
+func (parser *Parser) parseDefinitions() {
+	parser.parseModifiers()
+}
+
+func (parser *Parser) parseClassMember() {
+
+}
+
+func (parser *Parser) parseDelaration() {
+
+}
+
+func (parser *Parser) parseFunction() {
+
 }
