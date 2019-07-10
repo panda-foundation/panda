@@ -17,6 +17,8 @@ type Parser struct {
 	InClass    bool
 	InFunction bool
 	InEnum     bool
+
+	Comments []string
 }
 
 func NewParser() *Parser {
@@ -33,10 +35,11 @@ func (parser *Parser) Parse(scanner *Scanner) {
 }
 
 // return the first cached token
-func (parser *Parser) peek() {
+func (parser *Parser) peek() Token {
 	if parser.Token == TokenInvalid {
 		parser.Token = parser.Scanner.Scan()
 	}
+	return parser.Token
 }
 
 func (parser *Parser) consume() {
@@ -44,8 +47,7 @@ func (parser *Parser) consume() {
 }
 
 func (parser *Parser) ensure(token Token) {
-	parser.peek()
-	if parser.Token != token {
+	if parser.peek() != token {
 		err := fmt.Sprintf("unexpected %s: %s, expecte: %s \n", parser.Scanner.Position, parser.Scanner.Token(), TokenToKey(token))
 		parser.Scanner.error(err)
 	}
@@ -61,12 +63,24 @@ func (parser *Parser) isAccessModifier(token Token) bool {
 	return token == Private || token == Protected || token == Public
 }
 
-func (parser *Parser) parseNamespace() {
-	parser.peek()
-	if parser.Token == Namespace {
+func (parser *Parser) scanComments(store bool) {
+	if parser.Scanner.skipComment {
+		return
+	}
+	parser.Comments = parser.Comments[:0]
+	for parser.peek() == TokenComment {
+		if store {
+			parser.Comments = append(parser.Comments, parser.Scanner.Token())
+		}
 		parser.consume()
-		parser.peek()
-		if parser.Token != Semi {
+	}
+}
+
+func (parser *Parser) parseNamespace() {
+	parser.scanComments(false)
+	if parser.peek() == Namespace {
+		parser.consume()
+		if parser.peek() != Semi {
 			parser.Program.Namespace = parser.parseQualifiedId(false)
 		}
 		parser.ensure(Semi)
@@ -76,8 +90,8 @@ func (parser *Parser) parseNamespace() {
 
 func (parser *Parser) parseIncludes() {
 	for {
-		parser.peek()
-		if parser.Token == Include {
+		parser.scanComments(false)
+		if parser.peek() == Include {
 			parser.consume()
 			text := parser.parseQualifiedId(true)
 			parser.Program.Includes = append(parser.Program.Includes, text)
@@ -92,22 +106,21 @@ func (parser *Parser) parseIncludes() {
 func (parser *Parser) parseModifiers() {
 	parser.Modifiers = parser.Modifiers[:0]
 	for {
-		parser.peek()
-		if parser.isModifier(parser.Token) {
-			if parser.Token == Static {
+		if parser.isModifier(parser.peek()) {
+			if parser.peek() == Static {
 				if !parser.InClass {
 					parser.Scanner.error("unexpected static")
 				}
 			}
 			for _, v := range parser.Modifiers {
-				if v == parser.Token {
-					parser.Scanner.error("dupilicate modifier: " + TokenToKey(parser.Token))
+				if v == parser.peek() {
+					parser.Scanner.error("dupilicate modifier: " + TokenToKey(parser.peek()))
 				}
-				if parser.isAccessModifier(parser.Token) && parser.isAccessModifier(v) {
-					parser.Scanner.error("dupilicate access modifier: " + TokenToKey(parser.Token))
+				if parser.isAccessModifier(parser.peek()) && parser.isAccessModifier(v) {
+					parser.Scanner.error("dupilicate access modifier: " + TokenToKey(parser.peek()))
 				}
 			}
-			parser.Modifiers = append(parser.Modifiers, parser.Token)
+			parser.Modifiers = append(parser.Modifiers, parser.peek())
 			parser.consume()
 		} else {
 			break
@@ -117,21 +130,17 @@ func (parser *Parser) parseModifiers() {
 }
 
 func (parser *Parser) parseQualifiedId(allowStar bool) string {
-	parser.peek()
 	id := ""
 	for {
-		if parser.Token == TokenIdentifier {
+		if parser.peek() == TokenIdentifier {
 			id += parser.Scanner.Token()
 			parser.consume()
-			parser.peek()
-			if parser.Token == Dot {
+			if parser.peek() == Dot {
 				id += parser.Scanner.Token()
 				parser.consume()
-				parser.peek()
-				if allowStar && parser.Token == Star {
+				if allowStar && parser.peek() == Star {
 					id += parser.Scanner.Token()
 					parser.consume()
-					parser.peek()
 					break
 				}
 			} else {
@@ -147,6 +156,13 @@ func (parser *Parser) parseQualifiedId(allowStar bool) string {
 
 func (parser *Parser) parseDefinitions() {
 	parser.parseModifiers()
+
+	switch parser.peek() {
+	case Class:
+	case Enum:
+	case TokenIdentifier:
+	}
+
 }
 
 func (parser *Parser) parseClassMember() {

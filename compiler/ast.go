@@ -25,10 +25,12 @@ type ProgramUnit struct {
 }
 
 type EnumDefinition struct {
+	Comment  string
 	Modifier *Modifier
 }
 
 type ClassDefinition struct {
+	Comment  string
 	Modifier *Modifier
 
 	Parents      []string
@@ -38,12 +40,14 @@ type ClassDefinition struct {
 }
 
 type Function struct {
+	Comment  string
 	Modifier *Modifier
 
 	Templates []string
 }
 
 type Declaration struct {
+	Comment  string
 	Modifier *Modifier
 }
 
