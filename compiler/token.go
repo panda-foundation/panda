@@ -5,8 +5,20 @@ type Token rune
 
 // Tokens defined here
 const (
+	// identifier and values
+	TokenInvalid Token = iota
+	TokenEOF
+	TokenIdentifier
+	TokenInt
+	TokenFloat
+	TokenChar
+	TokenString
+	TokenRawString
+	TokenComment
+	TokenMetaIdentifier
+
 	// keywords
-	Auto Token = iota
+	Auto
 	Base
 	Bool
 	Break
@@ -59,7 +71,7 @@ const (
 	Ushort
 	Void
 
-	/*Operators*/
+	// operators
 	LeftParen
 	RightParen
 	LeftBracket
@@ -217,6 +229,18 @@ func init() {
 	for k, v := range tokenToKey {
 		keyToToken[v] = k
 	}
+
+	// no fixed text value (read from scanner.Token())
+	tokenToKey[TokenInvalid] = "invalid token"
+	tokenToKey[TokenEOF] = "EOF"
+	tokenToKey[TokenIdentifier] = "identifier"
+	tokenToKey[TokenInt] = "int value"
+	tokenToKey[TokenFloat] = "float value"
+	tokenToKey[TokenChar] = "char value"
+	tokenToKey[TokenString] = "string value"
+	tokenToKey[TokenRawString] = "raw string value"
+	tokenToKey[TokenComment] = "comment"
+	tokenToKey[TokenMetaIdentifier] = "meta identifier"
 
 	operators['('] = true
 	operators[')'] = true

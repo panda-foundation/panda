@@ -2,10 +2,11 @@
 /* here the block comment */
 
 // namespace define, empty namespace and no namespace mean global
-namespace sample;
+namespace test.sample;
 
 // include define, can include single file or everything under some namespace
-include net.socket
+include serializer.json;
+include network.*;
 
 // global variable, this is not recommended but allowed
 int a, b;

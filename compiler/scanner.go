@@ -28,25 +28,6 @@ func (pos Position) String() string {
 	return s
 }
 
-// Type for scanner
-type Type rune
-
-// Token types
-const (
-	TypeInvalid Type = iota
-	TypeEOF
-	TypeIdentifier
-	TypeToken //TO-DO opti store token directly
-	TypeInt
-	TypeFloat
-	TypeChar
-	TypeString
-	TypeRawString
-	TypeComment
-	TypeMetaIdentifier
-	TypeIgnored
-)
-
 // Const for scanner
 const (
 	EOFChar       rune = -1
@@ -55,26 +36,6 @@ const (
 	InvalidLine   int  = 0
 	InvalidColumn int  = 0
 )
-
-var tokenString = map[Type]string{
-	TypeInvalid:        "Invalid",
-	TypeEOF:            "EOF",
-	TypeIdentifier:     "Identifier",
-	TypeToken:          "Token",
-	TypeInt:            "Int",
-	TypeFloat:          "Float",
-	TypeChar:           "Char",
-	TypeString:         "String",
-	TypeRawString:      "RawString",
-	TypeComment:        "Comment",
-	TypeMetaIdentifier: "MetaIdentifier",
-	TypeIgnored:        "Ignored", // by conditional compile
-}
-
-// TokenType return token type
-func TokenType(token Type) string {
-	return tokenString[token]
-}
 
 const bufLen = 4 // 1024 // at least utf8.UTFMax // default 1024, 4 for testing
 
@@ -230,6 +191,7 @@ func (s *Scanner) error(msg string) {
 		pos = s.Pos()
 	}
 	fmt.Fprintf(os.Stderr, "%s: %s\n", pos, msg)
+	panic(fmt.Sprintf("%s: %s\n", pos, msg))
 }
 
 func (s *Scanner) scanIdentifier() rune {
@@ -258,14 +220,14 @@ func (s *Scanner) scanDigits(char rune, base int) rune {
 	return char
 }
 
-func (s *Scanner) scanNumber(char rune, seenDot bool) (rune, Type) {
+func (s *Scanner) scanNumber(char rune, seenDot bool) (rune, Token) {
 	base := 10        // number base
 	prefix := rune(0) // one of 0 (decimal), '0' (0-octal), 'x', or 'b'
 
 	// integer part
-	var numberType Type
+	var numberType Token
 	if !seenDot {
-		numberType = TypeInt
+		numberType = TokenInt
 		if char == '0' {
 			char = s.next()
 			switch lower(char) {
@@ -288,7 +250,7 @@ func (s *Scanner) scanNumber(char rune, seenDot bool) (rune, Type) {
 
 	// fractional part
 	if seenDot {
-		numberType = TypeFloat
+		numberType = TokenFloat
 		if prefix == 'b' || prefix == 'x' {
 			s.error("invalid radix point")
 		}
@@ -378,12 +340,12 @@ func (s *Scanner) scanChar() rune {
 	return char
 }
 
-func (s *Scanner) scanOperators(char rune) rune {
+func (s *Scanner) scanOperators(char rune) (rune, Token) {
 	// TO-DO optimization later with tree, and opt info stored in scanner
 	for HasToken(s.currentToken() + string(char)) {
 		char = s.next()
 	}
-	return char
+	return char, KeyToToken(s.currentToken())
 }
 
 func (s *Scanner) scanLineComment() rune {
@@ -396,11 +358,9 @@ func (s *Scanner) scanBlockComment() rune {
 	// '*'
 	char, _ := s.scanUntil('*')
 	terminated := false
-	//TO-DO check error
 	char, terminated = s.ensureChar('/')
 	for terminated != true {
 		char, _ = s.scanUntil('*')
-		//TO-DO check error
 		char, terminated = s.ensureChar('/')
 	}
 	return char
@@ -436,8 +396,8 @@ func (s *Scanner) scanPreprossesor() (rune, bool) {
 }
 
 func (s *Scanner) skipPreprossesor() rune {
-	s.scanUntil('#')
-	char := s.next()
+	char, _ := s.scanUntil('#')
+	char = s.next()
 	if s.isIdentifierRune(char, 0) {
 		s.resetToken()
 		char = s.scanIdentifier()
@@ -504,7 +464,7 @@ func isHex(char rune) bool {
 }
 
 // Scan next token
-func (s *Scanner) Scan() Type {
+func (s *Scanner) Scan() Token {
 	// reset token text position
 	s.tokenPos = InvalidPos
 	s.Line = 0
@@ -533,20 +493,21 @@ func (s *Scanner) Scan() Type {
 
 	// todo NewLine
 	// determine token value
-	token := TypeInvalid
+	token := TokenInvalid
 	switch {
 	case s.isIdentifierRune(char, 0):
-		token = TypeIdentifier
+		token = TokenIdentifier
 		char = s.scanIdentifier()
-		if HasToken(s.currentToken()) {
-			token = TypeToken
+		text := s.currentToken()
+		if HasToken(text) {
+			token = KeyToToken(text)
 		}
 	case isDecimal(char):
 		char, token = s.scanNumber(char, false)
 	default:
 		switch char {
 		case EOFChar:
-			token = TypeEOF
+			token = TokenEOF
 			if s.conditionStarted {
 				s.error("#if not terminated, expecting #end")
 			}
@@ -554,18 +515,17 @@ func (s *Scanner) Scan() Type {
 		case '"':
 			s.scanString('"')
 			char = s.next()
-			token = TypeString
+			token = TokenString
 		case '\'':
 			s.scanChar()
 			char = s.next()
-			token = TypeChar
+			token = TokenChar
 		case '.': //start with . can maybe operator
 			char = s.next()
 			if isDecimal(char) {
 				char, token = s.scanNumber(char, true)
 			} else {
-				token = TypeToken
-				char = s.scanOperators(char)
+				char, token = s.scanOperators(char)
 			}
 		case '/': // alse maybe operator /
 			char = s.next()
@@ -580,10 +540,9 @@ func (s *Scanner) Scan() Type {
 					s.char = char
 					return s.Scan()
 				}
-				token = TypeComment
+				token = TokenComment
 			} else {
-				token = TypeToken
-				char = s.scanOperators(char)
+				char, token = s.scanOperators(char)
 			}
 		case '@':
 			char = s.next()
@@ -592,13 +551,13 @@ func (s *Scanner) Scan() Type {
 				char, isRawString = s.ensureChar('"')
 				if isRawString {
 					s.scanRawString()
-					token = TypeRawString
+					token = TokenRawString
 					char = s.next()
 				} else {
 					s.error(fmt.Sprintf("unexpected: %s", string(char)))
 				}
 			} else if s.isIdentifierRune(char, 0) {
-				token = TypeMetaIdentifier
+				token = TokenMetaIdentifier
 				char = s.scanIdentifier()
 			}
 
@@ -640,9 +599,8 @@ func (s *Scanner) Scan() Type {
 			s.error("unexpected: " + string(char))
 		default:
 			if IsOperator(char) {
-				token = TypeToken
 				char = s.next()
-				char = s.scanOperators(char)
+				char, token = s.scanOperators(char)
 			} else {
 				// invalid
 				s.error("invalid token")

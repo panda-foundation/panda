@@ -3,31 +3,22 @@ package compiler
 import "fmt"
 
 type TokenData struct {
-	Type Type
+	Type Token
 	Text string
 }
 
 type Parser struct {
 	Scanner *Scanner
-	Cache   []*TokenData
-
 	Program *ProgramUnit
+
+	Token     Token
+	Modifiers []Token
 }
 
 func NewParser() *Parser {
 	return &Parser{}
 }
 
-/*
-	for token := s.Scan(); token != compiler.TypeEOF; token = s.Scan() {
-		if s.ErrorCount > 0 {
-			break
-		}
-		fmt.Printf("type %s %s: %s \n", compiler.TokenType(token), s.Position, s.Token())
-	}
-*/
-
-//TO-DO return error
 func (parser *Parser) Parse(scanner *Scanner) {
 	parser.Scanner = scanner
 	parser.Program = &ProgramUnit{}
@@ -36,46 +27,66 @@ func (parser *Parser) Parse(scanner *Scanner) {
 }
 
 // return the first cached token
-func (parser *Parser) peek() *TokenData {
-	if len(parser.Cache) == 0 {
-		token := parser.next()
-		if token != nil {
-			parser.Cache = append(parser.Cache, token)
-		} else {
-			return nil
-		}
+func (parser *Parser) peek() {
+	if parser.Token == TokenInvalid {
+		parser.Token = parser.Scanner.Scan()
 	}
-	return parser.Cache[0]
-}
-
-func (parser *Parser) next() *TokenData {
-	tokenType := parser.Scanner.Scan()
-	if parser.Scanner.ErrorCount > 0 {
-		//TO-DO will stop parse
-		fmt.Printf("type %s %s: %s \n", TokenType(tokenType), parser.Scanner.Position, parser.Scanner.Token())
-		return nil
-	}
-	token := &TokenData{
-		Type: tokenType,
-	}
-	if tokenType != TypeEOF {
-		token.Text = parser.Scanner.Token()
-	}
-	return token
-
 }
 
 func (parser *Parser) consume() {
-	parser.Cache = parser.Cache[1:]
+	parser.Token = TokenInvalid
+}
+
+func (parser *Parser) ensure(token Token) {
+	parser.peek()
+	if parser.Token != token {
+		err := fmt.Sprintf("unexpected %s: %s, expecte: %s \n", parser.Scanner.Position, parser.Scanner.Token(), TokenToKey(token))
+		fmt.Print(err)
+		panic(err)
+	}
+	parser.consume()
+}
+
+func (parser *Parser) isModifier(token Token) bool {
+	return token == Private || token == Protected || token == Public ||
+		token == Static || token == Const
 }
 
 func (parser *Parser) parseNamespace() {
-	fmt.Println("parse namespace")
-	token := parser.peek()
-	if token.Type == TypeToken && token.Text == TokenToKey(Namespace) {
+	parser.peek()
+	if parser.Token == Namespace {
 		parser.Program.Namespace = "to be parsed"
 		parser.consume()
-		//TO-DO parse namespace content
-		fmt.Println("to parse namespace")
+		parser.Program.Namespace = parser.parseQualifiedId()
+		parser.ensure(Semi)
+		fmt.Println(parser.Program.Namespace)
 	}
+}
+
+func (parser *Parser) parseIncludes() {
+}
+
+func (parser *Parser) parseModifiers() {
+}
+
+func (parser *Parser) parseQualifiedId() string {
+	parser.peek()
+	id := ""
+	for {
+		if parser.Token == TokenIdentifier {
+			id += parser.Scanner.Token()
+			parser.consume()
+			parser.peek()
+			if parser.Token == Dot {
+				id += parser.Scanner.Token()
+				parser.consume()
+				parser.peek()
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+	}
+	return id
 }
