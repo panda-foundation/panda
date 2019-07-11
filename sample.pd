@@ -1,31 +1,44 @@
-// namespace define, empty namespace and no namespace mean global
+/// document for this namespace
+/** no protected type, under same namespace 
+can access none-public fields. they will all
+be presented as struct in c++ (no class) 
+**/
 namespace test.sample;
 
-// include define, can include single file or everything under some namespace
+// these comments will be ignored
+/* normal comments */
 include serializer.json;
 include network.*;
 
-// global variable, this is not recommended but allowed
-public int a, b;
-public string c;
+/// document for declarartions
+/** also document **/
+public var a, b : int;
+public const c : string = "hellow world";
 
 // global function
-void do_nothing()
+function do_nothing() // void return type can be ommited
 {
 }
 
-// empty class
-class empty
+// simple class
+public class empty
 {
+    public function new()
+    {
+    }
+
+    public function destroy()
+    {
+    }
 }
 
 // interface define, must have something
-interface must_do
+public interface must_do
 {
-    void string();
+    print() void; // void can be ommited
 }
 
-// enum define
+// enum define // private default
 enum color
 {
     red;
@@ -40,90 +53,79 @@ enum more_color : color
 }
 
 // base class ("base" is keyword)
-class base_class
+public class base_class
 {
     // private member
-    private int value_ = 0;
+    value_ : int = 0;
 
-    // constructor
-    base_class(int value)
+    // private constructor
+    function new(value : int)
     {
         value_ = value;
     }
 
     // also constructor
-    base_class()
+    function new()
     {
         value_ = 10;
-    }
-
-    // public member function
-    public void print()
-    {
-        print(value_);
     }
 }
 
 // derived class
-class derive_class : base_class, must_do
+public class derive_class : base_class, must_do
 {
-    derive_class()
+    public function new()
     {
-        base();
+        base.new();
     }
 
-    derive_class(int value)
+    public function new(value : int)
     {
-        base(value);
+        base.new(value);
     }
 
     // all function will be virtual, can be override
-    public void print()
+    public function print()
     {
         base.print();
     }
 }
 
 // generic
-class generic<K, V>
+public class generic<K, V>
 {
-    K k_;
-    V v_;
+    var k_ : K;
+    var v_ : V;
 
-    generic(K k, V k)
+    public function new(k : K, v : V)
     {
         k_ = k;
         v_ = v;
     }
-
-    public void print()
-    {
-
-    }
 }
 
 // derive from generic
-class derive_generic : generic<int, int>
+public class derive_generic : generic<int, int>
 {
 
 }
 
 // program entry
-void main()
+function main()
 {
-    int a = 1;
-    int b = 2;
-    int c = a + b;
+    var a : int = 1;
+    var b : int = 2;
+    var c = a + b;
     print(c);
 
-    base_class b = new base_class();
+    var b : base_class = new base_class();
     b.print();
 
-    derive_class d = new derive_class;
+    var d : derive_class = new derive_class;
     d.print();
 
-    generic<int, int> g = new generic(1, 2);
+    var g ： generic<int, int> = new generic(1, 2);
     g.print();
 
-    // return 0 // will auto add it
+    // return 0 // will be added automatically
 }
