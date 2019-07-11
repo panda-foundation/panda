@@ -17,14 +17,14 @@ type Parser struct {
 	Scanner *Scanner
 	Program *ProgramUnit
 
-	Token     Token
-	Modifiers []Token
+	Token    Token
+	Modifier Modifier
 
 	InClass    bool
 	InFunction bool
 	InEnum     bool
 
-	Comments []string
+	Documents []string
 }
 
 func NewParser() *Parser {
@@ -60,63 +60,56 @@ func (parser *Parser) ensure(token Token) {
 	parser.consume()
 }
 
-func (parser *Parser) isModifier(token Token) bool {
-	return token == Private || token == Protected || token == Public ||
-		token == Static || token == Const
-}
-
-func (parser *Parser) isAccessModifier(token Token) bool {
-	return token == Private || token == Protected || token == Public
-}
-
-func (parser *Parser) parseComments() {
-	if parser.Scanner.skipComment {
+func (parser *Parser) parseDocument() {
+	if parser.Scanner.skipDocument {
 		return
 	}
-	parser.clearComments()
-	for parser.peek() == TokenComment {
-		parser.Comments = append(parser.Comments, parser.Scanner.Token())
-		parser.consume()
-	}
+	/*
+		parser.clearDocument()
+		for parser.peek() == TokenComment {
+			parser.Documents = append(parser.Documents, parser.Scanner.Token())
+			parser.consume()
+		}*/
 }
 
-func (parser *Parser) skipComments() {
-	if parser.Scanner.skipComment {
+func (parser *Parser) skipDocument() {
+	if parser.Scanner.skipDocument {
 		return
 	}
-	for parser.peek() == TokenComment {
-		parser.consume()
-	}
+	/*
+		for parser.peek() == TokenComment {
+			parser.consume()
+		}*/
 }
 
-func (parser *Parser) clearComments() {
-	if parser.Scanner.skipComment {
+func (parser *Parser) clearDocument() {
+	if parser.Scanner.skipDocument {
 		return
 	}
-	parser.Comments = parser.Comments[:0]
+	parser.Documents = parser.Documents[:0]
 }
 
-func (parser *Parser) getComments() []string {
-	var comments []string
-	if parser.Scanner.skipComment {
-		return comments
+func (parser *Parser) getDocument() []string {
+	var documents []string
+	if parser.Scanner.skipDocument {
+		return documents
 	}
-	for _, v := range parser.Comments {
-		comments = append(comments, v)
+	for _, v := range parser.Documents {
+		documents = append(documents, v)
 	}
-	parser.clearComments()
-	return comments
+	parser.clearDocument()
+	return documents
 }
 
 func (parser *Parser) parseNamespace() {
-	parser.parseComments()
+	parser.parseDocument()
 	if parser.peek() == Namespace {
 		parser.consume()
 		if parser.peek() != Semi {
 			parser.Program.Namespace = parser.parseQualifiedId(false)
 		}
 		parser.ensure(Semi)
-		parser.Program.Comments = parser.getComments()
+		parser.Program.Document = parser.getDocument()
 		fmt.Println("namespace:", parser.Program.Namespace)
 	} else {
 		parser.Scanner.error(fmt.Sprintf("unexpected: %s, expect namespace", TokenToKey(parser.peek())))
@@ -125,44 +118,37 @@ func (parser *Parser) parseNamespace() {
 
 func (parser *Parser) parseIncludes() {
 	for {
-		parser.parseComments()
+		parser.parseDocument()
 		if parser.peek() == Include {
 			parser.consume()
 			text := parser.parseQualifiedId(true)
 			parser.Program.Includes = append(parser.Program.Includes, text)
 			fmt.Println("include:", text)
 			parser.ensure(Semi)
-			parser.clearComments()
+			parser.clearDocument()
 		} else {
 			break
 		}
 	}
 }
 
-func (parser *Parser) parseModifiers() {
-	parser.Modifiers = parser.Modifiers[:0]
-	for {
-		if parser.isModifier(parser.peek()) {
-			if parser.peek() == Static {
-				if !parser.InClass {
-					parser.Scanner.error("unexpected static")
-				}
-			}
-			for _, v := range parser.Modifiers {
-				if v == parser.peek() {
-					parser.Scanner.error("dupilicate modifier: " + TokenToKey(parser.peek()))
-				}
-				if parser.isAccessModifier(parser.peek()) && parser.isAccessModifier(v) {
-					parser.Scanner.error("dupilicate access modifier: " + TokenToKey(parser.peek()))
-				}
-			}
-			parser.Modifiers = append(parser.Modifiers, parser.peek())
-			parser.consume()
-		} else {
-			break
+func (parser *Parser) parseModifier() {
+	parser.Modifier.Public = false
+	parser.Modifier.Static = false
+
+	if parser.peek() == Public {
+		parser.Modifier.Public = true
+		parser.consume()
+	}
+	if parser.peek() == Static {
+		parser.Modifier.Static = true
+		parser.consume()
+		if !parser.InClass {
+			parser.Scanner.error("unexpected static")
 		}
 	}
-	fmt.Println("modifiers:", parser.Modifiers)
+
+	fmt.Println("modifiers:", parser.Modifier)
 }
 
 func (parser *Parser) parseQualifiedId(allowStar bool) string {
@@ -193,11 +179,11 @@ func (parser *Parser) parseQualifiedId(allowStar bool) string {
 func (parser *Parser) parseType() *Type {
 	dataType := &Type{}
 	dataType.Scalar = TokenInvalid
-
+	return nil
 }
 
 func (parser *Parser) parseDeclarations() {
-	parser.parseModifiers()
+	parser.parseModifier()
 	//parser meta data
 
 	switch parser.peek() {

@@ -59,7 +59,7 @@ type Scanner struct {
 
 	char rune // character before current srcPos
 
-	skipComment      bool            // if skip to store comment info
+	skipDocument     bool            // if skip to store comment info
 	flags            map[string]bool // flags for condition compiler
 	conditionStarted bool            // if #if is true
 
@@ -70,7 +70,7 @@ type Scanner struct {
 }
 
 // NewScanner return an initialized scanner
-func NewScanner(src io.Reader, skipComment bool, flags []string) *Scanner {
+func NewScanner(src io.Reader, skipDocument bool, flags []string) *Scanner {
 	s := &Scanner{}
 
 	s.src = src
@@ -78,7 +78,7 @@ func NewScanner(src io.Reader, skipComment bool, flags []string) *Scanner {
 	s.srcEnd = 0
 	s.srcBufOffset = 0
 
-	s.skipComment = skipComment
+	s.skipDocument = skipDocument
 	s.flags = make(map[string]bool)
 	for _, v := range flags {
 		s.flags[v] = true
@@ -529,6 +529,7 @@ func (s *Scanner) Scan() Token {
 			}
 		case '/': // alse maybe operator /
 			char = s.next()
+			//TO-DO scan document
 			if char == '/' || char == '*' {
 				if char == '/' {
 					char = s.scanLineComment()
@@ -536,11 +537,11 @@ func (s *Scanner) Scan() Token {
 					char = s.scanBlockComment()
 				}
 				char = s.next()
-				if s.skipComment {
+				if s.skipDocument {
 					s.char = char
 					return s.Scan()
 				}
-				token = TokenComment
+				token = TokenDocument
 			} else {
 				char, token = s.scanOperators(char)
 			}

@@ -14,61 +14,62 @@ const (
 	TokenChar
 	TokenString
 	TokenRawString
-	TokenComment
 	TokenMetaIdentifier
+	TokenDocument //TO-DO
 
 	// keywords
-	Auto
 	Base
-	Bool
 	Break
 	Case
 	Cast
 	Catch
-	Char
 	Class
 	Const
 	Continue
 	Default
-	Double
 	Else
 	Enum
-	Float32
-	Float64
 	False
-	Float
 	For
+	Function
 	Include
 	If
-	Int
-	Int8
-	Int16
-	Int32
-	Int64
-	Long
 	Namespace
 	New
 	Null
 	Operator
-	Private
-	Protected
 	Public
 	Return
 	Static
-	Short
-	String
 	Switch
 	This
 	Throw
 	True
 	Try
+	Var
+
+	// scalar
+	Bool
+	Char
+	Int
+	Int8
+	Int16
+	Int32
+	Int64
 	Uint
 	Uint8
 	Uint16
 	Uint32
 	Uint64
-	Ulong
+	Short
+	Long
 	Ushort
+	Ulong
+	Double
+	Float
+	Float32
+	Float64
+	String
 	Void
 
 	// operators
@@ -129,57 +130,57 @@ func init() {
 	keyToToken = make(map[string]Token)
 	tokenToKey = make(map[Token]string)
 
-	tokenToKey[Auto] = "auto"
 	tokenToKey[Base] = "base"
-	tokenToKey[Bool] = "bool"
 	tokenToKey[Break] = "break"
 	tokenToKey[Case] = "case"
 	tokenToKey[Cast] = "cast"
 	tokenToKey[Catch] = "catch"
-	tokenToKey[Char] = "char"
 	tokenToKey[Class] = "class"
 	tokenToKey[Const] = "const"
 	tokenToKey[Continue] = "continue"
 	tokenToKey[Default] = "default"
-	tokenToKey[Double] = "double"
 	tokenToKey[Else] = "else"
 	tokenToKey[Enum] = "enum"
-	tokenToKey[Float32] = "f32"
-	tokenToKey[Float64] = "f64"
 	tokenToKey[False] = "false"
-	tokenToKey[Float] = "float"
 	tokenToKey[For] = "for"
+	tokenToKey[Function] = "function"
 	tokenToKey[Include] = "include"
 	tokenToKey[If] = "if"
-	tokenToKey[Int] = "int"
-	tokenToKey[Int8] = "i8"
-	tokenToKey[Int16] = "i16"
-	tokenToKey[Int32] = "i32"
-	tokenToKey[Int64] = "i64"
-	tokenToKey[Long] = "long"
 	tokenToKey[Namespace] = "namespace"
 	tokenToKey[New] = "new"
 	tokenToKey[Null] = "null"
 	tokenToKey[Operator] = "operator"
-	tokenToKey[Private] = "private"
-	tokenToKey[Protected] = "protected"
 	tokenToKey[Public] = "public"
 	tokenToKey[Return] = "return"
 	tokenToKey[Static] = "static"
-	tokenToKey[Short] = "short"
-	tokenToKey[String] = "string"
 	tokenToKey[Switch] = "switch"
 	tokenToKey[This] = "this"
 	tokenToKey[Throw] = "throw"
 	tokenToKey[True] = "true"
 	tokenToKey[Try] = "try"
+	tokenToKey[Var] = "var"
+
+	tokenToKey[Bool] = "bool"
+	tokenToKey[Char] = "char"
+	tokenToKey[Int] = "int"
+	tokenToKey[Int8] = "i8"
+	tokenToKey[Int16] = "i16"
+	tokenToKey[Int32] = "i32"
+	tokenToKey[Int64] = "i64"
 	tokenToKey[Uint] = "uint"
 	tokenToKey[Uint8] = "u8"
 	tokenToKey[Uint16] = "u16"
 	tokenToKey[Uint32] = "u32"
 	tokenToKey[Uint64] = "u64"
-	tokenToKey[Ulong] = "ulong"
+	tokenToKey[Short] = "short"
+	tokenToKey[Long] = "long"
 	tokenToKey[Ushort] = "ushort"
+	tokenToKey[Ulong] = "ulong"
+	tokenToKey[Double] = "double"
+	tokenToKey[Float] = "float"
+	tokenToKey[Float32] = "f32"
+	tokenToKey[Float64] = "f64"
+	tokenToKey[String] = "string"
 	tokenToKey[Void] = "void"
 
 	tokenToKey[LeftParen] = "("
@@ -232,16 +233,16 @@ func init() {
 	}
 
 	// no fixed text value (read from scanner.Token())
-	tokenToKey[TokenInvalid] = "invalid token"
+	tokenToKey[TokenInvalid] = "invalid_token"
 	tokenToKey[TokenEOF] = "EOF"
 	tokenToKey[TokenIdentifier] = "identifier"
-	tokenToKey[TokenInt] = "int value"
-	tokenToKey[TokenFloat] = "float value"
-	tokenToKey[TokenChar] = "char value"
-	tokenToKey[TokenString] = "string value"
-	tokenToKey[TokenRawString] = "raw string value"
-	tokenToKey[TokenComment] = "comment"
-	tokenToKey[TokenMetaIdentifier] = "meta identifier"
+	tokenToKey[TokenInt] = "int_value"
+	tokenToKey[TokenFloat] = "float_value"
+	tokenToKey[TokenChar] = "char_value"
+	tokenToKey[TokenString] = "string_value"
+	tokenToKey[TokenRawString] = "raw_string"
+	tokenToKey[TokenDocument] = "document"
+	tokenToKey[TokenMetaIdentifier] = "meta_identifier"
 
 	operators['('] = true
 	operators[')'] = true
@@ -273,23 +274,25 @@ func init() {
 
 	scalars[Bool] = true
 
+	scalars[Char] = true
+
+	scalars[Int] = true
 	scalars[Int8] = true
 	scalars[Int16] = true
 	scalars[Int32] = true
 	scalars[Int64] = true
+	scalars[Uint] = true
 	scalars[Uint8] = true
 	scalars[Uint16] = true
 	scalars[Uint32] = true
 	scalars[Uint64] = true
 	scalars[Short] = true
-	scalars[Ushort] = true
-	scalars[Int] = true
-	scalars[Uint] = true
 	scalars[Long] = true
+	scalars[Ushort] = true
 	scalars[Ulong] = true
 
-	scalars[Float] = true
 	scalars[Double] = true
+	scalars[Float] = true
 	scalars[Float32] = true
 	scalars[Float64] = true
 

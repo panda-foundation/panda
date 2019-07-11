@@ -9,48 +9,51 @@ const (
 )
 
 type Modifier struct {
-	Access AccessType
+	Public bool
 	Static bool
-	Const  bool
 }
 
 type ProgramUnit struct {
-	Comments  []string
+	Document  []string
 	Namespace string
 	Includes  []string
 
-	Declarations []*Declaration
-	Functions    []*Function
-	Enums        []*EnumDefinition
-	Classes      []*ClassDefinition
+	Declarations []*IdentifierDecl
+	Functions    []*FunctionDecl
+	Enums        []*EnumDecl
+	Classes      []*ClassDecl
 }
 
-type EnumDefinition struct {
-	Comments []string
+type EnumDecl struct {
+	Document []string
 	Modifier *Modifier
 }
 
-type ClassDefinition struct {
-	Comments []string
+type ClassDecl struct {
+	Document []string
 	Modifier *Modifier
 
 	Parents      []string
 	Templates    []string
-	Declarations []*Declaration
-	Functions    []*Function
+	Declarations []*IdentifierDecl
+	Functions    []*FunctionDecl
 }
 
-type Function struct {
-	Comments []string
+type FunctionDecl struct {
+	Document []string
 	Modifier *Modifier
 
 	Templates []string
 }
 
-type Declaration struct {
-	Comments []string
+type IdentifierDecl struct {
+	Document []string
 	Modifier *Modifier
+	IsVar    bool
 }
 
 type Expression struct {
+}
+
+type Statement struct {
 }

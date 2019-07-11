@@ -1,26 +1,15 @@
-/// document for this namespace
-/** no protected type, under same namespace 
-can access none-public fields. they will all
-be presented as struct in c++ (no class) 
-**/
 namespace test.sample;
 
-// these comments will be ignored
-/* normal comments */
 include serializer.json;
 include network.*;
 
-/// document for declarartions
-/** also document **/
 public var a, b : int;
 public const c : string = "hellow world";
 
-// global function
 function do_nothing() // void return type can be ommited
 {
 }
 
-// simple class
 public class empty
 {
     public function new()
@@ -32,13 +21,11 @@ public class empty
     }
 }
 
-// interface define, must have something
 public interface must_do
 {
     print() void; // void can be ommited
 }
 
-// enum define // private default
 enum color
 {
     red;
@@ -46,13 +33,11 @@ enum color
     blue;
 }
 
-// more enum
 enum more_color : color
 {
     yellow;
 }
 
-// base class ("base" is keyword)
 public class base_class
 {
     // private member
@@ -71,7 +56,6 @@ public class base_class
     }
 }
 
-// derived class
 public class derive_class : base_class, must_do
 {
     public function new()
@@ -91,7 +75,6 @@ public class derive_class : base_class, must_do
     }
 }
 
-// generic
 public class generic<K, V>
 {
     var k_ : K;
@@ -104,13 +87,11 @@ public class generic<K, V>
     }
 }
 
-// derive from generic
 public class derive_generic : generic<int, int>
 {
 
 }
 
-// program entry
 function main()
 {
     var a : int = 1;
@@ -126,6 +107,4 @@ function main()
 
     var g ： generic<int, int> = new generic(1, 2);
     g.print();
-
-    // return 0 // will be added automatically
 }
