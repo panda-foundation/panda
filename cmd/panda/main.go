@@ -38,7 +38,7 @@ import (
 
 func main() {
 	file, _ := os.Open("./../../sample.pd")
-	s := compiler.NewScanner(file, true, []string{})
+	s := compiler.NewScanner(file, false, []string{})
 	p := compiler.NewParser()
 	p.Parse(s)
 }

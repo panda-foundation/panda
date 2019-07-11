@@ -122,6 +122,7 @@ var (
 	keyToToken map[string]Token
 	tokenToKey map[Token]string
 	operators  [128]bool
+	scalars    map[Token]bool
 )
 
 func init() {
@@ -266,6 +267,35 @@ func init() {
 	operators['?'] = true
 	operators[';'] = true
 	operators['.'] = true
+
+	// scalars
+	scalars = make(map[Token]bool)
+
+	scalars[Bool] = true
+
+	scalars[Int8] = true
+	scalars[Int16] = true
+	scalars[Int32] = true
+	scalars[Int64] = true
+	scalars[Uint8] = true
+	scalars[Uint16] = true
+	scalars[Uint32] = true
+	scalars[Uint64] = true
+	scalars[Short] = true
+	scalars[Ushort] = true
+	scalars[Int] = true
+	scalars[Uint] = true
+	scalars[Long] = true
+	scalars[Ulong] = true
+
+	scalars[Float] = true
+	scalars[Double] = true
+	scalars[Float32] = true
+	scalars[Float64] = true
+
+	scalars[String] = true
+
+	scalars[Void] = true
 }
 
 // KeyToToken convert key to token
@@ -290,6 +320,10 @@ func IsOperator(char rune) bool {
 		return false
 	}
 	return operators[char] == true
+}
+
+func IsScala(token Token) bool {
+	return scalars[token]
 }
 
 /*

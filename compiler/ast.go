@@ -15,6 +15,7 @@ type Modifier struct {
 }
 
 type ProgramUnit struct {
+	Comments  []string
 	Namespace string
 	Includes  []string
 
@@ -25,12 +26,12 @@ type ProgramUnit struct {
 }
 
 type EnumDefinition struct {
-	Comment  string
+	Comments []string
 	Modifier *Modifier
 }
 
 type ClassDefinition struct {
-	Comment  string
+	Comments []string
 	Modifier *Modifier
 
 	Parents      []string
@@ -40,14 +41,14 @@ type ClassDefinition struct {
 }
 
 type Function struct {
-	Comment  string
+	Comments []string
 	Modifier *Modifier
 
 	Templates []string
 }
 
 type Declaration struct {
-	Comment  string
+	Comments []string
 	Modifier *Modifier
 }
 

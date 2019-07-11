@@ -1,6 +1,3 @@
-// this is comment
-/* here the block comment */
-
 // namespace define, empty namespace and no namespace mean global
 namespace test.sample;
 
@@ -10,7 +7,7 @@ include network.*;
 
 // global variable, this is not recommended but allowed
 public int a, b;
-public static const string c;
+public string c;
 
 // global function
 void do_nothing()
@@ -31,15 +28,15 @@ interface must_do
 // enum define
 enum color
 {
-    red,
-    green = 10,
-    blue,
+    red;
+    green = 10;
+    blue;
 }
 
 // more enum
 enum more_color : color
 {
-    yellow,
+    yellow;
 }
 
 // base class ("base" is keyword)

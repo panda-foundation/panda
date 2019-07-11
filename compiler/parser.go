@@ -7,6 +7,12 @@ type TokenData struct {
 	Text string
 }
 
+type Type struct {
+	Scalar      Token
+	QualifiedId string
+	//TO-DO generic
+}
+
 type Parser struct {
 	Scanner *Scanner
 	Program *ProgramUnit
@@ -31,7 +37,7 @@ func (parser *Parser) Parse(scanner *Scanner) {
 
 	parser.parseNamespace()
 	parser.parseIncludes()
-	parser.parseDefinitions()
+	parser.parseDeclarations()
 }
 
 // return the first cached token
@@ -63,40 +69,70 @@ func (parser *Parser) isAccessModifier(token Token) bool {
 	return token == Private || token == Protected || token == Public
 }
 
-func (parser *Parser) scanComments(store bool) {
+func (parser *Parser) parseComments() {
 	if parser.Scanner.skipComment {
 		return
 	}
-	parser.Comments = parser.Comments[:0]
+	parser.clearComments()
 	for parser.peek() == TokenComment {
-		if store {
-			parser.Comments = append(parser.Comments, parser.Scanner.Token())
-		}
+		parser.Comments = append(parser.Comments, parser.Scanner.Token())
 		parser.consume()
 	}
 }
 
+func (parser *Parser) skipComments() {
+	if parser.Scanner.skipComment {
+		return
+	}
+	for parser.peek() == TokenComment {
+		parser.consume()
+	}
+}
+
+func (parser *Parser) clearComments() {
+	if parser.Scanner.skipComment {
+		return
+	}
+	parser.Comments = parser.Comments[:0]
+}
+
+func (parser *Parser) getComments() []string {
+	var comments []string
+	if parser.Scanner.skipComment {
+		return comments
+	}
+	for _, v := range parser.Comments {
+		comments = append(comments, v)
+	}
+	parser.clearComments()
+	return comments
+}
+
 func (parser *Parser) parseNamespace() {
-	parser.scanComments(false)
+	parser.parseComments()
 	if parser.peek() == Namespace {
 		parser.consume()
 		if parser.peek() != Semi {
 			parser.Program.Namespace = parser.parseQualifiedId(false)
 		}
 		parser.ensure(Semi)
+		parser.Program.Comments = parser.getComments()
 		fmt.Println("namespace:", parser.Program.Namespace)
+	} else {
+		parser.Scanner.error(fmt.Sprintf("unexpected: %s, expect namespace", TokenToKey(parser.peek())))
 	}
 }
 
 func (parser *Parser) parseIncludes() {
 	for {
-		parser.scanComments(false)
+		parser.parseComments()
 		if parser.peek() == Include {
 			parser.consume()
 			text := parser.parseQualifiedId(true)
 			parser.Program.Includes = append(parser.Program.Includes, text)
 			fmt.Println("include:", text)
 			parser.ensure(Semi)
+			parser.clearComments()
 		} else {
 			break
 		}
@@ -154,15 +190,27 @@ func (parser *Parser) parseQualifiedId(allowStar bool) string {
 	return id
 }
 
-func (parser *Parser) parseDefinitions() {
+func (parser *Parser) parseType() *Type {
+	dataType := &Type{}
+	dataType.Scalar = TokenInvalid
+
+}
+
+func (parser *Parser) parseDeclarations() {
 	parser.parseModifiers()
+	//parser meta data
 
 	switch parser.peek() {
 	case Class:
 	case Enum:
 	case TokenIdentifier:
-	}
+	default:
+		if IsScala(parser.peek()) {
 
+		} else {
+
+		}
+	}
 }
 
 func (parser *Parser) parseClassMember() {
