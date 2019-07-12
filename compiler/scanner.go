@@ -1,198 +1,121 @@
 package compiler
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"os"
+	"path/filepath"
 	"unicode/utf8"
 )
 
-type Position struct {
-	Filename string // filename, if any
-	Offset   int    // byte offset, starting at 0
-	Line     int    // line number, starting at 1
-	Column   int    // column number, starting at 1 (character count per line)
-}
+const bom = 0xFEFF // byte order mark, only permitted as very first character
 
-func (pos *Position) IsValid() bool { return pos.Line > 0 }
-
-func (pos Position) String() string {
-	s := pos.Filename
-	if s == "" {
-		s = "<input>"
-	}
-	if pos.IsValid() {
-		s += fmt.Sprintf(":%d:%d", pos.Line, pos.Column)
-	}
-	return s
-}
+type ErrorHandler func(position Position, msg string)
 
 // Const for scanner
+/*
 const (
 	EOFChar       rune = -1
 	InvalidChar   rune = -2
 	InvalidPos    int  = -1
 	InvalidLine   int  = 0
 	InvalidColumn int  = 0
-)
+)*/
 
-const bufLen = 4 // 1024 // at least utf8.UTFMax // default 1024, 4 for testing
-
-// A Scanner implements reading of Unicode characters and tokens from an io.Reader.
 type Scanner struct {
-	src io.Reader // Input
+	file *File
+	dir  string
+	src  []byte
 
-	srcBuf       [bufLen]byte // for input reader
-	srcPos       int          // reading position (srcBuf index)
-	srcEnd       int          // source end (srcBuf index)
-	srcBufOffset int          // byte offset of srcBuf[0] in source
+	err        ErrorHandler
+	ErrorCount int // total errors
 
-	line        int // line count
-	column      int // character count
-	lastLineLen int // length of last line in characters (for correct column reporting)
-	lastCharLen int // length of last character in bytes
+	scanDocument bool
+	flags        map[string]bool // flags for condition compiler
+	flagStarted  bool            // if #if is true
 
-	tokenBuf bytes.Buffer // token text head that is not in srcBuf anymore, store unfinished token
-	tokenPos int          // token text tail position (srcBuf index); valid if >= 0
-	tokenEnd int          // token text tail end (srcBuf index)
-
-	char rune // character before current srcPos
-
-	skipDocument     bool            // if skip to store comment info
-	flags            map[string]bool // flags for condition compiler
-	conditionStarted bool            // if #if is true
-
-	Error      func(s *Scanner, msg string) // hook error function
-	ErrorCount int                          // total errors
-
-	Position
+	char       rune
+	offset     int
+	readOffset int
 }
 
 // NewScanner return an initialized scanner
-func NewScanner(src io.Reader, skipDocument bool, flags []string) *Scanner {
-	s := &Scanner{}
+func NewScanner(file *File, src []byte, err ErrorHandler, scanDocument bool, flags []string) *Scanner {
+	scanner := &Scanner{}
 
-	s.src = src
-	s.srcPos = 0
-	s.srcEnd = 0
-	s.srcBufOffset = 0
+	if file.size != len(src) {
+		panic(fmt.Sprintf("file size (%d) does not match src len (%d)", file.size, len(src)))
+	}
+	scanner.file = file
+	scanner.src = src
+	scanner.err = err
+	scanner.scanDocument = scanDocument
+	scanner.dir = filepath.Split(file.name)
 
-	s.skipDocument = skipDocument
-	s.flags = make(map[string]bool)
-	for _, v := range flags {
-		s.flags[v] = true
+	scanner.char = ' '
+	scanner.offset = 0
+	scanner.readOffset = 0
+	scanner.ErrorCount = 0
+
+	scanner.next()
+	if scanner.char == bom {
+		scanner.next()
 	}
 
-	s.line = 1
-	s.column = InvalidColumn
-	s.lastLineLen = 0
-	s.lastCharLen = 0
+	scanner.flags = make(map[string]bool)
+	for _, flag := range flags {
+		scanner.flags[flag] = true
+	}
 
-	s.tokenPos = InvalidPos
-
-	s.char = InvalidChar // no char read yet, not EOF
-
-	s.Error = nil
-	s.ErrorCount = 0
-	s.Line = InvalidLine // invalidate token position
-
-	return s
+	return scanner
 }
 
-func (s *Scanner) next() rune {
-	// check if need to load some buf first
-	shouldRead := s.srcPos >= s.srcEnd
-	if !shouldRead {
-		char := rune(s.srcBuf[s.srcPos])
-		if char >= utf8.RuneSelf && s.srcPos+utf8.UTFMax > s.srcEnd && !utf8.FullRune(s.srcBuf[s.srcPos:s.srcEnd]) {
-			shouldRead = true
+func (s *Scanner) next() {
+	if s.readOffset < len(s.src) {
+		s.offset = s.readOffset
+		if s.char == '\n' {
+			s.file.AddLine(s.offset)
 		}
-	}
-	if shouldRead {
-		if s.tokenPos >= 0 {
-			s.tokenBuf.Write(s.srcBuf[s.tokenPos:s.srcPos])
-			s.tokenPos = 0
-		}
-		copy(s.srcBuf[0:], s.srcBuf[s.srcPos:s.srcEnd]) // move to start
-		s.srcBufOffset += s.srcPos
-		length := s.srcEnd - s.srcPos // length in buf
-		n, err := s.src.Read(s.srcBuf[length:bufLen])
-		s.srcPos = 0
-		s.srcEnd = length + n
-		if err != nil {
-			if err != io.EOF {
-				s.error(err.Error())
-			}
-			if s.srcEnd == 0 {
-				if s.lastCharLen > 0 {
-					// previous character was not EOF
-					s.column++
-				}
-				s.lastCharLen = 0
-				return EOFChar
+		r, w := rune(s.src[s.readOffset]), 1
+		switch {
+		case r == 0:
+			s.error(s.offset, "illegal character NUL")
+		case r >= utf8.RuneSelf:
+			// not ASCII
+			r, w = utf8.DecodeRune(s.src[s.readOffset:])
+			if r == utf8.RuneError && w == 1 {
+				s.error(s.offset, "illegal UTF-8 encoding")
+			} else if r == bom && s.offset > 0 {
+				s.error(s.offset, "illegal byte order mark")
 			}
 		}
-	}
-
-	// at least one byte
-	char, width := rune(s.srcBuf[s.srcPos]), 1
-	if char >= utf8.RuneSelf {
-		// uncommon case: not ASCII
-		char, width = utf8.DecodeRune(s.srcBuf[s.srcPos:s.srcEnd])
-		if char == utf8.RuneError && width == 1 {
-			// advance for correct error position
-			s.srcPos += width
-			s.lastCharLen = width
-			s.column++
-			s.error("invalid UTF-8 encoding")
-			return char
+		s.readOffset += w
+		s.char = r
+	} else {
+		s.offset = len(s.src)
+		if s.ch == '\n' {
+			s.file.AddLine(s.offset)
 		}
+		s.ch = -1 // eof
 	}
-
-	// advance
-	s.srcPos += width
-	s.lastCharLen = width
-	s.column++
-
-	// special situations
-	switch char {
-	case 0:
-		// for compatibility
-		s.error("invalid character NUL")
-	case '\n':
-		s.line++
-		s.lastLineLen = s.column
-		s.column = InvalidColumn
-	}
-
-	return char
 }
 
-func (s *Scanner) peek() rune {
-	if s.char == InvalidChar {
-		s.char = s.next()
-		if s.char == '\uFEFF' {
-			s.char = s.next()
-		}
+func (s *Scanner) peek() byte {
+	if s.readOffset < len(s.src) {
+		return s.src[s.readOffset]
 	}
-	return s.char
+	return 0
 }
 
-func (s *Scanner) error(msg string) {
-	s.tokenEnd = s.srcPos - s.lastCharLen // make sure token text is terminated
+func (s *Scanner) error(offset int, msg string) {
+	if s.err != nil {
+		s.err(s.file.Position(s.file.Pos(offset)), msg)
+	}
 	s.ErrorCount++
-	if s.Error != nil {
-		s.Error(s, msg)
-		return
-	}
-	pos := s.Position
-	if !pos.IsValid() {
-		pos = s.Pos()
-	}
-	fmt.Fprintf(os.Stderr, "%s: %s\n", pos, msg)
-	panic(fmt.Sprintf("%s: %s\n", pos, msg))
 }
+
+//func (s *Scanner) scanComment() string {
+// skip then update line info
+// scanDocument
+// updateLineInfo
 
 func (s *Scanner) scanIdentifier() rune {
 	// the zero'th rune is OK; start scanning at the next one
