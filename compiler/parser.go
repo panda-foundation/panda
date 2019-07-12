@@ -2,17 +2,6 @@ package compiler
 
 import "fmt"
 
-type TokenData struct {
-	Type Token
-	Text string
-}
-
-type Type struct {
-	Scalar      Token
-	QualifiedId string
-	//TO-DO generic
-}
-
 type Parser struct {
 	Scanner *Scanner
 	Program *ProgramUnit
@@ -189,21 +178,19 @@ func (parser *Parser) parseDeclarations() {
 	switch parser.peek() {
 	case Class:
 	case Enum:
-	case TokenIdentifier:
+	case Interface:
+	case Var:
+	case Const:
 	default:
-		if IsScala(parser.peek()) {
-
-		} else {
-
-		}
+		parser.Scanner.error("unexpected: " + parser.Scanner.Token())
 	}
 }
 
-func (parser *Parser) parseClassMember() {
+func (parser *Parser) parseClass() {
 
 }
 
-func (parser *Parser) parseDelaration() {
+func (parser *Parser) parseDelaration(isConstant bool) {
 
 }
 

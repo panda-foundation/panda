@@ -8,6 +8,21 @@ const (
 	AccessPublic
 )
 
+type Node interface {
+	Pos() Position // position of first character belonging to the node
+	End() Position // position of first character immediately after the node
+}
+
+type Expression interface {
+	Node
+	isExpr() bool
+}
+
+type Statement interface {
+	Node
+	isStatement() bool
+}
+
 type Modifier struct {
 	Public bool
 	Static bool
@@ -22,6 +37,12 @@ type ProgramUnit struct {
 	Functions    []*FunctionDecl
 	Enums        []*EnumDecl
 	Classes      []*ClassDecl
+}
+
+type Type struct {
+	Scalar      Token
+	QualifiedId string
+	//TO-DO generic
 }
 
 type EnumDecl struct {
@@ -50,10 +71,4 @@ type IdentifierDecl struct {
 	Document []string
 	Modifier *Modifier
 	IsVar    bool
-}
-
-type Expression struct {
-}
-
-type Statement struct {
 }

@@ -1,23 +1,27 @@
 package compiler
 
-// Token is keywords and operators
-type Token rune
+// Token is the set of lexical tokens of the Panda programming language.
+type Token int
 
-// Tokens defined here
+// The list of tokens.
 const (
-	// identifier and values
-	TokenInvalid Token = iota
-	TokenEOF
-	TokenIdentifier
-	TokenInt
-	TokenFloat
-	TokenChar
-	TokenString
-	TokenRawString
-	TokenMetaIdentifier
-	TokenDocument //TO-DO
+	// Special tokens
+	ILLEGAL Token = iota
+	EOF
+	COMMENT
+	DOCUMENT
+
+	literal_begin
+	IDENT
+	INT
+	FLOAT
+	CHAR
+	STRING
+	META
+	literal_end
 
 	// keywords
+	keyword_begin
 	Base
 	Break
 	Case
@@ -33,6 +37,7 @@ const (
 	For
 	Function
 	Include
+	Interface
 	If
 	Namespace
 	New
@@ -47,8 +52,10 @@ const (
 	True
 	Try
 	Var
+	keyword_end
 
 	// scalar
+	scalar_begin
 	Bool
 	Char
 	Int
@@ -71,14 +78,17 @@ const (
 	Float64
 	String
 	Void
+	scalar_end
 
 	// operators
+	operator_begin
 	LeftParen
 	RightParen
 	LeftBracket
 	RightBracket
 	LeftBrace
 	RightBrace
+
 	Plus
 	Minus
 	Star
@@ -92,6 +102,7 @@ const (
 	Assign
 	Less
 	Greater
+
 	PlusAssign
 	MinusAssign
 	DivAssign
@@ -103,6 +114,7 @@ const (
 	RightShift
 	LeftShiftAssign
 	RightShiftAssign
+
 	Equal
 	NotEqual
 	LessEqual
@@ -111,19 +123,19 @@ const (
 	OrOr
 	PlusPlus
 	MinusMinus
+
 	Comma
 	Question
 	Colon
 	Semi
 	Dot
 	Ellipsis
+	operator_end
 )
 
 var (
 	keyToToken map[string]Token
 	tokenToKey map[Token]string
-	operators  [128]bool
-	scalars    map[Token]bool
 )
 
 func init() {
@@ -145,6 +157,7 @@ func init() {
 	tokenToKey[For] = "for"
 	tokenToKey[Function] = "function"
 	tokenToKey[Include] = "include"
+	tokenToKey[Interface] = "interface"
 	tokenToKey[If] = "if"
 	tokenToKey[Namespace] = "namespace"
 	tokenToKey[New] = "new"
