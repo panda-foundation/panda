@@ -35,10 +35,15 @@ func test() {
 	0b01010101
 	keyword 
 	'a'
-	"string"`
+	'\n'
+	"string"
+	@meta
+	//comment
+	/* block 
+	comment */`
 
 	bytes := []byte(src)
-	s := compiler.NewScanner(nil, bytes, nil, false, []string{})
+	s := compiler.NewScanner(nil, bytes, nil, true, []string{})
 	for _, token, literal := s.Scan(); token != compiler.EOF; _, token, literal = s.Scan() {
 		fmt.Printf("%s %s \n", token.String(), literal)
 	}

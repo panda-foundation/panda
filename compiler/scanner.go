@@ -21,7 +21,7 @@ type Scanner struct {
 	err        ErrorHandler
 	ErrorCount int // total errors
 
-	scanDocument bool
+	scanComments bool
 	flags        map[string]bool // flags for condition compiler
 	flagStarted  bool            // if #if is true
 
@@ -32,7 +32,7 @@ type Scanner struct {
 }
 
 // NewScanner return an initialized scanner
-func NewScanner(file *File, src []byte, err ErrorHandler, scanDocument bool, flags []string) *Scanner {
+func NewScanner(file *File, src []byte, err ErrorHandler, scanComment bool, flags []string) *Scanner {
 	scanner := &Scanner{}
 
 	//if file.size != len(src) {
@@ -41,7 +41,7 @@ func NewScanner(file *File, src []byte, err ErrorHandler, scanDocument bool, fla
 	scanner.file = file
 	scanner.src = src
 	scanner.err = err
-	scanner.scanDocument = scanDocument
+	scanner.scanComments = scanComment
 	//scanner.dir, _ = filepath.Split(file.name)
 
 	scanner.char = ' '
@@ -107,10 +107,40 @@ func (s *Scanner) error(offset int, msg string) {
 	s.ErrorCount++
 }
 
-//func (s *Scanner) scanComment() string {
-// skip then update line info
-// scanDocument
-// updateLineInfo
+func (s *Scanner) scanComment() string {
+	// initial '/' already consumed; s.ch == '/' || s.ch == '*'
+	offset := s.offset - 1 // position of initial '/'
+
+	if s.char == '/' {
+		//-style comment
+		// (the final '\n' is not considered part of the comment)
+		s.next()
+		for s.char != '\n' && s.char >= 0 {
+			s.next()
+		}
+		// if we are at '\n', the position following the comment is afterwards
+		if s.char == '\n' {
+			//TO-DO update line info
+		}
+	} else {
+		/*-style comment */
+		terminated := false
+		s.next()
+		for s.char >= 0 {
+			char := s.char
+			s.next()
+			if char == '*' && s.char == '/' {
+				s.next()
+				terminated = true
+				break
+			}
+		}
+		if !terminated {
+			s.error(offset, "comment not terminated")
+		}
+	}
+	return string(s.src[offset:s.offset])
+}
 
 func (s *Scanner) scanIdentifier() string {
 	offset := s.offset
@@ -278,6 +308,7 @@ func (s *Scanner) scanChar() string {
 			case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '\'':
 				s.next()
 			default:
+				s.error(offset, "illegal char literal")
 				valid = false
 			}
 		}
@@ -290,17 +321,22 @@ func (s *Scanner) scanChar() string {
 	return string(s.src[offset:s.offset])
 }
 
-/*
-func (s *Scanner) scanRawString() rune {
-	char, _ := s.scanUntil('"') // read character after '@("'
-	terminated := false
-	char, terminated = s.ensureChar(')')
-	for terminated != true {
-		char, _ = s.scanUntil('"')
-		char, terminated = s.ensureChar(')')
+func (s *Scanner) scanRawString() string {
+	// '`' opening already consumed
+	offset := s.offset - 1
+	for {
+		char := s.char
+		if char < 0 {
+			s.error(offset, "raw string literal not terminated")
+			break
+		}
+		s.next()
+		if char == '`' {
+			break
+		}
 	}
-	return char
-}*/
+	return string(s.src[offset:s.offset])
+}
 
 /*
 func (s *Scanner) scanOperators(char rune) (rune, Token) {
@@ -371,12 +407,6 @@ func (s *Scanner) lower(char rune) rune {
 	return ('a' - 'A') | char
 }
 
-func (s *Scanner) skipWhitespace() {
-	for s.char == ' ' || s.char == '\t' || s.char == '\n' || s.char == '\r' {
-		s.next()
-	}
-}
-
 func (s *Scanner) digitVal(char rune) int {
 	switch {
 	case '0' <= char && char <= '9':
@@ -389,12 +419,14 @@ func (s *Scanner) digitVal(char rune) int {
 
 // Scan next token
 func (s *Scanner) Scan() (pos Position, token Token, literal string) {
-	s.skipWhitespace()
+	for s.char == ' ' || s.char == '\t' || s.char == '\n' || s.char == '\r' {
+		s.next()
+	}
 
 	//pos = s.file.Pos(s.offset)
 
 	token = ILLEGAL
-	if s.isLetter(s.char) || s.char == '_' {
+	if s.isLetter(s.char) {
 		literal = s.scanIdentifier()
 		token = Lookup(literal)
 	} else if s.isDecimal(s.char) || (s.char == '.' && s.isDecimal(rune(s.peek()))) {
@@ -412,47 +444,38 @@ func (s *Scanner) Scan() (pos Position, token Token, literal string) {
 		case '"':
 			token = STRING
 			literal = s.scanString()
+		case '`':
+			token = STRING
+			literal = s.scanRawString()
 		case '\'':
 			token = CHAR
 			literal = s.scanChar()
 		case '.': //start with . can maybe operator
 			//token, literal = s.scanOperators()
 			/*
-				case '/': // alse maybe operator /
-					char = s.next()
-					//TO-DO scan document
-					if char == '/' || char == '*' {
-						if char == '/' {
-							char = s.scanLineComment()
-						} else {
-							char = s.scanBlockComment()
-						}
-						char = s.next()
-						if s.skipDocument {
-							s.char = char
-							return s.Scan()
-						}
-						token = TokenDocument
-					} else {
-						token, literal = s.scanOperators()
-					}*/
-			/*
-				case '@':
-					char = s.next()
-					if char == '(' {
-						isRawString := false
-						char, isRawString = s.ensureChar('"')
-						if isRawString {
-							s.scanRawString()
-							token = TokenRawString
-							char = s.next()
-						} else {
-							s.error(fmt.Sprintf("unexpected: %s", string(char)))
-						}
-					} else if s.isIdentifierRune(char, 0) {
-						token = TokenMetaIdentifier
-						char = s.scanIdentifier()
-					}*/
+			   case '/':
+			   			if s.ch == '/' || s.ch == '*' {
+			   			} else {
+			   				tok = s.switch2(token.QUO, token.QUO_ASSIGN)
+			   			}
+			*/
+		case '/': // alse maybe operator /
+			if s.char == '/' || s.char == '*' {
+				literal = s.scanComment()
+				if !s.scanComments {
+					return s.Scan()
+				}
+				token = COMMENT
+			} else {
+				//token, literal = s.scanOperators()
+			}
+		case '@':
+			if s.isLetter(s.char) {
+				token = META
+				literal = s.scanIdentifier()
+			} else {
+				s.error(s.offset, "invalid meta name")
+			}
 			/*
 				case '#':
 					//#if #end, before flag can add '!' for not operation
@@ -497,7 +520,7 @@ func (s *Scanner) Scan() (pos Position, token Token, literal string) {
 					char, token = s.scanOperators(char)
 				} else*/{
 				// invalid
-				s.error(0, "invalid token")
+				s.error(s.offset, "invalid token")
 				s.next()
 			}
 		}
