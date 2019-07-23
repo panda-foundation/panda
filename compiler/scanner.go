@@ -2,11 +2,14 @@ package compiler
 
 import (
 	"fmt"
-	"path/filepath"
+	"unicode"
 	"unicode/utf8"
 )
 
-const bom = 0xFEFF // byte order mark, only permitted as very first character
+const (
+	bom = 0xFEFF // byte order mark, only permitted as very first character
+	eof = -1
+)
 
 type ErrorHandler func(position Position, msg string)
 
@@ -35,20 +38,21 @@ type Scanner struct {
 	char       rune
 	offset     int
 	readOffset int
+	lineOffset int
 }
 
 // NewScanner return an initialized scanner
 func NewScanner(file *File, src []byte, err ErrorHandler, scanDocument bool, flags []string) *Scanner {
 	scanner := &Scanner{}
 
-	if file.size != len(src) {
-		panic(fmt.Sprintf("file size (%d) does not match src len (%d)", file.size, len(src)))
-	}
+	//if file.size != len(src) {
+	//panic(fmt.Sprintf("file size (%d) does not match src len (%d)", file.size, len(src)))
+	//}
 	scanner.file = file
 	scanner.src = src
 	scanner.err = err
 	scanner.scanDocument = scanDocument
-	scanner.dir = filepath.Split(file.name)
+	//scanner.dir, _ = filepath.Split(file.name)
 
 	scanner.char = ' '
 	scanner.offset = 0
@@ -72,7 +76,7 @@ func (s *Scanner) next() {
 	if s.readOffset < len(s.src) {
 		s.offset = s.readOffset
 		if s.char == '\n' {
-			s.file.AddLine(s.offset)
+			//s.file.AddLine(s.offset)
 		}
 		r, w := rune(s.src[s.readOffset]), 1
 		switch {
@@ -91,10 +95,10 @@ func (s *Scanner) next() {
 		s.char = r
 	} else {
 		s.offset = len(s.src)
-		if s.ch == '\n' {
-			s.file.AddLine(s.offset)
+		if s.char == '\n' {
+			//s.file.AddLine(s.offset)
 		}
-		s.ch = -1 // eof
+		s.char = eof
 	}
 }
 
@@ -107,7 +111,8 @@ func (s *Scanner) peek() byte {
 
 func (s *Scanner) error(offset int, msg string) {
 	if s.err != nil {
-		s.err(s.file.Position(s.file.Pos(offset)), msg)
+		fmt.Println("error:", msg)
+		//s.err(s.file.Position(s.file.Pos(offset)), msg)
 	}
 	s.ErrorCount++
 }
@@ -117,133 +122,184 @@ func (s *Scanner) error(offset int, msg string) {
 // scanDocument
 // updateLineInfo
 
-func (s *Scanner) scanIdentifier() rune {
-	// the zero'th rune is OK; start scanning at the next one
-	char := s.next()
-	for i := 1; s.isIdentifierRune(char, i); i++ {
-		char = s.next()
+func (s *Scanner) scanIdentifier() string {
+	offset := s.offset
+	for s.isIdentifierLetter(s.char) {
+		s.next()
 	}
-	return char
+	return string(s.src[offset:s.offset])
 }
 
-func (s *Scanner) scanDigits(char rune, base int) rune {
-	if base <= 10 {
-		max := rune('0' + base)
-		for isDecimal(char) {
-			if char >= max {
-				s.error(fmt.Sprintf("invalid digit %q ", char))
-			}
-			char = s.next()
-		}
-	} else {
-		for isHex(char) {
-			char = s.next()
-		}
+func (s *Scanner) scanDigits(base int) {
+	for s.digitVal(s.char) < base {
+		s.next()
 	}
-	return char
 }
 
-func (s *Scanner) scanNumber(char rune, seenDot bool) (rune, Token) {
-	base := 10        // number base
-	prefix := rune(0) // one of 0 (decimal), '0' (0-octal), 'x', or 'b'
+func (s *Scanner) scanNumber(seenDot bool) (Token, string) {
+	offset := s.offset
+	token := INT
 
-	// integer part
-	var numberType Token
 	if !seenDot {
-		numberType = TokenInt
-		if char == '0' {
-			char = s.next()
-			switch lower(char) {
+		if s.char == '0' {
+			s.next()
+			switch s.lower(s.char) {
 			case 'x':
-				char = s.next()
-				base, prefix = 16, 'x'
+				s.next()
+				s.scanDigits(16)
+				if s.offset-offset <= 2 {
+					// only scanned "0x" or "0X"
+					s.error(offset, "illegal hexadecimal number")
+				}
+				if s.char == '.' {
+					s.error(offset, "invalid radix point")
+				}
 			case 'b':
-				char = s.next()
-				base, prefix = 2, 'b'
+				s.next()
+				s.scanDigits(2)
+				if s.offset-offset <= 2 {
+					// only scanned "0b" or "0B"
+					s.error(offset, "illegal binary number")
+				}
+				if s.char == '.' {
+					s.error(offset, "invalid radix point")
+				}
 			default:
-				base, prefix = 8, '0'
+				s.scanDigits(8)
+				if s.char == '8' || s.char == '9' {
+					token = FLOAT
+					s.scanDigits(10)
+					if s.char != '.' {
+						s.error(offset, "illegal octal number")
+					}
+					seenDot = true
+				}
 			}
-		}
-		char = s.scanDigits(char, base)
-		if char == '.' {
-			char = s.next()
-			seenDot = true
+		} else {
+			s.scanDigits(10)
 		}
 	}
 
 	// fractional part
 	if seenDot {
-		numberType = TokenFloat
-		if prefix == 'b' || prefix == 'x' {
-			s.error("invalid radix point")
+		token = FLOAT
+		s.scanDigits(10)
+	}
+
+	return token, string(s.src[offset:s.offset])
+}
+
+func (s *Scanner) scanEscape(quote rune) bool {
+	offset := s.offset
+
+	var n int
+	var base, max uint32
+	switch s.char {
+	case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', quote:
+		s.next()
+		return true
+	case '0', '1', '2', '3', '4', '5', '6', '7':
+		n, base, max = 3, 8, 255
+	case 'x':
+		s.next()
+		n, base, max = 2, 16, 255
+	case 'u':
+		s.next()
+		n, base, max = 4, 16, unicode.MaxRune
+	case 'U':
+		s.next()
+		n, base, max = 8, 16, unicode.MaxRune
+	default:
+		msg := "unknown escape sequence"
+		if s.char < 0 {
+			msg = "escape sequence not terminated"
 		}
-		char = s.scanDigits(char, base)
+		s.error(offset, msg)
+		return false
 	}
 
-	s.tokenEnd = s.srcPos - s.lastCharLen
-	return char, numberType
-}
-
-func (s *Scanner) digitVal(char rune) int {
-	switch {
-	case '0' <= char && char <= '9':
-		return int(char - '0')
-	case 'a' <= lower(char) && lower(char) <= 'f':
-		return int(lower(char) - 'a' + 10)
-	}
-	s.error("invalid digit char")
-	return 16 // larger than any legal digit val
-}
-
-func (s *Scanner) scanNDigits(char rune, base, n int) rune {
-	for n > 0 && s.digitVal(char) < base {
-		char = s.next()
+	var x uint32
+	for n > 0 {
+		d := uint32(s.digitVal(s.char))
+		if d >= base {
+			msg := fmt.Sprintf("illegal character %#U in escape sequence", s.char)
+			if s.char < 0 {
+				msg = "escape sequence not terminated"
+			}
+			s.error(s.offset, msg)
+			return false
+		}
+		x = x*base + d
+		s.next()
 		n--
 	}
-	if n > 0 {
-		s.error("invalid char escape")
+
+	if x > max || 0xD800 <= x && x < 0xE000 {
+		s.error(offset, "escape sequence is invalid Unicode code point")
+		return false
 	}
-	return char
+
+	return true
 }
 
-func (s *Scanner) scanEscape(quote rune) rune {
-	char := s.next() // read character after '/'
-	switch char {
-	case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', quote:
-		// nothing to do
-		char = s.next()
-	case '0', '1', '2', '3', '4', '5', '6', '7':
-		char = s.scanNDigits(char, 8, 3)
-	case 'x':
-		char = s.scanNDigits(s.next(), 16, 2)
-	case 'u':
-		char = s.scanNDigits(s.next(), 16, 4)
-	case 'U':
-		char = s.scanNDigits(s.next(), 16, 8)
-	default:
-		s.error("invalid char escape")
-	}
-	return char
-}
+func (s *Scanner) scanString() string {
+	offset := s.offset - 1
 
-func (s *Scanner) scanString(quote rune) (rune, int) {
-	char := s.next() // read character after quote
-	n := 0
-	for char != quote {
-		if char == '\n' || char < 0 { // new line or EOF
-			s.error("string not terminated")
-			return char, n
+	for {
+		char := s.char
+		if char == '\n' || char < 0 {
+			s.error(offset, "string literal not terminated")
+			break
+		}
+		s.next()
+		if char == '"' {
+			break
 		}
 		if char == '\\' {
-			char = s.scanEscape(quote)
-		} else {
-			char = s.next()
+			s.scanEscape('"')
 		}
-		n++
 	}
-	return char, n
+
+	return string(s.src[offset:s.offset])
 }
 
+func (s *Scanner) scanChar() string {
+	// '\'' opening already consumed
+	offset := s.offset - 1
+
+	valid := true
+	n := 0
+	for {
+		char := s.char
+		if char == '\n' || char < 0 {
+			// only report error if we don't have one already
+			if valid {
+				s.error(offset, "rune literal not terminated")
+				valid = false
+			}
+			break
+		}
+		s.next()
+		if char == '\'' {
+			break
+		}
+		n++
+		if char == '\\' {
+			if !s.scanEscape('\'') {
+				valid = false
+			}
+			// continue to read to closing quote
+		}
+	}
+
+	if valid && n != 1 {
+		s.error(offset, "illegal rune literal")
+	}
+
+	return string(s.src[offset:s.offset])
+}
+
+/*
 func (s *Scanner) scanRawString() rune {
 	char, _ := s.scanUntil('"') // read character after '@("'
 	terminated := false
@@ -253,42 +309,18 @@ func (s *Scanner) scanRawString() rune {
 		char, terminated = s.ensureChar(')')
 	}
 	return char
-}
+}*/
 
-func (s *Scanner) scanChar() rune {
-	char, n := s.scanString('\'')
-	if n != 1 {
-		s.error("invalid char literal")
-	}
-	return char
-}
-
+/*
 func (s *Scanner) scanOperators(char rune) (rune, Token) {
 	// TO-DO optimization later with tree, and opt info stored in scanner
 	for HasToken(s.currentToken() + string(char)) {
 		char = s.next()
 	}
 	return char, KeyToToken(s.currentToken())
-}
+}*/
 
-func (s *Scanner) scanLineComment() rune {
-	// '/'
-	char, _ := s.scanUntil('\n') // read character after "//"
-	return char
-}
-
-func (s *Scanner) scanBlockComment() rune {
-	// '*'
-	char, _ := s.scanUntil('*')
-	terminated := false
-	char, terminated = s.ensureChar('/')
-	for terminated != true {
-		char, _ = s.scanUntil('*')
-		char, terminated = s.ensureChar('/')
-	}
-	return char
-}
-
+/*
 func (s *Scanner) scanPreprossesor() (rune, bool) {
 	char := s.next()
 	notOp := false
@@ -332,262 +364,170 @@ func (s *Scanner) skipPreprossesor() rune {
 		s.error("unexpected: " + string(char))
 	}
 	return char
-}
-
-func (s *Scanner) scanUntil(quote rune) (rune, int) {
-	char := s.next() // read character after quote
-	n := 0
-	for char != quote {
-		if char < 0 { // EOF
-			s.error("not terminated")
-			return char, n
-		}
-		char = s.next()
-		n++
-	}
-	return char, n
-}
-
-func (s *Scanner) ensureChar(char rune) (rune, bool) {
-	result := s.next()
-	return result, char == result
-}
+}*/
 
 //TO-DO add: ensureIdentifier
 
-func (s *Scanner) isIdentifierRune(char rune, i int) bool {
-	return char == '_' || s.isLetter(char) || (s.isDigit(char) && i > 0)
+func (s *Scanner) isIdentifierLetter(char rune) bool {
+	return char == '_' || s.isLetter(char) || s.isDigit(char)
 }
 
 func (s *Scanner) isLetter(char rune) bool {
-	return ('a' <= char && char <= 'z') || ('A' <= char && char <= 'Z')
+	return 'a' <= char && char <= 'z' || 'A' <= char && char <= 'Z'
 }
 
 func (s *Scanner) isDigit(char rune) bool {
 	return '0' <= char && char <= '9'
 }
 
-func (s *Scanner) resetToken() {
-	s.tokenBuf.Reset()
-	s.tokenPos = s.srcPos - s.lastCharLen
+func (s *Scanner) isDecimal(char rune) bool {
+	return '0' <= char && char <= '9'
+}
+
+func (s *Scanner) isHex(char rune) bool {
+	return '0' <= char && char <= '9' || 'a' <= s.lower(char) && s.lower(char) <= 'f'
 }
 
 // returns lower-case char if char is ASCII letter
 // use 0b00100000 instead 'a' - 'A' later in panda own compiler
-func lower(char rune) rune {
+func (s *Scanner) lower(char rune) rune {
 	return ('a' - 'A') | char
 }
 
-func isDecimal(char rune) bool {
-	return '0' <= char && char <= '9'
+func (s *Scanner) skipWhitespace() {
+	for s.char == ' ' || s.char == '\t' || s.char == '\n' || s.char == '\r' {
+		s.next()
+	}
 }
 
-func isHex(char rune) bool {
-	return '0' <= char && char <= '9' || 'a' <= lower(char) && lower(char) <= 'f'
+func (s *Scanner) digitVal(char rune) int {
+	switch {
+	case '0' <= char && char <= '9':
+		return int(char - '0')
+	case 'a' <= s.lower(char) && s.lower(char) <= 'f':
+		return int(s.lower(char) - 'a' + 10)
+	}
+	return 16 // larger than any legal digit val
 }
 
 // Scan next token
-func (s *Scanner) Scan() Token {
-	// reset token text position
-	s.tokenPos = InvalidPos
-	s.Line = 0
+func (s *Scanner) Scan() (pos Position, token Token, literal string) {
+	s.skipWhitespace()
 
-	char := s.peek()
-	// whitespace
-	for char == ' ' || char == '\t' || char == '\r' || char == '\n' {
-		char = s.next()
-	}
+	//pos = s.file.Pos(s.offset)
 
-	// reset token
-	s.resetToken()
-	s.Offset = s.srcBufOffset + s.tokenPos
-
-	if s.column > 0 {
-		// common case: last character was not a '\n'
-		s.Line = s.line
-		s.Column = s.column
+	token = ILLEGAL
+	if s.isLetter(s.char) || s.char == '_' {
+		literal = s.scanIdentifier()
+		token = Lookup(literal)
+	} else if s.isDecimal(s.char) {
+		token, literal = s.scanNumber(false)
 	} else {
-		// last character was a '\n'
-		// (we cannot be at the beginning of the source
-		// since we have called next() at least once)
-		s.Line = s.line - 1
-		s.Column = s.lastLineLen
-	}
-
-	// todo NewLine
-	// determine token value
-	token := TokenInvalid
-	switch {
-	case s.isIdentifierRune(char, 0):
-		token = TokenIdentifier
-		char = s.scanIdentifier()
-		text := s.currentToken()
-		if HasToken(text) {
-			token = KeyToToken(text)
-		}
-	case isDecimal(char):
-		char, token = s.scanNumber(char, false)
-	default:
+		char := s.char
+		s.next()
 		switch char {
-		case EOFChar:
-			token = TokenEOF
-			if s.conditionStarted {
-				s.error("#if not terminated, expecting #end")
-			}
-			break
+		case eof:
+			token = EOF
+			/*
+				if s.conditionStarted {
+					s.error("#if not terminated, expecting #end")
+				}*/
 		case '"':
-			s.scanString('"')
-			char = s.next()
-			token = TokenString
+			token = STRING
+			literal = s.scanString()
 		case '\'':
-			s.scanChar()
-			char = s.next()
-			token = TokenChar
+			token = CHAR
+			literal = s.scanChar()
 		case '.': //start with . can maybe operator
-			char = s.next()
-			if isDecimal(char) {
-				char, token = s.scanNumber(char, true)
+			if s.isDecimal(s.char) {
+				token, literal = s.scanNumber(true)
 			} else {
-				char, token = s.scanOperators(char)
+				//token, literal = s.scanOperators()
 			}
-		case '/': // alse maybe operator /
-			char = s.next()
-			//TO-DO scan document
-			if char == '/' || char == '*' {
-				if char == '/' {
-					char = s.scanLineComment()
-				} else {
-					char = s.scanBlockComment()
-				}
-				char = s.next()
-				if s.skipDocument {
-					s.char = char
-					return s.Scan()
-				}
-				token = TokenDocument
-			} else {
-				char, token = s.scanOperators(char)
-			}
-		case '@':
-			char = s.next()
-			if char == '(' {
-				isRawString := false
-				char, isRawString = s.ensureChar('"')
-				if isRawString {
-					s.scanRawString()
-					token = TokenRawString
+			/*
+				case '/': // alse maybe operator /
 					char = s.next()
-				} else {
-					s.error(fmt.Sprintf("unexpected: %s", string(char)))
-				}
-			} else if s.isIdentifierRune(char, 0) {
-				token = TokenMetaIdentifier
-				char = s.scanIdentifier()
-			}
-
-		case '#':
-			//#if #end, before flag can add '!' for not operation
-			//nested # is not supported
-			char = s.next()
-			if s.isIdentifierRune(char, 0) {
-				s.resetToken()
-				char = s.scanIdentifier()
-				text := s.currentToken()
-				if text == "if" {
-					if s.conditionStarted {
-						s.error("unexpected #if")
-					}
-					s.conditionStarted = true
-				} else if text == "end" {
-					if !s.conditionStarted {
-						s.error("unexpected #end")
-					}
-					s.conditionStarted = false
-				} else {
-					s.error("unexpected: " + text)
-				}
-
-				if text == "if" {
-					result := false
-					char, result = s.scanPreprossesor()
-					if !result {
-						char = s.skipPreprossesor()
+					//TO-DO scan document
+					if char == '/' || char == '*' {
+						if char == '/' {
+							char = s.scanLineComment()
+						} else {
+							char = s.scanBlockComment()
+						}
 						char = s.next()
-						s.conditionStarted = false
-					}
-				}
+						if s.skipDocument {
+							s.char = char
+							return s.Scan()
+						}
+						token = TokenDocument
+					} else {
+						token, literal = s.scanOperators()
+					}*/
+			/*
+				case '@':
+					char = s.next()
+					if char == '(' {
+						isRawString := false
+						char, isRawString = s.ensureChar('"')
+						if isRawString {
+							s.scanRawString()
+							token = TokenRawString
+							char = s.next()
+						} else {
+							s.error(fmt.Sprintf("unexpected: %s", string(char)))
+						}
+					} else if s.isIdentifierRune(char, 0) {
+						token = TokenMetaIdentifier
+						char = s.scanIdentifier()
+					}*/
+			/*
+				case '#':
+					//#if #end, before flag can add '!' for not operation
+					//nested # is not supported
+					char = s.next()
+					if s.isIdentifierRune(char, 0) {
+						s.resetToken()
+						char = s.scanIdentifier()
+						text := s.currentToken()
+						if text == "if" {
+							if s.conditionStarted {
+								s.error("unexpected #if")
+							}
+							s.conditionStarted = true
+						} else if text == "end" {
+							if !s.conditionStarted {
+								s.error("unexpected #end")
+							}
+							s.conditionStarted = false
+						} else {
+							s.error("unexpected: " + text)
+						}
 
-				s.char = char
-				return s.Scan()
-			}
-			s.error("unexpected: " + string(char))
+						if text == "if" {
+							result := false
+							char, result = s.scanPreprossesor()
+							if !result {
+								char = s.skipPreprossesor()
+								char = s.next()
+								s.conditionStarted = false
+							}
+						}
+
+						s.char = char
+						return s.Scan()
+					}
+					s.error("unexpected: " + string(char))*/
 		default:
-			if IsOperator(char) {
-				char = s.next()
-				char, token = s.scanOperators(char)
-			} else {
+			/*
+				if IsOperator(char) {
+					char = s.next()
+					char, token = s.scanOperators(char)
+				} else*/{
 				// invalid
-				s.error("invalid token")
-				char = s.next()
+				s.error(0, "invalid token")
+				s.next()
 			}
 		}
-	}
-
-	// end of token text
-	s.tokenEnd = s.srcPos - s.lastCharLen
-
-	s.char = char
-	return token
-}
-
-// Pos return position info of scanner
-func (s *Scanner) Pos() (pos Position) {
-	pos.Filename = s.Filename
-	pos.Offset = s.srcBufOffset + s.srcPos - s.lastCharLen
-	switch {
-	case s.column > InvalidColumn:
-		// common case: last character was not a '\n'
-		pos.Line = s.line
-		pos.Column = s.column
-	case s.lastLineLen > 0:
-		// last character was a '\n'
-		pos.Line = s.line - 1
-		pos.Column = s.lastLineLen
-	default:
-		// at the beginning of the source
-		pos.Line = 1
-		pos.Column = 1
 	}
 	return
-}
-
-// Token returns the string corresponding to the most recently scanned token.
-// Valid after calling Scan and in calls of Scanner.Error.
-func (s *Scanner) Token() string {
-	if s.tokenPos < 0 {
-		// no token text
-		return ""
-	}
-	if s.tokenEnd < s.tokenPos {
-		// if EOF was reached, s.tokenEnd is set to -1 (s.srcPos == 0)
-		s.tokenEnd = s.tokenPos
-	}
-	// s.tokenEnd >= s.tokenPos
-	if s.tokenBuf.Len() == 0 {
-		// common case: the entire token text is still in srcBuf
-		return string(s.srcBuf[s.tokenPos:s.tokenEnd])
-	}
-	// part of the token text was saved in tokenBuf: save the rest in
-	// tokenBuf as well and return its content
-	s.tokenBuf.Write(s.srcBuf[s.tokenPos:s.tokenEnd])
-	s.tokenPos = s.tokenEnd // ensure idempotency of Token() call
-	return s.tokenBuf.String()
-}
-
-func (s *Scanner) currentToken() string {
-	end := s.tokenEnd
-	s.tokenEnd = s.srcPos - s.lastCharLen
-	token := s.Token()
-	s.tokenEnd = end
-	return token
 }

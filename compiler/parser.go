@@ -1,7 +1,6 @@
 package compiler
 
-import "fmt"
-
+/*
 type Parser struct {
 	Scanner *Scanner
 	Program *ProgramUnit
@@ -53,22 +52,21 @@ func (parser *Parser) parseDocument() {
 	if parser.Scanner.skipDocument {
 		return
 	}
-	/*
-		parser.clearDocument()
-		for parser.peek() == TokenComment {
-			parser.Documents = append(parser.Documents, parser.Scanner.Token())
-			parser.consume()
-		}*/
+
+		//parser.clearDocument()
+		//for parser.peek() == TokenComment {
+			//parser.Documents = append(parser.Documents, parser.Scanner.Token())
+			//parser.consume()
+		//}
 }
 
 func (parser *Parser) skipDocument() {
 	if parser.Scanner.skipDocument {
 		return
 	}
-	/*
-		for parser.peek() == TokenComment {
-			parser.consume()
-		}*/
+		//for parser.peek() == TokenComment {
+			//parser.consume()
+		//}
 }
 
 func (parser *Parser) clearDocument() {
@@ -196,4 +194,4 @@ func (parser *Parser) parseDelaration(isConstant bool) {
 
 func (parser *Parser) parseFunction() {
 
-}
+}*/
