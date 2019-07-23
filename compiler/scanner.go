@@ -13,16 +13,6 @@ const (
 
 type ErrorHandler func(position Position, msg string)
 
-// Const for scanner
-/*
-const (
-	EOFChar       rune = -1
-	InvalidChar   rune = -2
-	InvalidPos    int  = -1
-	InvalidLine   int  = 0
-	InvalidColumn int  = 0
-)*/
-
 type Scanner struct {
 	file *File
 	dir  string
@@ -110,8 +100,8 @@ func (s *Scanner) peek() byte {
 }
 
 func (s *Scanner) error(offset int, msg string) {
+	fmt.Println("error:", msg)
 	if s.err != nil {
-		fmt.Println("error:", msg)
 		//s.err(s.file.Position(s.file.Pos(offset)), msg)
 	}
 	s.ErrorCount++
@@ -124,7 +114,7 @@ func (s *Scanner) error(offset int, msg string) {
 
 func (s *Scanner) scanIdentifier() string {
 	offset := s.offset
-	for s.isIdentifierLetter(s.char) {
+	for s.isLetter(s.char) || s.isDecimal(s.char) {
 		s.next()
 	}
 	return string(s.src[offset:s.offset])
@@ -136,43 +126,38 @@ func (s *Scanner) scanDigits(base int) {
 	}
 }
 
-func (s *Scanner) scanNumber(seenDot bool) (Token, string) {
+func (s *Scanner) scanNumber() (Token, string) {
 	offset := s.offset
 	token := INT
 
-	if !seenDot {
+	if s.char != '.' {
 		if s.char == '0' {
 			s.next()
-			switch s.lower(s.char) {
-			case 'x':
-				s.next()
-				s.scanDigits(16)
-				if s.offset-offset <= 2 {
-					// only scanned "0x" or "0X"
-					s.error(offset, "illegal hexadecimal number")
+			if s.char != '.' {
+				base := 10
+				switch s.lower(s.char) {
+				case 'x':
+					base = 16
+				case 'b':
+					base = 2
+				case 'o':
+					base = 8
+				default:
+					s.error(offset, "invalid integer")
+					token = ILLEGAL
 				}
-				if s.char == '.' {
-					s.error(offset, "invalid radix point")
-				}
-			case 'b':
-				s.next()
-				s.scanDigits(2)
-				if s.offset-offset <= 2 {
-					// only scanned "0b" or "0B"
-					s.error(offset, "illegal binary number")
-				}
-				if s.char == '.' {
-					s.error(offset, "invalid radix point")
-				}
-			default:
-				s.scanDigits(8)
-				if s.char == '8' || s.char == '9' {
-					token = FLOAT
-					s.scanDigits(10)
-					if s.char != '.' {
-						s.error(offset, "illegal octal number")
+				if token != ILLEGAL {
+					s.next()
+					s.scanDigits(base)
+					if s.offset-offset <= 2 {
+						// only scanned "0x" or "0X"
+						token = ILLEGAL
+						s.error(offset, "illegal number")
 					}
-					seenDot = true
+					if s.char == '.' {
+						token = ILLEGAL
+						s.error(offset, "invalid radix point")
+					}
 				}
 			}
 		} else {
@@ -180,10 +165,15 @@ func (s *Scanner) scanNumber(seenDot bool) (Token, string) {
 		}
 	}
 
-	// fractional part
-	if seenDot {
+	if s.char == '.' {
+		offsetFraction := s.offset
 		token = FLOAT
+		s.next()
 		s.scanDigits(10)
+		if offsetFraction == s.offset-1 {
+			token = ILLEGAL
+			s.error(offset, "float has no digits after .")
+		}
 	}
 
 	return token, string(s.src[offset:s.offset])
@@ -272,7 +262,6 @@ func (s *Scanner) scanChar() string {
 	for {
 		char := s.char
 		if char == '\n' || char < 0 {
-			// only report error if we don't have one already
 			if valid {
 				s.error(offset, "rune literal not terminated")
 				valid = false
@@ -285,15 +274,17 @@ func (s *Scanner) scanChar() string {
 		}
 		n++
 		if char == '\\' {
-			if !s.scanEscape('\'') {
+			switch s.char {
+			case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '\'':
+				s.next()
+			default:
 				valid = false
 			}
-			// continue to read to closing quote
 		}
 	}
 
 	if valid && n != 1 {
-		s.error(offset, "illegal rune literal")
+		s.error(offset, "illegal char literal")
 	}
 
 	return string(s.src[offset:s.offset])
@@ -366,26 +357,12 @@ func (s *Scanner) skipPreprossesor() rune {
 	return char
 }*/
 
-//TO-DO add: ensureIdentifier
-
-func (s *Scanner) isIdentifierLetter(char rune) bool {
-	return char == '_' || s.isLetter(char) || s.isDigit(char)
-}
-
 func (s *Scanner) isLetter(char rune) bool {
-	return 'a' <= char && char <= 'z' || 'A' <= char && char <= 'Z'
-}
-
-func (s *Scanner) isDigit(char rune) bool {
-	return '0' <= char && char <= '9'
+	return char == '_' || 'a' <= char && char <= 'z' || 'A' <= char && char <= 'Z'
 }
 
 func (s *Scanner) isDecimal(char rune) bool {
 	return '0' <= char && char <= '9'
-}
-
-func (s *Scanner) isHex(char rune) bool {
-	return '0' <= char && char <= '9' || 'a' <= s.lower(char) && s.lower(char) <= 'f'
 }
 
 // returns lower-case char if char is ASCII letter
@@ -420,8 +397,8 @@ func (s *Scanner) Scan() (pos Position, token Token, literal string) {
 	if s.isLetter(s.char) || s.char == '_' {
 		literal = s.scanIdentifier()
 		token = Lookup(literal)
-	} else if s.isDecimal(s.char) {
-		token, literal = s.scanNumber(false)
+	} else if s.isDecimal(s.char) || (s.char == '.' && s.isDecimal(rune(s.peek()))) {
+		token, literal = s.scanNumber()
 	} else {
 		char := s.char
 		s.next()
@@ -439,11 +416,7 @@ func (s *Scanner) Scan() (pos Position, token Token, literal string) {
 			token = CHAR
 			literal = s.scanChar()
 		case '.': //start with . can maybe operator
-			if s.isDecimal(s.char) {
-				token, literal = s.scanNumber(true)
-			} else {
-				//token, literal = s.scanOperators()
-			}
+			//token, literal = s.scanOperators()
 			/*
 				case '/': // alse maybe operator /
 					char = s.next()

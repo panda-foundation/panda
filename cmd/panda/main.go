@@ -7,7 +7,7 @@ import (
 )
 
 const src = `// test program
-.5 5 0xabcdef 01 0b01010101
+.5 1.5 0xabcdef 01 0b01010101
 keyword 'a'
 1/2*3+4
 a.b.c/d
@@ -27,14 +27,19 @@ linux
 #end`
 
 func test() {
-	const src = `.5 5 0xabcdef 01 0b01010101
-	keyword 'a'`
+	const src = `
+	0.5
+	.5
+	0xabcdef 
+	12345
+	0b01010101
+	keyword 
+	'a'
+	"string"`
+
 	bytes := []byte(src)
 	s := compiler.NewScanner(nil, bytes, nil, false, []string{})
 	for _, token, literal := s.Scan(); token != compiler.EOF; _, token, literal = s.Scan() {
-		if s.ErrorCount > 0 {
-			break
-		}
 		fmt.Printf("%s %s \n", token.String(), literal)
 	}
 }
