@@ -28,6 +28,9 @@ linux
 
 func test() {
 	const src = `
+	+
+	++
+	>>=
 	0.5
 	.5
 	0xabcdef 

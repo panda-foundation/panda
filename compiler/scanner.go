@@ -338,14 +338,18 @@ func (s *Scanner) scanRawString() string {
 	return string(s.src[offset:s.offset])
 }
 
-/*
-func (s *Scanner) scanOperators(char rune) (rune, Token) {
-	// TO-DO optimization later with tree, and opt info stored in scanner
-	for HasToken(s.currentToken() + string(char)) {
-		char = s.next()
+func (s *Scanner) scanOperators() (token Token, literal string) {
+	length := 0
+	offset := s.offset - 1
+	token, length = ReadOperator(s.src[offset:])
+	if length > 0 {
+		for i := 1; i < length; i++ {
+			s.next()
+		}
+		literal = string(s.src[offset:s.offset])
 	}
-	return char, KeyToToken(s.currentToken())
-}*/
+	return
+}
 
 /*
 func (s *Scanner) scanPreprossesor() (rune, bool) {
@@ -428,7 +432,7 @@ func (s *Scanner) Scan() (pos Position, token Token, literal string) {
 	token = ILLEGAL
 	if s.isLetter(s.char) {
 		literal = s.scanIdentifier()
-		token = Lookup(literal)
+		token = GetToken(literal)
 	} else if s.isDecimal(s.char) || (s.char == '.' && s.isDecimal(rune(s.peek()))) {
 		token, literal = s.scanNumber()
 	} else {
@@ -450,15 +454,6 @@ func (s *Scanner) Scan() (pos Position, token Token, literal string) {
 		case '\'':
 			token = CHAR
 			literal = s.scanChar()
-		case '.': //start with . can maybe operator
-			//token, literal = s.scanOperators()
-			/*
-			   case '/':
-			   			if s.ch == '/' || s.ch == '*' {
-			   			} else {
-			   				tok = s.switch2(token.QUO, token.QUO_ASSIGN)
-			   			}
-			*/
 		case '/': // alse maybe operator /
 			if s.char == '/' || s.char == '*' {
 				literal = s.scanComment()
@@ -467,7 +462,7 @@ func (s *Scanner) Scan() (pos Position, token Token, literal string) {
 				}
 				token = COMMENT
 			} else {
-				//token, literal = s.scanOperators()
+				token, literal = s.scanOperators()
 			}
 		case '@':
 			if s.isLetter(s.char) {
@@ -514,12 +509,8 @@ func (s *Scanner) Scan() (pos Position, token Token, literal string) {
 					}
 					s.error("unexpected: " + string(char))*/
 		default:
-			/*
-				if IsOperator(char) {
-					char = s.next()
-					char, token = s.scanOperators(char)
-				} else*/{
-				// invalid
+			token, literal = s.scanOperators()
+			if token == ILLEGAL {
 				s.error(s.offset, "invalid token")
 				s.next()
 			}

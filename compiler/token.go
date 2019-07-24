@@ -247,19 +247,34 @@ var (
 		META:   "META",
 	}
 
-	keywords map[string]Token
-	scalars  map[string]Token
+	keywords     map[string]Token
+	scalars      map[string]Token
+	operators    map[string]Token
+	allTokens    map[string]Token
+	operatorRoot *OperatorNode
 )
 
 func init() {
+	allTokens = make(map[string]Token)
+
 	keywords = make(map[string]Token)
 	for i := keyword_begin + 1; i < keyword_end; i++ {
 		keywords[tokens[i]] = i
+		allTokens[tokens[i]] = i
 	}
 
 	scalars = make(map[string]Token)
 	for i := scalar_begin + 1; i < scalar_end; i++ {
 		scalars[tokens[i]] = i
+		allTokens[tokens[i]] = i
+	}
+
+	operators = make(map[string]Token)
+	operatorRoot = NewOperatorNode()
+	for i := operator_begin + 1; i < operator_end; i++ {
+		operators[tokens[i]] = i
+		allTokens[tokens[i]] = i
+		operatorRoot.Insert(tokens[i])
 	}
 }
 
@@ -285,11 +300,62 @@ func (token Token) IsScalar() bool {
 	return scalar_begin < token && token < scalar_end
 }
 
-func Lookup(identifier string) Token {
-	if token, is_keyword := keywords[identifier]; is_keyword {
+func GetToken(identifier string) Token {
+	if token, ok := allTokens[identifier]; ok {
 		return token
 	}
 	return IDENT
+}
+
+func ReadOperator(bytes []byte) (Token, int) {
+	return operatorRoot.Find(bytes)
+}
+
+type OperatorNode struct {
+	children map[byte]*OperatorNode
+	token    Token
+}
+
+func NewOperatorNode() *OperatorNode {
+	return &OperatorNode{
+		children: make(map[byte]*OperatorNode),
+		token:    ILLEGAL,
+	}
+}
+
+func (node *OperatorNode) Insert(operator string) {
+	node.insertOperator(operator, 0)
+}
+
+func (node *OperatorNode) Find(bytes []byte) (Token, int) {
+	return node.findOperator(bytes, 0)
+}
+
+func (node *OperatorNode) findOperator(bytes []byte, offset int) (Token, int) {
+	if child, ok := node.children[bytes[offset]]; ok {
+		offset++
+		if offset < len(bytes) {
+			return child.findOperator(bytes, offset)
+		} else {
+			return node.token, offset
+		}
+	} else if offset > 0 {
+		return GetToken(string(bytes[:offset])), offset
+	}
+	return ILLEGAL, 1
+}
+
+func (node *OperatorNode) insertOperator(operator string, position int) {
+	if position < len(operator) {
+		char := operator[position]
+		if _, ok := node.children[char]; !ok {
+			node.children[char] = NewOperatorNode()
+		}
+		position++
+		node.children[char].insertOperator(operator, position)
+	} else {
+		node.token = GetToken(operator)
+	}
 }
 
 /*
