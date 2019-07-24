@@ -108,19 +108,14 @@ func (s *Scanner) error(offset int, msg string) {
 }
 
 func (s *Scanner) scanComment() string {
-	// initial '/' already consumed; s.ch == '/' || s.ch == '*'
+	// initial '/' already consumed
 	offset := s.offset - 1 // position of initial '/'
 
 	if s.char == '/' {
 		//-style comment
-		// (the final '\n' is not considered part of the comment)
 		s.next()
 		for s.char != '\n' && s.char >= 0 {
 			s.next()
-		}
-		// if we are at '\n', the position following the comment is afterwards
-		if s.char == '\n' {
-			//TO-DO update line info
 		}
 	} else {
 		/*-style comment */
@@ -339,8 +334,8 @@ func (s *Scanner) scanRawString() string {
 }
 
 func (s *Scanner) scanOperators() (token Token, literal string) {
-	length := 0
 	offset := s.offset - 1
+	length := 0
 	token, length = ReadOperator(s.src[offset:])
 	if length > 0 {
 		for i := 1; i < length; i++ {
@@ -351,51 +346,56 @@ func (s *Scanner) scanOperators() (token Token, literal string) {
 	return
 }
 
-/*
-func (s *Scanner) scanPreprossesor() (rune, bool) {
-	char := s.next()
+func (s *Scanner) scanPreprossesor() bool {
+	// skip whitespace but not newline
+	for s.char == ' ' || s.char == '\t' {
+		s.next()
+	}
+
 	notOp := false
-	if char == '!' {
+	if s.char == '!' {
 		notOp = true
-		char = s.next()
+		s.next()
 	}
-	s.resetToken()
-	if !s.isIdentifierRune(char, 0) {
-		s.error(fmt.Sprintf("unexpected %s \n", string(char)))
+
+	if s.isLetter(s.char) {
+		flag := s.scanIdentifier()
+
+		for s.char == ' ' || s.char == '\t' || s.char == '\r' {
+			s.next()
+		}
+		if s.char != '\n' {
+			s.error(s.offset, "unexpected: "+string(s.char))
+		}
+
+		result := false
+		if _, ok := s.flags[flag]; ok {
+			result = true
+		}
+		if notOp {
+			result = !result
+		}
+		return result
 	}
-	char = s.scanIdentifier()
-	for char == ' ' || char == '\t' || char == '\r' {
-		char = s.next()
-	}
-	if char != '\n' {
-		s.error("unexpected " + string(char))
-	}
-	result := false
-	text := s.currentToken()
-	if _, ok := s.flags[text]; ok {
-		result = true
-	}
-	if notOp {
-		result = !result
-	}
-	return char, result
+
+	s.error(s.offset, "#if not terminated")
+	return false
 }
 
-func (s *Scanner) skipPreprossesor() rune {
-	char, _ := s.scanUntil('#')
-	char = s.next()
-	if s.isIdentifierRune(char, 0) {
-		s.resetToken()
-		char = s.scanIdentifier()
-		text := s.currentToken()
-		if text != "end" {
-			s.error(fmt.Sprintf("unexpected: %s" + text))
+func (s *Scanner) skipPreprossesor() {
+	for s.char != '#' {
+		s.next()
+	}
+	s.next()
+	if s.isLetter(s.char) {
+		literal := s.scanIdentifier()
+		if literal != "end" {
+			s.error(s.offset, "unexpected: "+literal)
 		}
 	} else {
-		s.error("unexpected: " + string(char))
+		s.error(s.offset, "unexpected: "+string(s.char))
 	}
-	return char
-}*/
+}
 
 func (s *Scanner) isLetter(char rune) bool {
 	return char == '_' || 'a' <= char && char <= 'z' || 'A' <= char && char <= 'Z'
@@ -441,10 +441,9 @@ func (s *Scanner) Scan() (pos Position, token Token, literal string) {
 		switch char {
 		case eof:
 			token = EOF
-			/*
-				if s.conditionStarted {
-					s.error("#if not terminated, expecting #end")
-				}*/
+			if s.flagStarted {
+				s.error(s.offset, "#if not terminated, expecting #end")
+			}
 		case '"':
 			token = STRING
 			literal = s.scanString()
@@ -471,43 +470,37 @@ func (s *Scanner) Scan() (pos Position, token Token, literal string) {
 			} else {
 				s.error(s.offset, "invalid meta name")
 			}
-			/*
-				case '#':
-					//#if #end, before flag can add '!' for not operation
-					//nested # is not supported
-					char = s.next()
-					if s.isIdentifierRune(char, 0) {
-						s.resetToken()
-						char = s.scanIdentifier()
-						text := s.currentToken()
-						if text == "if" {
-							if s.conditionStarted {
-								s.error("unexpected #if")
-							}
-							s.conditionStarted = true
-						} else if text == "end" {
-							if !s.conditionStarted {
-								s.error("unexpected #end")
-							}
-							s.conditionStarted = false
-						} else {
-							s.error("unexpected: " + text)
-						}
+		case '#':
+			//#if #end, flag can add '!' for not operation
+			//nested # is not supported
+			//#else is not supported
+			if s.char == 'i' || s.char == 'e' {
+				literal = s.scanIdentifier()
 
-						if text == "if" {
-							result := false
-							char, result = s.scanPreprossesor()
-							if !result {
-								char = s.skipPreprossesor()
-								char = s.next()
-								s.conditionStarted = false
-							}
-						}
-
-						s.char = char
-						return s.Scan()
+				if literal == "if" {
+					if s.flagStarted {
+						s.error(s.offset, "unexpected #if")
 					}
-					s.error("unexpected: " + string(char))*/
+					s.flagStarted = true
+
+					result := s.scanPreprossesor()
+
+					if !result {
+						s.skipPreprossesor()
+						s.flagStarted = false
+					}
+				} else if literal == "end" {
+					if !s.flagStarted {
+						s.error(s.offset, "unexpected #end")
+					}
+					s.flagStarted = false
+				} else {
+					s.error(s.offset, "unexpected: "+literal)
+				}
+				return s.Scan()
+			} else {
+				s.error(s.offset, "unexpected: "+string(s.char))
+			}
 		default:
 			token, literal = s.scanOperators()
 			if token == ILLEGAL {
