@@ -1,5 +1,10 @@
 package compiler
 
+import (
+	"bytes"
+	"fmt"
+)
+
 // All node types implement the Node interface.
 type Node interface {
 	Pos() Pos // position of first character belonging to the node
@@ -409,13 +414,6 @@ type (
 		Implicit  bool // if set, ";" was omitted in the source
 	}
 
-	// A LabeledStmt node represents a labeled statement.
-	LabeledStmt struct {
-		Label *Ident
-		Colon Pos // position of ":"
-		Stmt  Stmt
-	}
-
 	// An ExprStmt node represents a (stand-alone) expression
 	// in a statement list.
 	//
@@ -513,22 +511,21 @@ type (
 
 // Pos and End implementations for statement nodes.
 
-func (s *BadStmt) Pos() Pos     { return s.From }
-func (s *DeclStmt) Pos() Pos    { return s.Decl.Pos() }
-func (s *EmptyStmt) Pos() Pos   { return s.Semicolon }
-func (s *LabeledStmt) Pos() Pos { return s.Label.Pos() }
-func (s *ExprStmt) Pos() Pos    { return s.X.Pos() }
-func (s *IncDecStmt) Pos() Pos  { return s.X.Pos() }
-func (s *AssignStmt) Pos() Pos  { return s.Lhs[0].Pos() }
-func (s *ReturnStmt) Pos() Pos  { return s.Return }
-func (s *BranchStmt) Pos() Pos  { return s.TokPos }
-func (s *BlockStmt) Pos() Pos   { return s.Lbrace }
-func (s *IfStmt) Pos() Pos      { return s.If }
-func (s *CaseClause) Pos() Pos  { return s.Case }
-func (s *SwitchStmt) Pos() Pos  { return s.Switch }
-func (s *CommClause) Pos() Pos  { return s.Case }
-func (s *SelectStmt) Pos() Pos  { return s.Select }
-func (s *ForStmt) Pos() Pos     { return s.For }
+func (s *BadStmt) Pos() Pos    { return s.From }
+func (s *DeclStmt) Pos() Pos   { return s.Decl.Pos() }
+func (s *EmptyStmt) Pos() Pos  { return s.Semicolon }
+func (s *ExprStmt) Pos() Pos   { return s.X.Pos() }
+func (s *IncDecStmt) Pos() Pos { return s.X.Pos() }
+func (s *AssignStmt) Pos() Pos { return s.Lhs[0].Pos() }
+func (s *ReturnStmt) Pos() Pos { return s.Return }
+func (s *BranchStmt) Pos() Pos { return s.TokPos }
+func (s *BlockStmt) Pos() Pos  { return s.Lbrace }
+func (s *IfStmt) Pos() Pos     { return s.If }
+func (s *CaseClause) Pos() Pos { return s.Case }
+func (s *SwitchStmt) Pos() Pos { return s.Switch }
+func (s *CommClause) Pos() Pos { return s.Case }
+func (s *SelectStmt) Pos() Pos { return s.Select }
+func (s *ForStmt) Pos() Pos    { return s.For }
 
 func (s *BadStmt) End() Pos  { return s.To }
 func (s *DeclStmt) End() Pos { return s.Decl.End() }
@@ -538,8 +535,7 @@ func (s *EmptyStmt) End() Pos {
 	}
 	return s.Semicolon + 1 /* len(";") */
 }
-func (s *LabeledStmt) End() Pos { return s.Stmt.End() }
-func (s *ExprStmt) End() Pos    { return s.X.End() }
+func (s *ExprStmt) End() Pos { return s.X.End() }
 func (s *IncDecStmt) End() Pos {
 	return s.TokPos + 2 /* len("++") */
 }
@@ -582,22 +578,21 @@ func (s *ForStmt) End() Pos    { return s.Body.End() }
 // stmtNode() ensures that only statement nodes can be
 // assigned to a Stmt.
 //
-func (*BadStmt) stmtNode()     {}
-func (*DeclStmt) stmtNode()    {}
-func (*EmptyStmt) stmtNode()   {}
-func (*LabeledStmt) stmtNode() {}
-func (*ExprStmt) stmtNode()    {}
-func (*IncDecStmt) stmtNode()  {}
-func (*AssignStmt) stmtNode()  {}
-func (*ReturnStmt) stmtNode()  {}
-func (*BranchStmt) stmtNode()  {}
-func (*BlockStmt) stmtNode()   {}
-func (*IfStmt) stmtNode()      {}
-func (*CaseClause) stmtNode()  {}
-func (*SwitchStmt) stmtNode()  {}
-func (*CommClause) stmtNode()  {}
-func (*SelectStmt) stmtNode()  {}
-func (*ForStmt) stmtNode()     {}
+func (*BadStmt) stmtNode()    {}
+func (*DeclStmt) stmtNode()   {}
+func (*EmptyStmt) stmtNode()  {}
+func (*ExprStmt) stmtNode()   {}
+func (*IncDecStmt) stmtNode() {}
+func (*AssignStmt) stmtNode() {}
+func (*ReturnStmt) stmtNode() {}
+func (*BranchStmt) stmtNode() {}
+func (*BlockStmt) stmtNode()  {}
+func (*IfStmt) stmtNode()     {}
+func (*CaseClause) stmtNode() {}
+func (*SwitchStmt) stmtNode() {}
+func (*CommClause) stmtNode() {}
+func (*SelectStmt) stmtNode() {}
+func (*ForStmt) stmtNode()    {}
 
 // ----------------------------------------------------------------------------
 // Declarations
@@ -766,11 +761,11 @@ func (*FuncDecl) declNode() {}
 // are "free-floating" (see also issues #18593, #20744).
 //
 type ProgramFile struct {
-	Doc       *Comment // associated documentation; or nil
-	Namespace Pos      // position of "namespace" keyword
-	Name      *Ident   // namespace name
-	Decls     []Decl   // top-level declarations; or nil
-	//Scope      *Scope        // package scope (this file only)
+	Doc        *Comment      // associated documentation; or nil
+	Namespace  Pos           // position of "namespace" keyword
+	Name       *Ident        // namespace name
+	Decls      []Decl        // top-level declarations; or nil
+	Scope      *Scope        // package scope (this file only)
 	Imports    []*ImportSpec // imports in this file
 	Unresolved []*Ident      // unresolved identifiers in this file
 }
@@ -787,14 +782,151 @@ func (f *ProgramFile) End() Pos {
 // collectively building a Go package.
 //
 type ProgramNamespace struct {
-	Name string // package name
-	//Scope   *Scope             // package scope across all files
-	//Imports map[string]*Object // map of package id -> package object
-	Files map[string]*ProgramFile // Go source files by filename
+	Name    string                  // package name
+	Scope   *Scope                  // package scope across all files
+	Imports map[string]*Object      // map of package id -> package object
+	Files   map[string]*ProgramFile // Go source files by filename
 }
 
 func (p *ProgramNamespace) Pos() Pos { return NoPos }
 func (p *ProgramNamespace) End() Pos { return NoPos }
+
+// A Scope maintains the set of named language entities declared
+// in the scope and a link to the immediately surrounding (outer)
+// scope.
+//
+type Scope struct {
+	Outer   *Scope
+	Objects map[string]*Object
+}
+
+// NewScope creates a new scope nested in the outer scope.
+func NewScope(outer *Scope) *Scope {
+	const n = 4 // initial scope capacity
+	return &Scope{outer, make(map[string]*Object, n)}
+}
+
+// Find returns the object with the given name if it is
+// found in scope s, otherwise it returns nil. Outer scopes
+// are ignored.
+//
+func (s *Scope) Find(name string) *Object {
+	return s.Objects[name]
+}
+
+// Insert attempts to insert a named object obj into the scope s.
+// If the scope already contains an object alt with the same name,
+// Insert leaves the scope unchanged and returns alt. Otherwise
+// it inserts obj and returns nil.
+//
+func (s *Scope) Insert(obj *Object) (alt *Object) {
+	if alt = s.Objects[obj.Name]; alt == nil {
+		s.Objects[obj.Name] = obj
+	}
+	return
+}
+
+// Debugging support
+func (s *Scope) String() string {
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "scope %p {", s)
+	if s != nil && len(s.Objects) > 0 {
+		fmt.Fprintln(&buf)
+		for _, obj := range s.Objects {
+			fmt.Fprintf(&buf, "\t%s %s\n", obj.Kind, obj.Name)
+		}
+	}
+	fmt.Fprintf(&buf, "}\n")
+	return buf.String()
+}
+
+// ----------------------------------------------------------------------------
+// Objects
+
+// An Object describes a named language entity such as a package,
+// constant, type, variable, function (incl. methods), or label.
+//
+type Object struct {
+	Kind ObjKind
+	Name string      // declared name
+	Decl interface{} // corresponding Field, XxxSpec, FuncDecl, AssignStmt, Scope; or nil
+	Data interface{} // object-specific data; or nil
+	Type interface{} // placeholder for type information; may be nil
+}
+
+// NewObj creates a new object of a given kind and name.
+func NewObj(kind ObjKind, name string) *Object {
+	return &Object{Kind: kind, Name: name}
+}
+
+// Pos computes the source position of the declaration of an object name.
+// The result may be an invalid position if it cannot be computed
+// (obj.Decl may be nil or not correct).
+func (obj *Object) Pos() Pos {
+	name := obj.Name
+	switch d := obj.Decl.(type) {
+	case *Field:
+		for _, n := range d.Names {
+			if n.Name == name {
+				return n.Pos()
+			}
+		}
+	case *ImportSpec:
+		if d.Name != nil && d.Name.Name == name {
+			return d.Name.Pos()
+		}
+		return d.Path.Pos()
+	case *ValueSpec:
+		for _, n := range d.Names {
+			if n.Name == name {
+				return n.Pos()
+			}
+		}
+	case *TypeSpec:
+		if d.Name.Name == name {
+			return d.Name.Pos()
+		}
+	case *FuncDecl:
+		if d.Name.Name == name {
+			return d.Name.Pos()
+		}
+	case *AssignStmt:
+		for _, x := range d.Lhs {
+			if ident, isIdent := x.(*Ident); isIdent && ident.Name == name {
+				return ident.Pos()
+			}
+		}
+	case *Scope:
+		// predeclared object - nothing to do for now
+	}
+	return NoPos
+}
+
+// ObjKind describes what an object represents.
+type ObjKind int
+
+// The list of possible Object kinds.
+const (
+	Bad         ObjKind = iota // for error handling
+	NS                         // namespace
+	ConstObj                   // constant
+	VarObj                     // variable
+	ClassObj                   // class
+	EnumObj                    // enum
+	FunctionObj                // function or method
+)
+
+var objKindStrings = [...]string{
+	Bad:         "bad",
+	NS:          "namespace",
+	ConstObj:    "const",
+	VarObj:      "var",
+	ClassObj:    "class",
+	EnumObj:     "enum",
+	FunctionObj: "function",
+}
+
+func (kind ObjKind) String() string { return objKindStrings[kind] }
 
 /*
 type ProgramUnit struct {

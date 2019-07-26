@@ -35,7 +35,7 @@ const (
 	False
 	For
 	Function
-	Include
+	Import
 	Interface
 	If
 	Namespace
@@ -149,7 +149,7 @@ var (
 		False:     "false",
 		For:       "for",
 		Function:  "function",
-		Include:   "include",
+		Import:    "import",
 		Interface: "interface",
 		If:        "if",
 		Namespace: "namespace",
