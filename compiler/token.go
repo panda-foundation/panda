@@ -24,7 +24,6 @@ const (
 	Base
 	Break
 	Case
-	Cast
 	Catch
 	Class
 	Const
@@ -138,7 +137,6 @@ var (
 		Base:      "base",
 		Break:     "break",
 		Case:      "case",
-		Cast:      "cast",
 		Catch:     "catch",
 		Class:     "class",
 		Const:     "const",

@@ -282,8 +282,6 @@ type (
 		Incomplete bool       // true if (source) fields are missing in the Fields list
 	}
 
-	//TO-DO class type
-
 	// Reference types are represented via RefExpr nodes.
 
 	// A FuncType node represents a function type.
@@ -300,7 +298,7 @@ type (
 		Incomplete bool       // true if (source) methods are missing in the Methods list
 	}
 
-	//TO-DO enum type
+	//TO-DO enum type, class type
 )
 
 // Pos and End implementations for expression/type nodes.
@@ -709,6 +707,8 @@ type (
 		Type *FuncType  // function signature: parameters, results, and position of "func" keyword
 		Body *BlockStmt // function body; or nil for external (non-Go) function
 	}
+
+	// TO-DO class decl, enum decl
 )
 
 // Pos and End implementations for declaration nodes.

@@ -203,6 +203,7 @@ func (parser *Parser) parseFunction() {
 // This file contains the exported entry points for invoking the parser.
 
 import (
+	"fmt"
 	"io/ioutil"
 )
 
@@ -483,28 +484,8 @@ func (p *parser) resolve(x Expr) {
 // ----------------------------------------------------------------------------
 // Parsing support
 
-// Advance to the next
-func (p *parser) next0() {
-	// Because of one-token look-ahead, print the previous token
-	// when tracing as it provides a more readable output. The
-	// very first token (!p.pos.IsValid()) is not initialized
-	// (it is ILLEGAL), so don't print it .
-	if p.trace && p.pos.IsValid() {
-		s := p.tok.String()
-		switch {
-		case p.tok.IsLiteral():
-			p.printTrace(s, p.lit)
-		case p.tok.IsOperator(), p.tok.IsKeyword():
-			p.printTrace("\"" + s + "\"")
-		default:
-			p.printTrace(s)
-		}
-	}
-
-	p.pos, p.tok, p.lit = p.Scan()
-}
-
 // Consume a comment and return it and the line on which it ends.
+/* TO-DO
 func (p *parser) consumeComment() (comment *Comment, endline int) {
 	// /*-style comments may end on a different line than where they start.
 	// Scan the comment for '\n' chars and adjust endline accordingly.
@@ -519,7 +500,7 @@ func (p *parser) consumeComment() (comment *Comment, endline int) {
 	}
 
 	comment = &Comment{Slash: p.pos, Text: p.lit}
-	p.next0()
+	p.pos, p.tok, p.lit = p.scanner.Scan()
 
 	return
 }
@@ -528,7 +509,7 @@ func (p *parser) consumeComment() (comment *Comment, endline int) {
 // comments list, and return it together with the line at which
 // the last comment in the group ends. A non-comment token or n
 // empty lines terminate a comment group.
-//
+//  TO-DO
 func (p *parser) consumeCommentGroup(n int) (comments *CommentGroup, endline int) {
 	var list []*Comment
 	endline = p.file.Line(p.pos)
@@ -544,6 +525,7 @@ func (p *parser) consumeCommentGroup(n int) (comments *CommentGroup, endline int
 
 	return
 }
+*/
 
 // Advance to the next non-comment  In the process, collect
 // any comment groups encountered, and remember the last lead and
@@ -563,39 +545,42 @@ func (p *parser) consumeCommentGroup(n int) (comments *CommentGroup, endline int
 func (p *parser) next() {
 	p.leadComment = nil
 	p.lineComment = nil
-	prev := p.pos
-	p.next0()
 
-	if p.tok == COMMENT {
-		var comment *CommentGroup
-		var endline int
+	p.pos, p.tok, p.lit = p.scanner.Scan()
+	//TO-DO scan comment for doc later
+	/*
+		if p.tok == COMMENT {
+			prev := p.pos
+			var comment *Comment
+			var endline int
 
-		if p.file.Line(p.pos) == p.file.Line(prev) {
-			// The comment is on same line as the previous token; it
-			// cannot be a lead comment but may be a line comment.
-			comment, endline = p.consumeCommentGroup(0)
-			if p.file.Line(p.pos) != endline || p.tok == EOF {
-				// The next token is on a different line, thus
-				// the last comment group is a line comment.
-				p.lineComment = comment
+			if p.file.Line(p.pos) == p.file.Line(prev) {
+				// The comment is on same line as the previous token; it
+				// cannot be a lead comment but may be a line comment.
+				comment, endline = p.consumeCommentGroup(0)
+				if p.file.Line(p.pos) != endline || p.tok == EOF {
+					// The next token is on a different line, thus
+					// the last comment group is a line comment.
+					p.lineComment = comment
+				}
 			}
-		}
 
-		// consume successor comments, if any
-		endline = -1
-		for p.tok == COMMENT {
-			comment, endline = p.consumeCommentGroup(1)
-		}
+			// consume successor comments, if any
+			endline = -1
+			for p.tok == COMMENT {
+				comment, endline = p.consumeCommentGroup(1)
+			}
 
-		if endline+1 == p.file.Line(p.pos) {
-			// The next token is following on the line immediately after the
-			// comment group, thus the last comment group is a lead comment.
-			p.leadComment = comment
-		}
-	}
+			if endline+1 == p.file.Line(p.pos) {
+				// The next token is following on the line immediately after the
+				// comment group, thus the last comment group is a lead comment.
+				p.leadComment = comment
+			}
+		}*/
 }
 
 func (p *parser) error(pos Pos, msg string) {
+	/* TO-DO
 	epos := p.file.Position(pos)
 
 	// If AllErrors is not set, discard errors reported on the same line
@@ -609,9 +594,11 @@ func (p *parser) error(pos Pos, msg string) {
 		if n > 10 {
 			panic(bailout{})
 		}
-	}
+	}*/
 
-	p.errors.Add(epos, msg)
+	//p.errors.Add(epos, msg)
+
+	fmt.Println("error: ", msg)
 }
 
 func (p *parser) errorExpected(pos Pos, msg string) {
@@ -620,10 +607,9 @@ func (p *parser) errorExpected(pos Pos, msg string) {
 		// the error happened at the current position;
 		// make the error message more specific
 		switch {
-		case p.tok == SEMICOLON && p.lit == "\n":
+		case p.tok == Semi && p.lit == "\n":
 			msg += ", found newline"
 		case p.tok.IsLiteral():
-			// print 123 rather than 'INT', etc.
 			msg += ", found " + p.lit
 		default:
 			msg += ", found '" + p.tok.String() + "'"
@@ -645,7 +631,7 @@ func (p *parser) expect(tok Token) Pos {
 // for the common case of a missing comma before a newline.
 //
 func (p *parser) expectClosing(tok Token, context string) Pos {
-	if p.tok != tok && p.tok == SEMICOLON && p.lit == "\n" {
+	if p.tok != tok && p.tok == Semi && p.lit == "\n" {
 		p.error(p.pos, "missing ',' before newline in "+context)
 		p.next()
 	}
@@ -654,13 +640,13 @@ func (p *parser) expectClosing(tok Token, context string) Pos {
 
 func (p *parser) expectSemi() {
 	// semicolon is optional before a closing ')' or '}'
-	if p.tok != RPAREN && p.tok != RBRACE {
+	if p.tok != RightParen && p.tok != RightBrace {
 		switch p.tok {
-		case COMMA:
+		case Comma:
 			// permit a ',' instead of a ';' but complain
 			p.errorExpected(p.pos, "';'")
 			fallthrough
-		case SEMICOLON:
+		case Semi:
 			p.next()
 		default:
 			p.errorExpected(p.pos, "';'")
@@ -670,12 +656,12 @@ func (p *parser) expectSemi() {
 }
 
 func (p *parser) atComma(context string, follow Token) bool {
-	if p.tok == COMMA {
+	if p.tok == Comma {
 		return true
 	}
 	if p.tok != follow {
 		msg := "missing ','"
-		if p.tok == SEMICOLON && p.lit == "\n" {
+		if p.tok == Semi && p.lit == "\n" {
 			msg += " before newline"
 		}
 		p.error(p.pos, msg+" in "+context)
@@ -720,39 +706,38 @@ func (p *parser) advance(to map[Token]bool) {
 	}
 }
 
-/*
 var stmtStart = map[Token]bool{
-	BREAK:       true,
-	CONST:       true,
-	CONTINUE:    true,
-	DEFER:       true,
-	FALLTHROUGH: true,
-	FOR:         true,
-	GO:          true,
-	GOTO:        true,
-	IF:          true,
-	RETURN:      true,
-	SELECT:      true,
-	SWITCH:      true,
-	TYPE:        true,
-	VAR:         true,
+	Break: true,
+	Catch: true,
+	//Const:    true,
+	Continue: true,
+	For:      true,
+	If:       true,
+	Return:   true,
+	Switch:   true,
+	Try:      true,
+	//Var:      true,
 }
 
 var declStart = map[Token]bool{
-	CONST: true,
-	TYPE:  true,
-	VAR:   true,
+	Const:  true,
+	Class:  true,
+	Enum:   true,
+	Public: true,
+	Static: true,
+	Var:    true,
 }
 
 var exprEnd = map[Token]bool{
-	COMMA:     true,
-	COLON:     true,
-	SEMICOLON: true,
-	RPAREN:    true,
-	RBRACK:    true,
-	RBRACE:    true,
+	Comma:        true,
+	Colon:        true,
+	Semi:         true,
+	RightParen:   true,
+	RightBrace:   true,
+	RightBracket: true,
 }
 
+/*
 // safePos returns a valid file position for a given position: If pos
 // is valid to begin with, safePos returns pos. If pos is out-of-range,
 // safePos returns the EOF position.
@@ -2749,7 +2734,7 @@ func (p *parser) parseFile() *ProgramFile {
 		return nil
 	}
 
-	// package clause
+	// package
 	doc := p.leadComment
 	pos := p.expect(PACKAGE)
 	// Go spec: The package clause is not a declaration;

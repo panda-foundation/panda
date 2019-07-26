@@ -424,7 +424,7 @@ func (s *Scanner) digitVal(char rune) int {
 }
 
 // Scan next token
-func (s *Scanner) Scan() (pos Position, token Token, literal string) {
+func (s *Scanner) Scan() (pos Pos, token Token, literal string) {
 	for s.char == ' ' || s.char == '\t' || s.char == '\n' || s.char == '\r' {
 		s.next()
 	}
