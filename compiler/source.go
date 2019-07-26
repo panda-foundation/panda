@@ -5,6 +5,14 @@ import (
 	"sync"
 )
 
+type Pos int
+
+const NoPos Pos = 0
+
+func (pos Pos) IsValid() bool {
+	return pos != NoPos
+}
+
 type Position struct {
 	Filename string // filename, if any
 	Offset   int    // offset, starting at 0
