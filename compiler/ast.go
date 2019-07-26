@@ -605,6 +605,12 @@ type (
 		specNode()
 	}
 
+	NamespaceSpec struct {
+		Doc    *Comment  // associated documentation; or nil
+		Path   *BasicLit // import path
+		EndPos Pos       // end of spec (overrides Path.Pos if nonzero)
+	}
+
 	// An ImportSpec node represents a single package import.
 	ImportSpec struct {
 		Doc    *Comment  // associated documentation; or nil

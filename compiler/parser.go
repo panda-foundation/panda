@@ -747,6 +747,7 @@ var exprEnd = map[Token]bool{
 // may be past the file's EOF position, which would lead to panics if used
 // later on.
 //
+/*
 func (p *parser) safePos(pos Pos) (res Pos) {
 	defer func() {
 		if recover() != nil {
@@ -755,7 +756,7 @@ func (p *parser) safePos(pos Pos) (res Pos) {
 	}()
 	_ = p.file.Offset(pos) // trigger a panic if position is out-of-range
 	return pos
-}
+}*/
 
 // ----------------------------------------------------------------------------
 // Identifiers
@@ -779,6 +780,28 @@ func (p *parser) parseIdentList() (list []*Ident) {
 		list = append(list, p.parseIdent())
 	}
 	return
+}
+
+// ----------------------------------------------------------------------------
+// Namespace
+// If the result is an identifier, it is not resolved.
+func (p *parser) parseNamespace() Expr {
+	if p.trace {
+		defer un(trace(p, "TypeName"))
+	}
+
+	ident := p.parseIdent()
+	// don't resolve ident yet - it may be a parameter or field name
+
+	if p.tok == PERIOD {
+		// ident is a package name
+		p.next()
+		p.resolve(ident)
+		sel := p.parseIdent()
+		return &SelectorExpr{X: ident, Sel: sel}
+	}
+
+	return ident
 }
 
 /*
@@ -1404,24 +1427,6 @@ func (p *parser) parseSelector(x Expr) Expr {
 	sel := p.parseIdent()
 
 	return &SelectorExpr{X: x, Sel: sel}
-}
-
-func (p *parser) parseTypeAssertion(x Expr) Expr {
-	if p.trace {
-		defer un(trace(p, "TypeAssertion"))
-	}
-
-	lparen := p.expect(LPAREN)
-	var typ Expr
-	if p.tok == TYPE {
-		// type switch: typ == nil
-		p.next()
-	} else {
-		typ = p.parseType()
-	}
-	rparen := p.expect(RPAREN)
-
-	return &TypeAssertExpr{X: x, Type: typ, Lparen: lparen, Rparen: rparen}
 }
 
 func (p *parser) parseIndexOrSlice(x Expr) Expr {
@@ -2732,60 +2737,55 @@ func (p *parser) parseFile() *ProgramFile {
 	// package
 	doc := p.leadComment
 	pos := p.expect(Namespace)
-	// Go spec: The package clause is not a declaration;
+	// The namespace clause is not a declaration;
 	// the package name does not appear in any scope.
 	ident := p.parseIdent()
-	if ident.Name == "_" && p.mode&DeclarationErrors != 0 {
-		p.error(p.pos, "invalid package name _")
-	}
 	p.expectSemi()
 
-	// Don't bother parsing the rest if we had errors parsing the package clause.
-	// Likely not a Go source file at all.
 	if p.errors.Len() != 0 {
 		return nil
 	}
 
-	p.openScope()
-	p.pkgScope = p.topScope
-	var decls []Decl
-	if p.mode&PackageClauseOnly == 0 {
-		// import decls
-		for p.tok == IMPORT {
-			decls = append(decls, p.parseGenDecl(IMPORT, p.parseImportSpec))
-		}
+	/*
+		p.openScope()
+		p.pkgScope = p.topScope
+		var decls []Decl
+		if p.mode&PackageClauseOnly == 0 {
+			// import decls
+			for p.tok == IMPORT {
+				decls = append(decls, p.parseGenDecl(IMPORT, p.parseImportSpec))
+			}
 
-		if p.mode&ImportsOnly == 0 {
-			// rest of package body
-			for p.tok != EOF {
-				decls = append(decls, p.parseDecl(declStart))
+			if p.mode&ImportsOnly == 0 {
+				// rest of package body
+				for p.tok != EOF {
+					decls = append(decls, p.parseDecl(declStart))
+				}
 			}
 		}
-	}
-	p.closeScope()
-	assert(p.topScope == nil, "unbalanced scopes")
-	assert(p.labelScope == nil, "unbalanced label scopes")
+		p.closeScope()
+		assert(p.topScope == nil, "unbalanced scopes")
+		assert(p.labelScope == nil, "unbalanced label scopes")
 
-	// resolve global identifiers within the same file
-	i := 0
-	for _, ident := range p.unresolved {
-		// i <= index for current ident
-		assert(ident.Obj == unresolved, "object already resolved")
-		ident.Obj = p.pkgScope.Lookup(ident.Name) // also removes unresolved sentinel
-		if ident.Obj == nil {
-			p.unresolved[i] = ident
-			i++
-		}
-	}
+		// resolve global identifiers within the same file
+		i := 0
+		for _, ident := range p.unresolved {
+			// i <= index for current ident
+			assert(ident.Obj == unresolved, "object already resolved")
+			ident.Obj = p.pkgScope.Lookup(ident.Name) // also removes unresolved sentinel
+			if ident.Obj == nil {
+				p.unresolved[i] = ident
+				i++
+			}
+		}*/
 
 	return &ProgramFile{
-		Doc:        doc,
-		Package:    pos,
-		Name:       ident,
-		Decls:      decls,
-		Scope:      p.pkgScope,
-		Imports:    p.imports,
-		Unresolved: p.unresolved[0:i],
-		Comments:   p.comments,
+		Doc:       doc,
+		Namespace: pos,
+		Name:      ident,
+		//Decls:      decls,
+		//Scope:      p.pkgScope,
+		//Imports:    p.imports,
+		//Unresolved: p.unresolved[0:i],
 	}
 }
