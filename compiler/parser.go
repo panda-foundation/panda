@@ -737,7 +737,6 @@ var exprEnd = map[Token]bool{
 	RightBracket: true,
 }
 
-/*
 // safePos returns a valid file position for a given position: If pos
 // is valid to begin with, safePos returns pos. If pos is out-of-range,
 // safePos returns the EOF position.
@@ -774,19 +773,15 @@ func (p *parser) parseIdent() *Ident {
 }
 
 func (p *parser) parseIdentList() (list []*Ident) {
-	if p.trace {
-		defer un(trace(p, "IdentList"))
-	}
-
 	list = append(list, p.parseIdent())
-	for p.tok == COMMA {
+	for p.tok == Comma {
 		p.next()
 		list = append(list, p.parseIdent())
 	}
-
 	return
 }
 
+/*
 // ----------------------------------------------------------------------------
 // Common productions
 
@@ -2736,7 +2731,7 @@ func (p *parser) parseFile() *ProgramFile {
 
 	// package
 	doc := p.leadComment
-	pos := p.expect(PACKAGE)
+	pos := p.expect(Namespace)
 	// Go spec: The package clause is not a declaration;
 	// the package name does not appear in any scope.
 	ident := p.parseIdent()
