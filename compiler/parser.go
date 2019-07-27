@@ -1,201 +1,5 @@
 package compiler
 
-/*
-type Parser struct {
-	Scanner *Scanner
-	Program *ProgramUnit
-
-	Token    Token
-	Modifier Modifier
-
-	InClass    bool
-	InFunction bool
-	InEnum     bool
-
-	Documents []string
-}
-
-func NewParser() *Parser {
-	return &Parser{}
-}
-
-func (parser *Parser) Parse(scanner *Scanner) {
-	parser.Scanner = scanner
-	parser.Program = &ProgramUnit{}
-
-	parser.parseNamespace()
-	parser.parseIncludes()
-	parser.parseDeclarations()
-}
-
-// return the first cached token
-func (parser *Parser) peek() Token {
-	if parser.Token == TokenInvalid {
-		parser.Token = parser.Scan()
-	}
-	return parser.Token
-}
-
-func (parser *Parser) consume() {
-	parser.Token = TokenInvalid
-}
-
-func (parser *Parser) ensure(token Token) {
-	if parser.peek() != token {
-		err := fmt.Sprintf("unexpected %s: %s, expecte: %s \n", parser.Position, parser.Token(), TokenToKey(token))
-		parser.error(err)
-	}
-	parser.consume()
-}
-
-func (parser *Parser) parseDocument() {
-	if parser.skipDocument {
-		return
-	}
-
-		//parser.clearDocument()
-		//for parser.peek() == TokenComment {
-			//parser.Documents = append(parser.Documents, parser.Token())
-			//parser.consume()
-		//}
-}
-
-func (parser *Parser) skipDocument() {
-	if parser.skipDocument {
-		return
-	}
-		//for parser.peek() == TokenComment {
-			//parser.consume()
-		//}
-}
-
-func (parser *Parser) clearDocument() {
-	if parser.skipDocument {
-		return
-	}
-	parser.Documents = parser.Documents[:0]
-}
-
-func (parser *Parser) getDocument() []string {
-	var documents []string
-	if parser.skipDocument {
-		return documents
-	}
-	for _, v := range parser.Documents {
-		documents = append(documents, v)
-	}
-	parser.clearDocument()
-	return documents
-}
-
-func (parser *Parser) parseNamespace() {
-	parser.parseDocument()
-	if parser.peek() == Namespace {
-		parser.consume()
-		if parser.peek() != Semi {
-			parser.Program.Namespace = parser.parseQualifiedId(false)
-		}
-		parser.ensure(Semi)
-		parser.Program.Document = parser.getDocument()
-		fmt.Println("namespace:", parser.Program.Namespace)
-	} else {
-		parser.error(fmt.Sprintf("unexpected: %s, expect namespace", TokenToKey(parser.peek())))
-	}
-}
-
-func (parser *Parser) parseIncludes() {
-	for {
-		parser.parseDocument()
-		if parser.peek() == Include {
-			parser.consume()
-			text := parser.parseQualifiedId(true)
-			parser.Program.Includes = append(parser.Program.Includes, text)
-			fmt.Println("include:", text)
-			parser.ensure(Semi)
-			parser.clearDocument()
-		} else {
-			break
-		}
-	}
-}
-
-func (parser *Parser) parseModifier() {
-	parser.Modifier.Public = false
-	parser.Modifier.Static = false
-
-	if parser.peek() == Public {
-		parser.Modifier.Public = true
-		parser.consume()
-	}
-	if parser.peek() == Static {
-		parser.Modifier.Static = true
-		parser.consume()
-		if !parser.InClass {
-			parser.error("unexpected static")
-		}
-	}
-
-	fmt.Println("modifiers:", parser.Modifier)
-}
-
-func (parser *Parser) parseQualifiedId(allowStar bool) string {
-	id := ""
-	for {
-		if parser.peek() == TokenIdentifier {
-			id += parser.Token()
-			parser.consume()
-			if parser.peek() == Dot {
-				id += parser.Token()
-				parser.consume()
-				if allowStar && parser.peek() == Star {
-					id += parser.Token()
-					parser.consume()
-					break
-				}
-			} else {
-				break
-			}
-		} else {
-			parser.error("invalid qualified id, unexpected: " + parser.Token())
-			break
-		}
-	}
-	return id
-}
-
-func (parser *Parser) parseType() *Type {
-	dataType := &Type{}
-	dataType.Scalar = TokenInvalid
-	return nil
-}
-
-func (parser *Parser) parseDeclarations() {
-	parser.parseModifier()
-	//parser meta data
-
-	switch parser.peek() {
-	case Class:
-	case Enum:
-	case Interface:
-	case Var:
-	case Const:
-	default:
-		parser.error("unexpected: " + parser.Token())
-	}
-}
-
-func (parser *Parser) parseClass() {
-
-}
-
-func (parser *Parser) parseDelaration(isConstant bool) {
-
-}
-
-func (parser *Parser) parseFunction() {
-
-}*/
-
 // Copyright 2009 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -340,14 +144,11 @@ type parser struct {
 	inRhs   bool // if set, the parser is parsing a rhs expression
 
 	// Ordinary identifier scopes
-	//pkgScope   *Scope        // pkgScope.Outer == nil
-	//topScope   *Scope        // top-most scope; may be pkgScope
+	nsScope    *Scope        // namespaceScope.Outer == nil
+	topScope   *Scope        // top-most scope; may be pkgScope
 	unresolved []*Ident      // unresolved identifiers
 	imports    []*ImportSpec // list of imports
 
-	// Label scopes
-	// (maintained by open/close LabelScope)
-	//labelScope  *Scope     // label scope for current function
 	targetStack [][]*Ident // stack of unresolved labels
 }
 
@@ -358,7 +159,6 @@ func (p *parser) init(fset *FileSet, filename string, src []byte, scanComments b
 	p.next()
 }
 
-/*
 // ----------------------------------------------------------------------------
 // Scoping support
 
@@ -370,26 +170,7 @@ func (p *parser) closeScope() {
 	p.topScope = p.topScope.Outer
 }
 
-func (p *parser) openLabelScope() {
-	p.labelScope = NewScope(p.labelScope)
-	p.targetStack = append(p.targetStack, nil)
-}
-
-func (p *parser) closeLabelScope() {
-	// resolve labels
-	n := len(p.targetStack) - 1
-	scope := p.labelScope
-	for _, ident := range p.targetStack[n] {
-		ident.Obj = scope.Lookup(ident.Name)
-		if ident.Obj == nil && p.mode&DeclarationErrors != 0 {
-			p.error(ident.Pos(), fmt.Sprintf("label %s undefined", ident.Name))
-		}
-	}
-	// pop label scope
-	p.targetStack = p.targetStack[0:n]
-	p.labelScope = p.labelScope.Outer
-}
-
+/*
 func (p *parser) declare(decl, data interface{}, scope *Scope, kind ObjKind, idents ...*Ident) {
 	for _, ident := range idents {
 		assert(ident.Obj == nil, "identifier already declared or resolved")
@@ -483,48 +264,31 @@ func (p *parser) resolve(x Expr) {
 // ----------------------------------------------------------------------------
 // Parsing support
 
-// Consume a comment and return it and the line on which it ends.
-/* TO-DO
+// Consume comments, keep the last one
 func (p *parser) consumeComment() (comment *Comment, endline int) {
-	// /*-style comments may end on a different line than where they start.
-	// Scan the comment for '\n' chars and adjust endline accordingly.
 	endline = p.file.Line(p.pos)
-	if p.lit[1] == '*' {
-		// don't use range here - no need to decode Unicode code points
-		for i := 0; i < len(p.lit); i++ {
-			if p.lit[i] == '\n' {
-				endline++
-			}
+	pos, tok, lit := p.pos, p.tok, p.lit
+	for p.tok == COMMENT {
+		p.pos, p.tok, p.lit = p.scanner.Scan()
+		if p.tok == COMMENT {
+			pos, tok, lit = p.pos, p.tok, p.lit
 		}
 	}
 
-	comment = &Comment{Slash: p.pos, Text: p.lit}
-	p.pos, p.tok, p.lit = p.scanner.Scan()
-
-	return
-}
-
-// Consume a group of adjacent comments, add it to the parser's
-// comments list, and return it together with the line at which
-// the last comment in the group ends. A non-comment token or n
-// empty lines terminate a comment group.
-//  TO-DO
-func (p *parser) consumeCommentGroup(n int) (comments *CommentGroup, endline int) {
-	var list []*Comment
-	endline = p.file.Line(p.pos)
-	for p.tok == COMMENT && p.file.Line(p.pos) <= endline+n {
-		var comment *Comment
-		comment, endline = p.consumeComment()
-		list = append(list, comment)
+	if tok == COMMENT {
+		endline = p.file.Line(pos)
+		if lit[1] == '*' {
+			// don't use range here - no need to decode Unicode code points
+			for i := 0; i < len(lit); i++ {
+				if lit[i] == '\n' {
+					endline++
+				}
+			}
+		}
+		comment = &Comment{Slash: pos, Text: lit}
 	}
-
-	// add comment group to the comments list
-	comments = &CommentGroup{List: list}
-	p.comments = append(p.comments, comments)
-
 	return
 }
-*/
 
 // Advance to the next non-comment  In the process, collect
 // any comment groups encountered, and remember the last lead and
@@ -537,45 +301,38 @@ func (p *parser) consumeCommentGroup(n int) (comments *CommentGroup, endline int
 // A line comment is a comment group that follows a non-comment
 // token on the same line, and that has no tokens after it on the line
 // where it ends.
-//
-// Lead and line comments may be considered documentation that is
-// stored in the
-//
 func (p *parser) next() {
 	p.leadComment = nil
 	p.lineComment = nil
 
+	prev := p.pos
 	p.pos, p.tok, p.lit = p.scanner.Scan()
-	//TO-DO scan comment for doc later
-	/*
-		if p.tok == COMMENT {
-			prev := p.pos
-			var comment *Comment
-			var endline int
-
-			if p.file.Line(p.pos) == p.file.Line(prev) {
-				// The comment is on same line as the previous token; it
-				// cannot be a lead comment but may be a line comment.
-				comment, endline = p.consumeCommentGroup(0)
-				if p.file.Line(p.pos) != endline || p.tok == EOF {
-					// The next token is on a different line, thus
-					// the last comment group is a line comment.
-					p.lineComment = comment
-				}
+	if p.tok == COMMENT {
+		var comment *Comment
+		var endline int
+		if p.file.Line(p.pos) == p.file.Line(prev) {
+			// The comment is on same line as the previous token; it
+			// cannot be a lead comment but may be a line comment.
+			comment, endline = p.consumeComment()
+			if p.file.Line(p.pos) != endline || p.tok == EOF {
+				// The next token is on a different line, thus
+				// the last comment group is a line comment.
+				p.lineComment = comment
 			}
+		}
 
-			// consume successor comments, if any
-			endline = -1
-			for p.tok == COMMENT {
-				comment, endline = p.consumeCommentGroup(1)
-			}
+		// consume successor comments, if any
+		endline = -1
+		for p.tok == COMMENT {
+			comment, endline = p.consumeComment()
+		}
 
-			if endline+1 == p.file.Line(p.pos) {
-				// The next token is following on the line immediately after the
-				// comment group, thus the last comment group is a lead comment.
-				p.leadComment = comment
-			}
-		}*/
+		if endline+1 == p.file.Line(p.pos) {
+			// The next token is following on the line immediately after the
+			// comment group, thus the last comment group is a lead comment.
+			p.leadComment = comment
+		}
+	}
 }
 
 func (p *parser) error(pos Pos, msg string) {
@@ -774,8 +531,10 @@ func (p *parser) parseQualifiedIdent() *Ident {
 			p.next()
 			if p.tok == IDENT {
 				name += "." + p.lit
+				p.next()
 			} else {
 				p.expect(IDENT)
+				break
 			}
 		}
 	} else {
@@ -1307,9 +1066,7 @@ func (p *parser) parseBody(scope *Scope) *BlockStmt {
 
 	lbrace := p.expect(LBRACE)
 	p.topScope = scope // open function scope
-	p.openLabelScope()
 	list := p.parseStmtList()
-	p.closeLabelScope()
 	p.closeScope()
 	rbrace := p.expect(RBRACE)
 
@@ -1905,27 +1662,6 @@ func (p *parser) parseSimpleStmt(mode int) (Stmt, bool) {
 	}
 
 	switch p.tok {
-	case COLON:
-		// labeled statement
-		colon := p.pos
-		p.next()
-		if label, isIdent := x[0].(*Ident); mode == labelOk && isIdent {
-			// Go spec: The scope of a label is the body of the function
-			// in which it is declared and excludes the body of any nested
-			// function.
-			stmt := &LabeledStmt{Label: label, Colon: colon, Stmt: p.parseStmt()}
-			p.declare(stmt, nil, p.labelScope, Lbl, label)
-			return stmt, false
-		}
-		// The label declaration typically starts at x[0].Pos(), but the label
-		// declaration may be erroneous due to a token after that position (and
-		// before the ':'). If SpuriousErrors is not set, the (only) error
-		// reported for the line is the illegal label error instead of the token
-		// before the ':' that caused the problem. Thus, use the (latest) colon
-		// position for error reporting.
-		p.error(colon, "illegal label declaration")
-		return &BadStmt{From: x[0].Pos(), To: colon + 1}, false
-
 	case ARROW:
 		// send statement
 		arrow := p.pos
@@ -2490,7 +2226,6 @@ func isValidImport(lit string) bool {
 }
 */
 func (p *parser) parseNamespaceSpec(doc *Comment) *NamespaceSpec {
-	p.expect(Namespace)
 	// The namespace clause is not a declaration;
 	// the package name does not appear in any scope.
 	ident := p.parseQualifiedIdent()
@@ -2734,8 +2469,8 @@ func (p *parser) parseFile() *ProgramFile {
 	}
 
 	// package
-	doc := p.leadComment
-	ns := p.parseNamespaceSpec(doc)
+	p.expect(Namespace)
+	ns := p.parseNamespaceSpec(p.leadComment)
 
 	if p.errors.Len() != 0 {
 		return nil
@@ -2760,7 +2495,6 @@ func (p *parser) parseFile() *ProgramFile {
 		}
 		p.closeScope()
 		assert(p.topScope == nil, "unbalanced scopes")
-		assert(p.labelScope == nil, "unbalanced label scopes")
 
 		// resolve global identifiers within the same file
 		i := 0
@@ -2775,7 +2509,6 @@ func (p *parser) parseFile() *ProgramFile {
 		}*/
 
 	return &ProgramFile{
-		Doc:       doc,
 		Namespace: ns,
 		//Decls:      decls,
 		//Scope:      p.pkgScope,

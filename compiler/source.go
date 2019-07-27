@@ -78,6 +78,49 @@ func (f *File) AddLine(offset int) {
 	f.mutex.Unlock()
 }
 
+// Line returns the line number for the given file position p;
+// p must be a Pos value in that file or NoPos.
+//
+func (f *File) Line(p Pos) int {
+	return f.Position(p).Line
+}
+
+// Position returns the Position value for the given file position p.
+// Calling f.Position(p) is equivalent to calling f.PositionFor(p, true).
+//
+func (f *File) Position(p Pos) (pos Position) {
+	offset := int(p) - f.base
+	pos.Offset = offset
+	pos.Filename, pos.Line, pos.Column = f.unpack(offset)
+	return
+}
+
+// unpack returns the filename and line and column number for a file offset.
+// If adjusted is set, unpack will return the filename and line information
+// possibly adjusted by //line comments; otherwise those comments are ignored.
+//
+func (f *File) unpack(offset int) (filename string, line, column int) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+	filename = f.name
+
+	i, j := 0, len(f.lines)
+	for i < j {
+		h := i + (j-i)/2 // avoid overflow when computing h
+		// i ≤ h < j
+		if f.lines[h] <= offset {
+			i = h + 1
+		} else {
+			j = h
+		}
+	}
+	i = i - 1
+	if i >= 0 {
+		line, column = i+1, offset-f.lines[i]+1
+	}
+	return
+}
+
 // -----------------------------------------------------------------------------
 // FileSet
 

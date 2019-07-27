@@ -778,7 +778,6 @@ func (*FuncDecl) declNode() {}
 // are "free-floating" (see also issues #18593, #20744).
 //
 type ProgramFile struct {
-	Doc        *Comment       // associated documentation; or nil
 	Namespace  *NamespaceSpec // position of "namespace" keyword
 	Decls      []Decl         // top-level declarations; or nil
 	Scope      *Scope         // package scope (this file only)
