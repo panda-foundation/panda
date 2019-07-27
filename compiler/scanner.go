@@ -34,9 +34,7 @@ type Scanner struct {
 }
 
 // Init scanner
-func (s *Scanner) Init(file *File, src []byte, err ErrorHandler, scanComment bool, flags []string) *Scanner {
-	scanner := &Scanner{}
-
+func (scanner *Scanner) Init(file *File, src []byte, err ErrorHandler, scanComment bool, flags []string) {
 	//if file.size != len(src) {
 	//panic(fmt.Sprintf("file size (%d) does not match src len (%d)", file.size, len(src)))
 	//}
@@ -60,8 +58,6 @@ func (s *Scanner) Init(file *File, src []byte, err ErrorHandler, scanComment boo
 	for _, flag := range flags {
 		scanner.flags[flag] = true
 	}
-
-	return scanner
 }
 
 func (s *Scanner) next() {

@@ -639,7 +639,12 @@ type (
 )
 
 // Pos and End implementations for spec nodes.
-
+func (s *NamespaceSpec) Pos() Pos {
+	if s.Path != nil {
+		return s.Path.Pos()
+	}
+	return s.Path.Pos()
+}
 func (s *ImportSpec) Pos() Pos {
 	if s.Name != nil {
 		return s.Name.Pos()
@@ -648,7 +653,12 @@ func (s *ImportSpec) Pos() Pos {
 }
 func (s *ValueSpec) Pos() Pos { return s.Names[0].Pos() }
 func (s *TypeSpec) Pos() Pos  { return s.Name.Pos() }
-
+func (s *NamespaceSpec) End() Pos {
+	if s.EndPos != 0 {
+		return s.EndPos
+	}
+	return s.Path.End()
+}
 func (s *ImportSpec) End() Pos {
 	if s.EndPos != 0 {
 		return s.EndPos
@@ -670,9 +680,10 @@ func (s *TypeSpec) End() Pos { return s.Type.End() }
 // specNode() ensures that only spec nodes can be
 // assigned to a Spec.
 //
-func (*ImportSpec) specNode() {}
-func (*ValueSpec) specNode()  {}
-func (*TypeSpec) specNode()   {}
+func (*NamespaceSpec) specNode() {}
+func (*ImportSpec) specNode()    {}
+func (*ValueSpec) specNode()     {}
+func (*TypeSpec) specNode()      {}
 
 // A declaration is represented by one of the following declaration nodes.
 //
@@ -767,21 +778,20 @@ func (*FuncDecl) declNode() {}
 // are "free-floating" (see also issues #18593, #20744).
 //
 type ProgramFile struct {
-	Doc        *Comment      // associated documentation; or nil
-	Namespace  Pos           // position of "namespace" keyword
-	Name       *Ident        // namespace name
-	Decls      []Decl        // top-level declarations; or nil
-	Scope      *Scope        // package scope (this file only)
-	Imports    []*ImportSpec // imports in this file
-	Unresolved []*Ident      // unresolved identifiers in this file
+	Doc        *Comment       // associated documentation; or nil
+	Namespace  *NamespaceSpec // position of "namespace" keyword
+	Decls      []Decl         // top-level declarations; or nil
+	Scope      *Scope         // package scope (this file only)
+	Imports    []*ImportSpec  // imports in this file
+	Unresolved []*Ident       // unresolved identifiers in this file
 }
 
-func (f *ProgramFile) Pos() Pos { return f.Namespace }
+func (f *ProgramFile) Pos() Pos { return f.Namespace.Pos() }
 func (f *ProgramFile) End() Pos {
 	if n := len(f.Decls); n > 0 {
 		return f.Decls[n-1].End()
 	}
-	return f.Name.End()
+	return f.Namespace.End()
 }
 
 // A Package node represents a set of source files
@@ -877,6 +887,8 @@ func (obj *Object) Pos() Pos {
 				return n.Pos()
 			}
 		}
+	case *NamespaceSpec:
+		return d.Path.Pos()
 	case *ImportSpec:
 		if d.Name != nil && d.Name.Name == name {
 			return d.Name.Pos()

@@ -254,7 +254,6 @@ func ParseFile(fset *FileSet, filename string, scanComments bool, flags []string
 			// ParseFile API and return a valid (but) empty
 			// *File
 			f = &ProgramFile{
-				Name:  new(Ident),
 				Scope: NewScope(nil),
 			}
 		}
@@ -638,23 +637,6 @@ func (p *parser) expectClosing(tok Token, context string) Pos {
 	return p.expect(tok)
 }
 
-func (p *parser) expectSemi() {
-	// semicolon is optional before a closing ')' or '}'
-	if p.tok != RightParen && p.tok != RightBrace {
-		switch p.tok {
-		case Comma:
-			// permit a ',' instead of a ';' but complain
-			p.errorExpected(p.pos, "';'")
-			fallthrough
-		case Semi:
-			p.next()
-		default:
-			p.errorExpected(p.pos, "';'")
-			p.advance(stmtStart)
-		}
-	}
-}
-
 func (p *parser) atComma(context string, follow Token) bool {
 	if p.tok == Comma {
 		return true
@@ -782,26 +764,25 @@ func (p *parser) parseIdentList() (list []*Ident) {
 	return
 }
 
-// ----------------------------------------------------------------------------
-// Namespace
-// If the result is an identifier, it is not resolved.
-func (p *parser) parseNamespace() Expr {
-	if p.trace {
-		defer un(trace(p, "TypeName"))
-	}
-
-	ident := p.parseIdent()
-	// don't resolve ident yet - it may be a parameter or field name
-
-	if p.tok == PERIOD {
-		// ident is a package name
+func (p *parser) parseQualifiedIdent() *Ident {
+	pos := p.pos
+	name := "_"
+	if p.tok == IDENT {
+		name = p.lit
 		p.next()
-		p.resolve(ident)
-		sel := p.parseIdent()
-		return &SelectorExpr{X: ident, Sel: sel}
+		for p.tok == Dot {
+			p.next()
+			if p.tok == IDENT {
+				name += "." + p.lit
+			} else {
+				p.expect(IDENT)
+			}
+		}
+	} else {
+		p.expect(IDENT) // use expect() error handling
 	}
+	return &Ident{NamePos: pos, Name: name}
 
-	return ident
 }
 
 /*
@@ -981,7 +962,7 @@ func (p *parser) parseFieldDecl(scope *Scope) *Field {
 		p.next()
 	}
 
-	p.expectSemi() // call before accessing p.linecomment
+	p.expect(Semi) // call before accessing p.linecomment
 
 	field := &Field{Doc: doc, Names: idents, Type: typ, Tag: tag, Comment: p.lineComment}
 	p.declare(field, nil, scope, Var, idents...)
@@ -1193,7 +1174,7 @@ func (p *parser) parseMethodSpec(scope *Scope) *Field {
 		typ = x
 		p.resolve(typ)
 	}
-	p.expectSemi() // call before accessing p.linecomment
+	p.expect(Semi) // call before accessing p.linecomment
 
 	spec := &Field{Doc: doc, Names: idents, Type: typ, Comment: p.lineComment}
 	p.declare(spec, nil, scope, Fun, idents...)
@@ -1982,7 +1963,7 @@ func (p *parser) parseGoStmt() Stmt {
 
 	pos := p.expect(GO)
 	call := p.parseCallExpr("go")
-	p.expectSemi()
+	p.expect(Semi)
 	if call == nil {
 		return &BadStmt{From: pos, To: pos + 2} // len("go")
 	}
@@ -1997,7 +1978,7 @@ func (p *parser) parseDeferStmt() Stmt {
 
 	pos := p.expect(DEFER)
 	call := p.parseCallExpr("defer")
-	p.expectSemi()
+	p.expect(Semi)
 	if call == nil {
 		return &BadStmt{From: pos, To: pos + 5} // len("defer")
 	}
@@ -2016,7 +1997,7 @@ func (p *parser) parseReturnStmt() *ReturnStmt {
 	if p.tok != SEMICOLON && p.tok != RBRACE {
 		x = p.parseRhsList()
 	}
-	p.expectSemi()
+	p.expect(Semi)
 
 	return &ReturnStmt{Return: pos, Results: x}
 }
@@ -2034,7 +2015,7 @@ func (p *parser) parseBranchStmt(tok Token) *BranchStmt {
 		n := len(p.targetStack) - 1
 		p.targetStack[n] = append(p.targetStack[n], label)
 	}
-	p.expectSemi()
+	p.expect(Semi)
 
 	return &BranchStmt{TokPos: pos, Tok: tok, Label: label}
 }
@@ -2137,13 +2118,13 @@ func (p *parser) parseIfStmt() *IfStmt {
 			else_ = p.parseIfStmt()
 		case LBRACE:
 			else_ = p.parseBlockStmt()
-			p.expectSemi()
+			p.expect(Semi)
 		default:
 			p.errorExpected(p.pos, "if statement or block")
 			else_ = &BadStmt{From: p.pos, To: p.pos}
 		}
 	} else {
-		p.expectSemi()
+		p.expect(Semi)
 	}
 
 	return &IfStmt{If: pos, Init: init, Cond: cond, Body: body, Else: else_}
@@ -2263,7 +2244,7 @@ func (p *parser) parseSwitchStmt() Stmt {
 		list = append(list, p.parseCaseClause(typeSwitch))
 	}
 	rbrace := p.expect(RBRACE)
-	p.expectSemi()
+	p.expect(Semi)
 	body := &BlockStmt{Lbrace: lbrace, List: list, Rbrace: rbrace}
 
 	if typeSwitch {
@@ -2343,7 +2324,7 @@ func (p *parser) parseSelectStmt() *SelectStmt {
 		list = append(list, p.parseCommClause())
 	}
 	rbrace := p.expect(RBRACE)
-	p.expectSemi()
+	p.expect(Semi)
 	body := &BlockStmt{Lbrace: lbrace, List: list, Rbrace: rbrace}
 
 	return &SelectStmt{Select: pos, Body: body}
@@ -2382,7 +2363,7 @@ func (p *parser) parseForStmt() Stmt {
 			if p.tok != SEMICOLON {
 				s2, _ = p.parseSimpleStmt(basic)
 			}
-			p.expectSemi()
+			p.expect(Semi)
 			if p.tok != LBRACE {
 				s3, _ = p.parseSimpleStmt(basic)
 			}
@@ -2391,7 +2372,7 @@ func (p *parser) parseForStmt() Stmt {
 	}
 
 	body := p.parseBlockStmt()
-	p.expectSemi()
+	p.expect(Semi)
 
 	if isRange {
 		as := s2.(*AssignStmt)
@@ -2450,7 +2431,7 @@ func (p *parser) parseStmt() (s Stmt) {
 		// parsed by parseSimpleStmt - don't expect a semicolon after
 		// them
 		if _, isLabeledStmt := s.(*LabeledStmt); !isLabeledStmt {
-			p.expectSemi()
+			p.expect(Semi)
 		}
 	case GO:
 		s = p.parseGoStmt()
@@ -2462,7 +2443,7 @@ func (p *parser) parseStmt() (s Stmt) {
 		s = p.parseBranchStmt(p.tok)
 	case LBRACE:
 		s = p.parseBlockStmt()
-		p.expectSemi()
+		p.expect(Semi)
 	case IF:
 		s = p.parseIfStmt()
 	case SWITCH:
@@ -2493,9 +2474,10 @@ func (p *parser) parseStmt() (s Stmt) {
 
 // ----------------------------------------------------------------------------
 // Declarations
+*/
+type parseSpecFunction func(doc *Comment, keyword Token, iota int) Spec
 
-type parseSpecFunction func(doc *CommentGroup, keyword Token, iota int) Spec
-
+/*
 func isValidImport(lit string) bool {
 	const illegalChars = `!"#$%&'()*,:;<=>?[\]^{|}` + "`\uFFFD"
 	s, _ := strconv.Unquote(lit) // go/scanner returns a legal string literal
@@ -2506,7 +2488,26 @@ func isValidImport(lit string) bool {
 	}
 	return s != ""
 }
+*/
+func (p *parser) parseNamespaceSpec(doc *Comment) *NamespaceSpec {
+	p.expect(Namespace)
+	// The namespace clause is not a declaration;
+	// the package name does not appear in any scope.
+	ident := p.parseQualifiedIdent()
+	p.expect(Semi)
 
+	if p.errors.Len() != 0 {
+		return nil
+	}
+
+	spec := &NamespaceSpec{
+		Doc:  doc,
+		Path: &BasicLit{ValuePos: ident.Pos(), Kind: STRING, Value: ident.Name},
+	}
+	return spec
+}
+
+/*
 func (p *parser) parseImportSpec(doc *CommentGroup, _ Token, _ int) Spec {
 	if p.trace {
 		defer un(trace(p, "ImportSpec"))
@@ -2532,7 +2533,7 @@ func (p *parser) parseImportSpec(doc *CommentGroup, _ Token, _ int) Spec {
 	} else {
 		p.expect(STRING) // use expect() error handling
 	}
-	p.expectSemi() // call before accessing p.linecomment
+	p.expect(Semi) // call before accessing p.linecomment
 
 	// collect imports
 	spec := &ImportSpec{
@@ -2560,7 +2561,7 @@ func (p *parser) parseValueSpec(doc *CommentGroup, keyword Token, iota int) Spec
 		p.next()
 		values = p.parseRhsList()
 	}
-	p.expectSemi() // call before accessing p.linecomment
+	p.expect(Semi) // call before accessing p.linecomment
 
 	switch keyword {
 	case VAR:
@@ -2611,29 +2612,26 @@ func (p *parser) parseTypeSpec(doc *CommentGroup, _ Token, _ int) Spec {
 		p.next()
 	}
 	spec.Type = p.parseType()
-	p.expectSemi() // call before accessing p.linecomment
+	p.expect(Semi) // call before accessing p.linecomment
 	spec.Comment = p.lineComment
 
 	return spec
 }
+*/
 
 func (p *parser) parseGenDecl(keyword Token, f parseSpecFunction) *GenDecl {
-	if p.trace {
-		defer un(trace(p, "GenDecl("+keyword.String()+")"))
-	}
-
 	doc := p.leadComment
 	pos := p.expect(keyword)
 	var lparen, rparen Pos
 	var list []Spec
-	if p.tok == LPAREN {
+	if p.tok == LeftParen {
 		lparen = p.pos
 		p.next()
-		for iota := 0; p.tok != RPAREN && p.tok != EOF; iota++ {
+		for iota := 0; p.tok != RightParen && p.tok != EOF; iota++ {
 			list = append(list, f(p.leadComment, keyword, iota))
 		}
-		rparen = p.expect(RPAREN)
-		p.expectSemi()
+		rparen = p.expect(RightParen)
+		p.expect(Semi)
 	} else {
 		list = append(list, f(nil, keyword, 0))
 	}
@@ -2648,6 +2646,7 @@ func (p *parser) parseGenDecl(keyword Token, f parseSpecFunction) *GenDecl {
 	}
 }
 
+/*
 func (p *parser) parseFuncDecl() *FuncDecl {
 	if p.trace {
 		defer un(trace(p, "FunctionDecl"))
@@ -2670,7 +2669,7 @@ func (p *parser) parseFuncDecl() *FuncDecl {
 	if p.tok == LBRACE {
 		body = p.parseBody(scope)
 	}
-	p.expectSemi()
+	p.expect(Semi)
 
 	decl := &FuncDecl{
 		Doc:  doc,
@@ -2736,11 +2735,7 @@ func (p *parser) parseFile() *ProgramFile {
 
 	// package
 	doc := p.leadComment
-	pos := p.expect(Namespace)
-	// The namespace clause is not a declaration;
-	// the package name does not appear in any scope.
-	ident := p.parseIdent()
-	p.expectSemi()
+	ns := p.parseNamespaceSpec(doc)
 
 	if p.errors.Len() != 0 {
 		return nil
@@ -2781,8 +2776,7 @@ func (p *parser) parseFile() *ProgramFile {
 
 	return &ProgramFile{
 		Doc:       doc,
-		Namespace: pos,
-		Name:      ident,
+		Namespace: ns,
 		//Decls:      decls,
 		//Scope:      p.pkgScope,
 		//Imports:    p.imports,
