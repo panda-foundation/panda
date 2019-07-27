@@ -1,15 +1,16 @@
 namespace test.sample;
 
-include serializer.json;
-include network.*;
+import serializer.json;
+import net network;
 
-public var a, b : int;
-public const c : string = "hellow world";
+public var a, b int;
+public const c string = "hellow world";
 
 function do_nothing() // void return type can be ommited
 {
 }
 
+/*
 public class empty
 {
     public function new()
@@ -91,6 +92,7 @@ public class derive_generic : generic<int, int>
 {
 
 }
+*/
 
 function main()
 {
@@ -99,6 +101,7 @@ function main()
     var c = a + b;
     print(c);
 
+    /*
     var b : base_class = new base_class();
     b.print();
 
@@ -107,4 +110,5 @@ function main()
 
     var g ： generic<int, int> = new generic(1, 2);
     g.print();
+    */
 }

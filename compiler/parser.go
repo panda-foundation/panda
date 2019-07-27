@@ -123,9 +123,7 @@ type parser struct {
 	indent       int  // indentation used for tracing output
 
 	// Comments
-	comments    []*Comment
 	leadComment *Comment // last lead comment
-	lineComment *Comment // last line comment
 
 	// Next token
 	pos Pos    // token position
@@ -219,6 +217,7 @@ func (p *parser) shortVarDecl(decl *AssignStmt, list []Expr) {
 		p.error(list[0].Pos(), "no new variables on left side of :=")
 	}
 }
+*/
 
 // The unresolved object is a sentinel to mark identifiers that have been added
 // to the list of unresolved identifiers. The sentinel is only used for verifying
@@ -242,7 +241,7 @@ func (p *parser) tryResolve(x Expr, collectUnresolved bool) {
 	}
 	// try to resolve the identifier
 	for s := p.topScope; s != nil; s = s.Outer {
-		if obj := s.Lookup(ident.Name); obj != nil {
+		if obj := s.Find(ident.Name); obj != nil {
 			ident.Obj = obj
 			return
 		}
@@ -260,13 +259,12 @@ func (p *parser) tryResolve(x Expr, collectUnresolved bool) {
 func (p *parser) resolve(x Expr) {
 	p.tryResolve(x, true)
 }
-*/
+
 // ----------------------------------------------------------------------------
 // Parsing support
 
 // Consume comments, keep the last one
-func (p *parser) consumeComment() (comment *Comment, endline int) {
-	endline = p.file.Line(p.pos)
+func (p *parser) consumeComment() *Comment {
 	pos, tok, lit := p.pos, p.tok, p.lit
 	for p.tok == COMMENT {
 		p.pos, p.tok, p.lit = p.scanner.Scan()
@@ -276,18 +274,9 @@ func (p *parser) consumeComment() (comment *Comment, endline int) {
 	}
 
 	if tok == COMMENT {
-		endline = p.file.Line(pos)
-		if lit[1] == '*' {
-			// don't use range here - no need to decode Unicode code points
-			for i := 0; i < len(lit); i++ {
-				if lit[i] == '\n' {
-					endline++
-				}
-			}
-		}
-		comment = &Comment{Slash: pos, Text: lit}
+		return &Comment{Slash: pos, Text: lit}
 	}
-	return
+	return nil
 }
 
 // Advance to the next non-comment  In the process, collect
@@ -303,34 +292,12 @@ func (p *parser) consumeComment() (comment *Comment, endline int) {
 // where it ends.
 func (p *parser) next() {
 	p.leadComment = nil
-	p.lineComment = nil
-
 	prev := p.pos
 	p.pos, p.tok, p.lit = p.scanner.Scan()
 	if p.tok == COMMENT {
-		var comment *Comment
-		var endline int
-		if p.file.Line(p.pos) == p.file.Line(prev) {
-			// The comment is on same line as the previous token; it
-			// cannot be a lead comment but may be a line comment.
-			comment, endline = p.consumeComment()
-			if p.file.Line(p.pos) != endline || p.tok == EOF {
-				// The next token is on a different line, thus
-				// the last comment group is a line comment.
-				p.lineComment = comment
-			}
-		}
-
-		// consume successor comments, if any
-		endline = -1
-		for p.tok == COMMENT {
-			comment, endline = p.consumeComment()
-		}
-
-		if endline+1 == p.file.Line(p.pos) {
-			// The next token is following on the line immediately after the
-			// comment group, thus the last comment group is a lead comment.
-			p.leadComment = comment
+		// if the comment is on same line as the previous token; it cannot be a lead comment
+		if p.file.Line(p.pos) != p.file.Line(prev) {
+			p.leadComment = p.consumeComment()
 		}
 	}
 }
@@ -544,16 +511,26 @@ func (p *parser) parseQualifiedIdent() *Ident {
 
 }
 
-/*
+func (p *parser) parseModifier() *Modifier {
+	m := &Modifier{}
+	m.Public = false
+	m.Static = false
+	if p.tok == Public {
+		m.Public = true
+		p.next()
+	}
+	if p.tok == Static {
+		m.Static = true
+		p.next()
+	}
+	return m
+}
+
 // ----------------------------------------------------------------------------
 // Common productions
 
 // If lhs is set, result list elements which are identifiers are not resolved.
 func (p *parser) parseExprList(lhs bool) (list []Expr) {
-	if p.trace {
-		defer un(trace(p, "ExpressionList"))
-	}
-
 	list = append(list, p.checkExpr(p.parseExpr(lhs)))
 	for p.tok == COMMA {
 		p.next()
@@ -603,10 +580,6 @@ func (p *parser) parseRhsList() []Expr {
 // Types
 
 func (p *parser) parseType() Expr {
-	if p.trace {
-		defer un(trace(p, "Type"))
-	}
-
 	typ := p.tryType()
 
 	if typ == nil {
@@ -621,14 +594,9 @@ func (p *parser) parseType() Expr {
 
 // If the result is an identifier, it is not resolved.
 func (p *parser) parseTypeName() Expr {
-	if p.trace {
-		defer un(trace(p, "TypeName"))
-	}
-
 	ident := p.parseIdent()
 	// don't resolve ident yet - it may be a parameter or field name
-
-	if p.tok == PERIOD {
+	if p.tok == Dot {
 		// ident is a package name
 		p.next()
 		p.resolve(ident)
@@ -636,31 +604,12 @@ func (p *parser) parseTypeName() Expr {
 		return &SelectorExpr{X: ident, Sel: sel}
 	}
 
+	//TO-DO generic eg: <int, int>
+
 	return ident
 }
 
-func (p *parser) parseArrayType() Expr {
-	if p.trace {
-		defer un(trace(p, "ArrayType"))
-	}
-
-	lbrack := p.expect(LBRACK)
-	p.exprLev++
-	var len Expr
-	// always permit ellipsis for more fault-tolerant parsing
-	if p.tok == ELLIPSIS {
-		len = &Ellipsis{Ellipsis: p.pos}
-		p.next()
-	} else if p.tok != RBRACK {
-		len = p.parseRhs()
-	}
-	p.exprLev--
-	p.expect(RBRACK)
-	elt := p.parseType()
-
-	return &ArrayType{Lbrack: lbrack, Len: len, Elt: elt}
-}
-
+/*
 func (p *parser) makeIdentList(list []Expr) []*Ident {
 	idents := make([]*Ident, len(list))
 	for i, x := range list {
@@ -964,72 +913,17 @@ func (p *parser) parseInterfaceType() *InterfaceType {
 		},
 	}
 }
-
-func (p *parser) parseMapType() *MapType {
-	if p.trace {
-		defer un(trace(p, "MapType"))
-	}
-
-	pos := p.expect(MAP)
-	p.expect(LBRACK)
-	key := p.parseType()
-	p.expect(RBRACK)
-	value := p.parseType()
-
-	return &MapType{Map: pos, Key: key, Value: value}
-}
-
-func (p *parser) parseChanType() *ChanType {
-	if p.trace {
-		defer un(trace(p, "ChanType"))
-	}
-
-	pos := p.pos
-	dir := SEND | RECV
-	var arrow Pos
-	if p.tok == CHAN {
-		p.next()
-		if p.tok == ARROW {
-			arrow = p.pos
-			p.next()
-			dir = SEND
-		}
-	} else {
-		arrow = p.expect(ARROW)
-		p.expect(CHAN)
-		dir = RECV
-	}
-	value := p.parseType()
-
-	return &ChanType{Begin: pos, Arrow: arrow, Dir: dir, Value: value}
-}
+*/
 
 // If the result is an identifier, it is not resolved.
 func (p *parser) tryIdentOrType() Expr {
 	switch p.tok {
 	case IDENT:
 		return p.parseTypeName()
-	case LBRACK:
-		return p.parseArrayType()
-	case STRUCT:
-		return p.parseStructType()
-	case MUL:
-		return p.parsePointerType()
-	case FUNC:
-		typ, _ := p.parseFuncType()
-		return typ
-	case INTERFACE:
-		return p.parseInterfaceType()
-	case MAP:
-		return p.parseMapType()
-	case CHAN, ARROW:
-		return p.parseChanType()
-	case LPAREN:
-		lparen := p.pos
-		p.next()
-		typ := p.parseType()
-		rparen := p.expect(RPAREN)
-		return &ParenExpr{Lparen: lparen, X: typ, Rparen: rparen}
+		/*
+			case Function:
+				typ, _ := p.parseFuncType()
+				return typ*/
 	}
 
 	// no type found
@@ -1044,6 +938,7 @@ func (p *parser) tryType() Expr {
 	return typ
 }
 
+/*
 // ----------------------------------------------------------------------------
 // Blocks
 
@@ -1328,6 +1223,7 @@ func (p *parser) parseLiteralValue(typ Expr) Expr {
 	rbrace := p.expectClosing(RBRACE, "composite literal")
 	return &CompositeLit{Type: typ, Lbrace: lbrace, Elts: elts, Rbrace: rbrace}
 }
+*/
 
 // checkExpr checks that x is an expression (and not a type).
 func (p *parser) checkExpr(x Expr) Expr {
@@ -2213,18 +2109,6 @@ func (p *parser) parseStmt() (s Stmt) {
 */
 type parseSpecFunction func(doc *Comment, keyword Token, iota int) Spec
 
-/*
-func isValidImport(lit string) bool {
-	const illegalChars = `!"#$%&'()*,:;<=>?[\]^{|}` + "`\uFFFD"
-	s, _ := strconv.Unquote(lit) // go/scanner returns a legal string literal
-	for _, r := range s {
-		if !unicode.IsGraphic(r) || unicode.IsSpace(r) || strings.ContainsRune(illegalChars, r) {
-			return false
-		}
-	}
-	return s != ""
-}
-*/
 func (p *parser) parseNamespaceSpec(doc *Comment) *NamespaceSpec {
 	// The namespace clause is not a declaration;
 	// the package name does not appear in any scope.
@@ -2242,71 +2126,49 @@ func (p *parser) parseNamespaceSpec(doc *Comment) *NamespaceSpec {
 	return spec
 }
 
-/*
-func (p *parser) parseImportSpec(doc *CommentGroup, _ Token, _ int) Spec {
-	if p.trace {
-		defer un(trace(p, "ImportSpec"))
-	}
+func (p *parser) parseImportSpec(doc *Comment) *ImportSpec {
+	ident := p.parseQualifiedIdent()
+	var path *BasicLit
 
-	var ident *Ident
 	switch p.tok {
-	case PERIOD:
-		ident = &Ident{NamePos: p.pos, Name: "."}
+	case Semi:
+		path = &BasicLit{ValuePos: ident.NamePos, Kind: STRING, Value: ident.Name}
+		ident = nil
 		p.next()
 	case IDENT:
-		ident = p.parseIdent()
+		qualifiedPath := p.parseQualifiedIdent()
+		path = &BasicLit{ValuePos: qualifiedPath.NamePos, Kind: STRING, Value: qualifiedPath.Name}
+		p.expect(Semi)
 	}
-
-	pos := p.pos
-	var path string
-	if p.tok == STRING {
-		path = p.lit
-		if !isValidImport(path) {
-			p.error(pos, "invalid import path: "+path)
-		}
-		p.next()
-	} else {
-		p.expect(STRING) // use expect() error handling
-	}
-	p.expect(Semi) // call before accessing p.linecomment
 
 	// collect imports
-	spec := &ImportSpec{
-		Doc:     doc,
-		Name:    ident,
-		Path:    &BasicLit{ValuePos: pos, Kind: STRING, Value: path},
-		Comment: p.lineComment,
+	return &ImportSpec{
+		Doc:  doc,
+		Name: ident,
+		Path: path,
 	}
-	p.imports = append(p.imports, spec)
-
-	return spec
 }
 
-func (p *parser) parseValueSpec(doc *CommentGroup, keyword Token, iota int) Spec {
-	if p.trace {
-		defer un(trace(p, keyword.String()+"Spec"))
+func (p *parser) parseValueSpec(doc *Comment, m *Modifier) *ValueSpec {
+	spec := &ValueSpec{
+		Doc: doc,
+		//Type:   p.tok,
 	}
 
 	pos := p.pos
 	idents := p.parseIdentList()
 	typ := p.tryType()
 	var values []Expr
+
 	// always permit optional initialization for more tolerant parsing
-	if p.tok == ASSIGN {
+	if p.tok == Assign {
 		p.next()
 		values = p.parseRhsList()
 	}
 	p.expect(Semi) // call before accessing p.linecomment
 
-	switch keyword {
-	case VAR:
-		if typ == nil && values == nil {
-			p.error(pos, "missing variable type or initialization")
-		}
-	case CONST:
-		if values == nil && (iota == 0 || typ != nil) {
-			p.error(pos, "missing constant value")
-		}
+	if values == nil && typ == nil {
+		p.error(pos, "missing type or initialization")
 	}
 
 	// Go spec: The scope of a constant or variable identifier declared inside
@@ -2314,11 +2176,10 @@ func (p *parser) parseValueSpec(doc *CommentGroup, keyword Token, iota int) Spec
 	// the end of the innermost containing block.
 	// (Global identifiers are resolved in a separate phase after parsing.)
 	spec := &ValueSpec{
-		Doc:     doc,
-		Names:   idents,
-		Type:    typ,
-		Values:  values,
-		Comment: p.lineComment,
+		Doc:    doc,
+		Names:  idents,
+		Type:   typ,
+		Values: values,
 	}
 	kind := Con
 	if keyword == VAR {
@@ -2329,6 +2190,7 @@ func (p *parser) parseValueSpec(doc *CommentGroup, keyword Token, iota int) Spec
 	return spec
 }
 
+/*
 func (p *parser) parseTypeSpec(doc *CommentGroup, _ Token, _ int) Spec {
 	if p.trace {
 		defer un(trace(p, "TypeSpec"))
@@ -2431,22 +2293,19 @@ func (p *parser) parseFuncDecl() *FuncDecl {
 
 	return decl
 }
-
+*/
 func (p *parser) parseDecl(sync map[Token]bool) Decl {
-	if p.trace {
-		defer un(trace(p, "Declaration"))
-	}
-
-	var f parseSpecFunction
+	m := p.parseModifier()
 	switch p.tok {
-	case CONST, VAR:
-		f = p.parseValueSpec
-
-	case TYPE:
+	case Const, Var:
+		//pack to general decl
+		return p.parseValueSpec(p.leadComment, m)
+	/*TO-DO class enum interface
+	case Type:
 		f = p.parseTypeSpec
-
-	case FUNC:
-		return p.parseFuncDecl()
+	*/
+	case Function:
+		return p.parseFuncDecl(p.leadComment, m)
 
 	default:
 		pos := p.pos
@@ -2454,48 +2313,42 @@ func (p *parser) parseDecl(sync map[Token]bool) Decl {
 		p.advance(sync)
 		return &BadDecl{From: pos, To: p.pos}
 	}
-
-	return p.parseGenDecl(p.tok, f)
 }
-*/
+
 // ----------------------------------------------------------------------------
 // Source files
 
 func (p *parser) parseFile() *ProgramFile {
-	// Don't bother parsing the rest if we had errors scanning the first
-	// Likely not a Go source file at all.
+	program := &ProgramFile{}
+
 	if p.errors.Len() != 0 {
 		return nil
 	}
 
-	// package
+	// namespace
 	p.expect(Namespace)
-	ns := p.parseNamespaceSpec(p.leadComment)
+	program.Namespace = p.parseNamespaceSpec(p.leadComment)
 
 	if p.errors.Len() != 0 {
 		return nil
 	}
+	p.openScope()
+	p.nsScope = p.topScope
 
+	// import
+	for p.tok == Import {
+		p.next()
+		program.Imports = append(program.Imports, p.parseImportSpec(p.leadComment))
+	}
+
+	// rest of namespace body
+	for p.tok != EOF {
+		program.Decls = append(program.Decls, p.parseDecl(declStart))
+	}
+
+	p.closeScope()
+	assert(p.topScope == nil, "unbalanced scopes")
 	/*
-		p.openScope()
-		p.pkgScope = p.topScope
-		var decls []Decl
-		if p.mode&PackageClauseOnly == 0 {
-			// import decls
-			for p.tok == IMPORT {
-				decls = append(decls, p.parseGenDecl(IMPORT, p.parseImportSpec))
-			}
-
-			if p.mode&ImportsOnly == 0 {
-				// rest of package body
-				for p.tok != EOF {
-					decls = append(decls, p.parseDecl(declStart))
-				}
-			}
-		}
-		p.closeScope()
-		assert(p.topScope == nil, "unbalanced scopes")
-
 		// resolve global identifiers within the same file
 		i := 0
 		for _, ident := range p.unresolved {
@@ -2508,11 +2361,7 @@ func (p *parser) parseFile() *ProgramFile {
 			}
 		}*/
 
-	return &ProgramFile{
-		Namespace: ns,
-		//Decls:      decls,
-		//Scope:      p.pkgScope,
-		//Imports:    p.imports,
-		//Unresolved: p.unresolved[0:i],
-	}
+	return program
+	//Scope:      p.pkgScope,
+	//Unresolved: p.unresolved[0:i],
 }

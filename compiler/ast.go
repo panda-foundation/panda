@@ -154,9 +154,9 @@ type (
 
 	// An Ident node represents an identifier.
 	Ident struct {
-		NamePos Pos    // identifier position
-		Name    string // identifier name
-		//Obj     *Object // denoted object; or nil
+		NamePos Pos     // identifier position
+		Name    string  // identifier name
+		Obj     *Object // denoted object; or nil
 	}
 
 	// An EllipsisLit node stands for the "..." type in a
