@@ -936,7 +936,7 @@ func (p *parser) parseOperand(lhs bool) Expr {
 	p.advance(stmtStart)
 	return &BadExpr{From: pos, To: p.pos}
 }
-/*
+
 func (p *parser) parseSelector(x Expr) Expr {
 
 	sel := p.parseIdent()
@@ -944,26 +944,26 @@ func (p *parser) parseSelector(x Expr) Expr {
 	return &SelectorExpr{X: x, Sel: sel}
 }
 
-func (p *parser) parseIndexOrSlice(x Expr) Expr {
+func (p *parser) parseIndex(x Expr) Expr {
 	const N = 3 // change the 3 to 2 to disable 3-index slices
-	lbrack := p.expect(LBRACK)
+	lbrack := p.expect(LeftBracket)
 	p.exprLev++
 	var index [N]Expr
 	var colons [N - 1]Pos
-	if p.tok != COLON {
+	if p.tok != Colon {
 		index[0] = p.parseRhs()
 	}
 	ncolons := 0
-	for p.tok == COLON && ncolons < len(colons) {
+	for p.tok == Colon && ncolons < len(colons) {
 		colons[ncolons] = p.pos
 		ncolons++
 		p.next()
-		if p.tok != COLON && p.tok != RBRACK && p.tok != EOF {
+		if p.tok != Colon && p.tok != RightBracket && p.tok != EOF {
 			index[ncolons] = p.parseRhs()
 		}
 	}
 	p.exprLev--
-	rbrack := p.expect(RBRACK)
+	rbrack := p.expect(RightBracket)
 
 	if ncolons > 0 {
 		// slice expression
@@ -988,29 +988,29 @@ func (p *parser) parseIndexOrSlice(x Expr) Expr {
 }
 
 func (p *parser) parseCallOrConversion(fun Expr) *CallExpr {
-	lparen := p.expect(LPAREN)
+	lparen := p.expect(LeftParen)
 	p.exprLev++
 	var list []Expr
 	var ellipsis Pos
-	for p.tok != RPAREN && p.tok != EOF && !ellipsis.IsValid() {
+	for p.tok != RightParen && p.tok != EOF && !ellipsis.IsValid() {
 		list = append(list, p.parseRhsOrType()) // builtins may expect a type: make(some type, ...)
-		if p.tok == ELLIPSIS {
+		if p.tok == Ellipsis {
 			ellipsis = p.pos
 			p.next()
 		}
-		if !p.atComma("argument list", RPAREN) {
+		if !p.atComma("argument list", RightParen) {
 			break
 		}
 		p.next()
 	}
 	p.exprLev--
-	rparen := p.expectClosing(RPAREN, "argument list")
+	rparen := p.expectClosing(RightParen, "argument list")
 
 	return &CallExpr{Fun: fun, Lparen: lparen, Args: list, Ellipsis: ellipsis, Rparen: rparen}
 }
 
 func (p *parser) parseValue(keyOk bool) Expr {
-	if p.tok == LBRACE {
+	if p.tok == LeftBrace {
 		return p.parseLiteralValue(nil)
 	}
 
@@ -1032,7 +1032,7 @@ func (p *parser) parseValue(keyOk bool) Expr {
 	// a separate field lookup.
 	x := p.checkExpr(p.parseExpr(keyOk))
 	if keyOk {
-		if p.tok == COLON {
+		if p.tok == Colon {
 			// Try to resolve the key but don't collect it
 			// as unresolved identifier if it fails so that
 			// we don't get (possibly false) errors about
@@ -1049,7 +1049,7 @@ func (p *parser) parseValue(keyOk bool) Expr {
 
 func (p *parser) parseElement() Expr {
 	x := p.parseValue(true)
-	if p.tok == COLON {
+	if p.tok == Colon {
 		colon := p.pos
 		p.next()
 		x = &KeyValueExpr{Key: x, Colon: colon, Value: p.parseValue(false)}
@@ -1059,9 +1059,9 @@ func (p *parser) parseElement() Expr {
 }
 
 func (p *parser) parseElementList() (list []Expr) {
-	for p.tok != RBRACE && p.tok != EOF {
+	for p.tok != RightBrace && p.tok != EOF {
 		list = append(list, p.parseElement())
-		if !p.atComma("composite literal", RBRACE) {
+		if !p.atComma("composite literal", RightBrace) {
 			break
 		}
 		p.next()
@@ -1071,17 +1071,16 @@ func (p *parser) parseElementList() (list []Expr) {
 }
 
 func (p *parser) parseLiteralValue(typ Expr) Expr {
-	lbrace := p.expect(LBRACE)
+	lbrace := p.expect(LeftBrace)
 	var elts []Expr
 	p.exprLev++
 	if p.tok != RBRACE {
 		elts = p.parseElementList()
 	}
 	p.exprLev--
-	rbrace := p.expectClosing(RBRACE, "composite literal")
+	rbrace := p.expectClosing(RightBrace, "composite literal")
 	return &CompositeLit{Type: typ, Lbrace: lbrace, Elts: elts, Rbrace: rbrace}
 }
-*/
 
 // checkExpr checks that x is an expression (and not a type).
 func (p *parser) checkExpr(x Expr) Expr {
@@ -1218,7 +1217,7 @@ func (p *parser) parsePrimaryExpr(lhs bool) Expr {
 // If lhs is set and the result is an identifier, it is not resolved.
 func (p *parser) parseUnaryExpr(lhs bool) Expr {
 	switch p.tok {
-	case Add, Sub, Not, Xor, And:
+	case Plus, Minus, Not, Caret, And:
 		pos, op := p.pos, p.tok
 		p.next()
 		x := p.parseUnaryExpr(false)
