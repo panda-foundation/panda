@@ -629,7 +629,7 @@ func (p *parser) parseFieldDecl(scope *Scope) *Field {
 /*
 func (p *parser) parseStructType() *StructType {
 	pos := p.expect(STRUCT)
-	lbrace := p.expect(LBRACE)
+	lbrace := p.expect(LeftBrace)
 	scope := NewScope(nil) // struct scope
 	var list []*Field
 	for p.tok == IDENT || p.tok == MUL || p.tok == LPAREN {
@@ -638,7 +638,7 @@ func (p *parser) parseStructType() *StructType {
 		// (parseFieldDecl will check and complain if necessary)
 		list = append(list, p.parseFieldDecl(scope))
 	}
-	rbrace := p.expect(RBRACE)
+	rbrace := p.expect(RightBrace)
 
 	return &StructType{
 		Struct: pos,
@@ -662,7 +662,7 @@ func (p *parser) tryVarType(isParam bool) Expr {
 			p.error(pos, "'...' parameter is missing type")
 			typ = &BadExpr{From: pos, To: p.pos}
 		}
-		return &Ellipsis{Ellipsis: pos, Elt: typ}
+		return &EllipsisLit{Ellipsis: pos, Elt: typ}
 	}
 	return p.tryIdentOrType()
 }
@@ -842,12 +842,11 @@ func (p *parser) tryType() Expr {
 	return typ
 }
 
-/*
 // ----------------------------------------------------------------------------
 // Blocks
 
 func (p *parser) parseStmtList() (list []Stmt) {
-	for p.tok != CASE && p.tok != DEFAULT && p.tok != RBRACE && p.tok != EOF {
+	for p.tok != Case && p.tok != Default && p.tok != RightBrace && p.tok != EOF {
 		list = append(list, p.parseStmt())
 	}
 
@@ -855,25 +854,24 @@ func (p *parser) parseStmtList() (list []Stmt) {
 }
 
 func (p *parser) parseBody(scope *Scope) *BlockStmt {
-	lbrace := p.expect(LBRACE)
+	lbrace := p.expect(LeftBrace)
 	p.topScope = scope // open function scope
 	list := p.parseStmtList()
 	p.closeScope()
-	rbrace := p.expect(RBRACE)
+	rbrace := p.expect(RightBrace)
 
 	return &BlockStmt{Lbrace: lbrace, List: list, Rbrace: rbrace}
 }
 
 func (p *parser) parseBlockStmt() *BlockStmt {
-	lbrace := p.expect(LBRACE)
+	lbrace := p.expect(LeftBrace)
 	p.openScope()
 	list := p.parseStmtList()
 	p.closeScope()
-	rbrace := p.expect(RBRACE)
+	rbrace := p.expect(RightBrace)
 
 	return &BlockStmt{Lbrace: lbrace, List: list, Rbrace: rbrace}
 }
-*/
 
 // ----------------------------------------------------------------------------
 // Expressions
@@ -953,36 +951,8 @@ func (p *parser) parseIndex(x Expr) Expr {
 	if p.tok != Colon {
 		index[0] = p.parseRhs()
 	}
-	ncolons := 0
-	for p.tok == Colon && ncolons < len(colons) {
-		colons[ncolons] = p.pos
-		ncolons++
-		p.next()
-		if p.tok != Colon && p.tok != RightBracket && p.tok != EOF {
-			index[ncolons] = p.parseRhs()
-		}
-	}
 	p.exprLev--
 	rbrack := p.expect(RightBracket)
-
-	if ncolons > 0 {
-		// slice expression
-		slice3 := false
-		if ncolons == 2 {
-			slice3 = true
-			// Check presence of 2nd and 3rd index here rather than during type-checking
-			// to prevent erroneous programs from passing through gofmt (was issue 7305).
-			if index[1] == nil {
-				p.error(colons[0], "2nd index required in 3-index slice")
-				index[1] = &BadExpr{From: colons[0] + 1, To: colons[1]}
-			}
-			if index[2] == nil {
-				p.error(colons[1], "3rd index required in 3-index slice")
-				index[2] = &BadExpr{From: colons[1] + 1, To: rbrack}
-			}
-		}
-		return &SliceExpr{X: x, Lbrack: lbrack, Low: index[0], High: index[1], Max: index[2], Slice3: slice3, Rbrack: rbrack}
-	}
 
 	return &IndexExpr{X: x, Lbrack: lbrack, Index: index[0], Rbrack: rbrack}
 }
@@ -1074,7 +1044,7 @@ func (p *parser) parseLiteralValue(typ Expr) Expr {
 	lbrace := p.expect(LeftBrace)
 	var elts []Expr
 	p.exprLev++
-	if p.tok != RBRACE {
+	if p.tok != RightBrace {
 		elts = p.parseElementList()
 	}
 	p.exprLev--
@@ -1177,8 +1147,6 @@ func (p *parser) parsePrimaryExpr(lhs bool) Expr {
 			switch p.tok {
 			case IDENT:
 				x = p.parseSelector(p.checkExprOrType(x))
-			case LeftParen:
-				x = p.parseTypeAssertion(p.checkExpr(x))
 			default:
 				pos := p.pos
 				p.errorExpected(pos, "selector or type assertion")
@@ -1230,7 +1198,7 @@ func (p *parser) parseUnaryExpr(lhs bool) Expr {
 func (p *parser) tokPrec() (Token, int) {
 	tok := p.tok
 	if p.inRhs && tok == Assign {
-		tok = EQL
+		tok = Equal
 	}
 	return tok, tok.Precedence()
 }
@@ -1291,30 +1259,22 @@ const (
 // of a range clause (with mode == rangeOk). The returned statement is an
 // assignment with a right-hand side that is a single unary expression of
 // the form "range x". No guarantees are given for the left-hand side.
-func (p *parser) parseSimpleStmt(mode int) (Stmt, bool) {
+func (p *parser) parseSimpleStmt(mode int) Stmt {
 	x := p.parseLhsList()
 
 	switch p.tok {
 	case
-		DEFINE, ASSIGN, ADD_ASSIGN,
-		SUB_ASSIGN, MUL_ASSIGN, QUO_ASSIGN,
-		REM_ASSIGN, AND_ASSIGN, OR_ASSIGN,
-		XOR_ASSIGN, SHL_ASSIGN, SHR_ASSIGN, AND_NOT_ASSIGN:
+		Assign, PlusAssign,
+		MinusAssign, MulAssign, DivAssign,
+		ModAssign, AndAssign, OrAssign,
+		XorAssign, LeftShiftAssign, RightShiftAssign:
 		// assignment statement, possibly part of a range clause
 		pos, tok := p.pos, p.tok
 		p.next()
 		var y []Expr
-		isRange := false
-		if mode == rangeOk && p.tok == RANGE && (tok == DEFINE || tok == ASSIGN) {
-			pos := p.pos
-			p.next()
-			y = []Expr{&UnaryExpr{OpPos: pos, Op: RANGE, X: p.parseRhs()}}
-			isRange = true
-		} else {
-			y = p.parseRhsList()
-		}
+		y = p.parseRhsList()
 		as := &AssignStmt{Lhs: x, TokPos: pos, Tok: tok, Rhs: y}
-		return as, isRange
+		return as
 	}
 
 	if len(x) > 1 {
@@ -1323,22 +1283,15 @@ func (p *parser) parseSimpleStmt(mode int) (Stmt, bool) {
 	}
 
 	switch p.tok {
-	case ARROW:
-		// send statement
-		arrow := p.pos
-		p.next()
-		y := p.parseRhs()
-		return &SendStmt{Chan: x[0], Arrow: arrow, Value: y}, false
-
-	case INC, DEC:
+	case PlusPlus, MinusMinus:
 		// increment or decrement
 		s := &IncDecStmt{X: x[0], TokPos: p.pos, Tok: p.tok}
 		p.next()
-		return s, false
+		return s
 	}
 
 	// expression
-	return &ExprStmt{X: x[0]}, false
+	return &ExprStmt{X: x[0]}
 }
 
 func (p *parser) parseCallExpr(callType string) *CallExpr {
@@ -1355,9 +1308,9 @@ func (p *parser) parseCallExpr(callType string) *CallExpr {
 
 func (p *parser) parseReturnStmt() *ReturnStmt {
 	pos := p.pos
-	p.expect(RETURN)
+	p.expect(Return)
 	var x []Expr
-	if p.tok != SEMICOLON && p.tok != RBRACE {
+	if p.tok != Semi && p.tok != RightBrace {
 		x = p.parseRhsList()
 	}
 	p.expect(Semi)
@@ -1368,7 +1321,7 @@ func (p *parser) parseReturnStmt() *ReturnStmt {
 func (p *parser) parseBranchStmt(tok Token) *BranchStmt {
 	pos := p.expect(tok)
 	var label *Ident
-	if tok != FALLTHROUGH && p.tok == IDENT {
+	if p.tok == IDENT {
 		label = p.parseIdent()
 		// add to list of unresolved targets
 		n := len(p.targetStack) - 1
@@ -1398,23 +1351,23 @@ func (p *parser) makeExpr(s Stmt, want string) Expr {
 // in cmd/compile/internal/syntax/parser.go, which has
 // been tuned for better error handling.
 func (p *parser) parseIfHeader() (init Stmt, cond Expr) {
-	if p.tok == LBRACE {
+	if p.tok == LeftBrace {
 		p.error(p.pos, "missing condition in if statement")
 		cond = &BadExpr{From: p.pos, To: p.pos}
 		return
 	}
-	// p.tok != LBRACE
+	// p.tok != LeftBrace
 
 	outer := p.exprLev
 	p.exprLev = -1
 
-	if p.tok != SEMICOLON {
+	if p.tok != Semi {
 		// accept potential variable declaration but complain
-		if p.tok == VAR {
+		if p.tok == Var {
 			p.next()
 			p.error(p.pos, fmt.Sprintf("var declaration not allowed in 'IF' initializer"))
 		}
-		init, _ = p.parseSimpleStmt(basic)
+		init = p.parseSimpleStmt(basic)
 	}
 
 	var condStmt Stmt
@@ -1422,16 +1375,16 @@ func (p *parser) parseIfHeader() (init Stmt, cond Expr) {
 		pos Pos
 		lit string // ";" or "\n"; valid if pos.IsValid()
 	}
-	if p.tok != LBRACE {
-		if p.tok == SEMICOLON {
+	if p.tok != LeftBrace {
+		if p.tok == Semi {
 			semi.pos = p.pos
 			semi.lit = p.lit
 			p.next()
 		} else {
-			p.expect(SEMICOLON)
+			p.expect(Semi)
 		}
-		if p.tok != LBRACE {
-			condStmt, _ = p.parseSimpleStmt(basic)
+		if p.tok != LeftBrace {
+			condStmt = p.parseSimpleStmt(basic)
 		}
 	} else {
 		condStmt = init
@@ -1458,7 +1411,7 @@ func (p *parser) parseIfHeader() (init Stmt, cond Expr) {
 }
 
 func (p *parser) parseIfStmt() *IfStmt {
-	pos := p.expect(IF)
+	pos := p.expect(If)
 	p.openScope()
 	defer p.closeScope()
 
@@ -1466,12 +1419,12 @@ func (p *parser) parseIfStmt() *IfStmt {
 	body := p.parseBlockStmt()
 
 	var else_ Stmt
-	if p.tok == ELSE {
+	if p.tok == Else {
 		p.next()
 		switch p.tok {
-		case IF:
+		case If:
 			else_ = p.parseIfStmt()
-		case LBRACE:
+		case LeftBrace:
 			else_ = p.parseBlockStmt()
 			p.expect(Semi)
 		default:
@@ -1487,7 +1440,7 @@ func (p *parser) parseIfStmt() *IfStmt {
 
 func (p *parser) parseTypeList() (list []Expr) {
 	list = append(list, p.parseType())
-	for p.tok == COMMA {
+	for p.tok == Comma {
 		p.next()
 		list = append(list, p.parseType())
 	}
@@ -1495,21 +1448,17 @@ func (p *parser) parseTypeList() (list []Expr) {
 	return
 }
 
-func (p *parser) parseCaseClause(typeSwitch bool) *CaseClause {
+func (p *parser) parseCaseClause() *CaseClause {
 	pos := p.pos
 	var list []Expr
-	if p.tok == CASE {
+	if p.tok == Case {
 		p.next()
-		if typeSwitch {
-			list = p.parseTypeList()
-		} else {
-			list = p.parseRhsList()
-		}
+		list = p.parseRhsList()
 	} else {
-		p.expect(DEFAULT)
+		p.expect(Default)
 	}
 
-	colon := p.expect(COLON)
+	colon := p.expect(Colon)
 	p.openScope()
 	body := p.parseStmtList()
 	p.closeScope()
@@ -1517,49 +1466,23 @@ func (p *parser) parseCaseClause(typeSwitch bool) *CaseClause {
 	return &CaseClause{Case: pos, List: list, Colon: colon, Body: body}
 }
 
-func isTypeSwitchAssert(x Expr) bool {
-	a, ok := x.(*TypeAssertExpr)
-	return ok && a.Type == nil
-}
-
-func (p *parser) isTypeSwitchGuard(s Stmt) bool {
-	switch t := s.(type) {
-	case *ExprStmt:
-		// x.(type)
-		return isTypeSwitchAssert(t.X)
-	case *AssignStmt:
-		// v := x.(type)
-		if len(t.Lhs) == 1 && len(t.Rhs) == 1 && isTypeSwitchAssert(t.Rhs[0]) {
-			switch t.Tok {
-			case ASSIGN:
-				// permit v = x.(type) but complain
-				p.error(t.TokPos, "expected ':=', found '='")
-				fallthrough
-			case DEFINE:
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func (p *parser) parseSwitchStmt() Stmt {
-	pos := p.expect(SWITCH)
+	pos := p.expect(Switch)
 	p.openScope()
 	defer p.closeScope()
 
 	var s1, s2 Stmt
-	if p.tok != LBRACE {
+	if p.tok != LeftBrace {
 		prevLev := p.exprLev
 		p.exprLev = -1
-		if p.tok != SEMICOLON {
-			s2, _ = p.parseSimpleStmt(basic)
+		if p.tok != Semi {
+			s2 = p.parseSimpleStmt(basic)
 		}
-		if p.tok == SEMICOLON {
+		if p.tok == Semi {
 			p.next()
 			s1 = s2
 			s2 = nil
-			if p.tok != LBRACE {
+			if p.tok != LeftBrace {
 				// A TypeSwitchGuard may declare a variable in addition
 				// to the variable declared in the initial SimpleStmt.
 				// Introduce extra scope to avoid redeclaration errors:
@@ -1574,95 +1497,22 @@ func (p *parser) parseSwitchStmt() Stmt {
 				// Having the extra nested but empty scope won't affect it.
 				p.openScope()
 				defer p.closeScope()
-				s2, _ = p.parseSimpleStmt(basic)
+				s2 = p.parseSimpleStmt(basic)
 			}
 		}
 		p.exprLev = prevLev
 	}
 
-	typeSwitch := p.isTypeSwitchGuard(s2)
-	lbrace := p.expect(LBRACE)
+	lbrace := p.expect(LeftBrace)
 	var list []Stmt
-	for p.tok == CASE || p.tok == DEFAULT {
-		list = append(list, p.parseCaseClause(typeSwitch))
+	for p.tok == Case || p.tok == DEFAULT {
+		list = append(list, p.parseCaseClause())
 	}
-	rbrace := p.expect(RBRACE)
+	rbrace := p.expect(RightBrace)
 	p.expect(Semi)
 	body := &BlockStmt{Lbrace: lbrace, List: list, Rbrace: rbrace}
-
-	if typeSwitch {
-		return &TypeSwitchStmt{Switch: pos, Init: s1, Assign: s2, Body: body}
-	}
 
 	return &SwitchStmt{Switch: pos, Init: s1, Tag: p.makeExpr(s2, "switch expression"), Body: body}
-}
-
-func (p *parser) parseCommClause() *CommClause {
-	p.openScope()
-	pos := p.pos
-	var comm Stmt
-	if p.tok == CASE {
-		p.next()
-		lhs := p.parseLhsList()
-		if p.tok == ARROW {
-			// SendStmt
-			if len(lhs) > 1 {
-				p.errorExpected(lhs[0].Pos(), "1 expression")
-				// continue with first expression
-			}
-			arrow := p.pos
-			p.next()
-			rhs := p.parseRhs()
-			comm = &SendStmt{Chan: lhs[0], Arrow: arrow, Value: rhs}
-		} else {
-			// RecvStmt
-			if tok := p.tok; tok == ASSIGN || tok == DEFINE {
-				// RecvStmt with assignment
-				if len(lhs) > 2 {
-					p.errorExpected(lhs[0].Pos(), "1 or 2 expressions")
-					// continue with first two expressions
-					lhs = lhs[0:2]
-				}
-				pos := p.pos
-				p.next()
-				rhs := p.parseRhs()
-				as := &AssignStmt{Lhs: lhs, TokPos: pos, Tok: tok, Rhs: []Expr{rhs}}
-				if tok == DEFINE {
-					p.shortVarDecl(as, lhs)
-				}
-				comm = as
-			} else {
-				// lhs must be single receive operation
-				if len(lhs) > 1 {
-					p.errorExpected(lhs[0].Pos(), "1 expression")
-					// continue with first expression
-				}
-				comm = &ExprStmt{X: lhs[0]}
-			}
-		}
-	} else {
-		p.expect(DEFAULT)
-	}
-
-	colon := p.expect(COLON)
-	body := p.parseStmtList()
-	p.closeScope()
-
-	return &CommClause{Case: pos, Comm: comm, Colon: colon, Body: body}
-}
-
-func (p *parser) parseSelectStmt() *SelectStmt {
-	pos := p.expect(SELECT)
-	lbrace := p.expect(LBRACE)
-	var list []Stmt
-	for p.tok == CASE || p.tok == DEFAULT {
-		list = append(list, p.parseCommClause())
-	}
-	rbrace := p.expect(RBRACE)
-	p.expect(Semi)
-	body := &BlockStmt{Lbrace: lbrace, List: list, Rbrace: rbrace}
-
-	return &SelectStmt{Select: pos, Body: body}
 }
 
 func (p *parser) parseForStmt() Stmt {
@@ -1672,30 +1522,21 @@ func (p *parser) parseForStmt() Stmt {
 
 	var s1, s2, s3 Stmt
 	var isRange bool
-	if p.tok != LBRACE {
+	if p.tok != LeftBrace {
 		prevLev := p.exprLev
 		p.exprLev = -1
-		if p.tok != SEMICOLON {
-			if p.tok == RANGE {
-				// "for range x" (nil lhs in assignment)
-				pos := p.pos
-				p.next()
-				y := []Expr{&UnaryExpr{OpPos: pos, Op: RANGE, X: p.parseRhs()}}
-				s2 = &AssignStmt{Rhs: y}
-				isRange = true
-			} else {
-				s2, isRange = p.parseSimpleStmt(rangeOk)
-			}
+		if p.tok != Semi {
+			s2 = p.parseSimpleStmt(rangeOk)
 		}
-		if !isRange && p.tok == SEMICOLON {
+		if p.tok == Semi {
 			p.next()
 			s1 = s2
 			s2 = nil
-			if p.tok != SEMICOLON {
+			if p.tok != Semi {
 				s2, _ = p.parseSimpleStmt(basic)
 			}
 			p.expect(Semi)
-			if p.tok != LBRACE {
+			if p.tok != LeftBrace {
 				s3, _ = p.parseSimpleStmt(basic)
 			}
 		}
@@ -1768,24 +1609,22 @@ func (p *parser) parseStmt() (s Stmt) {
 		s = p.parseReturnStmt()
 	case BREAK, CONTINUE, GOTO, FALLTHROUGH:
 		s = p.parseBranchStmt(p.tok)
-	case LBRACE:
+	case LeftBrace:
 		s = p.parseBlockStmt()
 		p.expect(Semi)
 	case IF:
 		s = p.parseIfStmt()
 	case SWITCH:
 		s = p.parseSwitchStmt()
-	case SELECT:
-		s = p.parseSelectStmt()
 	case FOR:
 		s = p.parseForStmt()
-	case SEMICOLON:
+	case Semi:
 		// Is it ever possible to have an implicit semicolon
 		// producing an empty statement in a valid program?
 		// (handle correctly anyway)
 		s = &EmptyStmt{Semicolon: p.pos, Implicit: p.lit == "\n"}
 		p.next()
-	case RBRACE:
+	case RightBrace:
 		// a semicolon may be omitted before a closing "}"
 		s = &EmptyStmt{Semicolon: p.pos, Implicit: true}
 	default:
@@ -1883,7 +1722,7 @@ func (p *parser) parseTypeSpec(doc *CommentGroup, _ Token, _ int) Spec {
 	// (Global identifiers are resolved in a separate phase after parsing.)
 	spec := &TypeSpec{Doc: doc, Name: ident}
 	p.declare(spec, nil, p.topScope, Typ, ident)
-	if p.tok == ASSIGN {
+	if p.tok == Assign {
 		spec.Assign = p.pos
 		p.next()
 	}
@@ -1938,7 +1777,7 @@ func (p *parser) parseFuncDecl() *FuncDecl {
 	params, results := p.parseSignature(scope)
 
 	var body *BlockStmt
-	if p.tok == LBRACE {
+	if p.tok == LeftBrace {
 		body = p.parseBody(scope)
 	}
 	p.expect(Semi)

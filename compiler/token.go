@@ -103,6 +103,7 @@ const (
 
 	PlusAssign
 	MinusAssign
+	MulAssign
 	DivAssign
 	ModAssign
 	XorAssign
@@ -208,6 +209,7 @@ var (
 		Greater:          ">",
 		PlusAssign:       "+=",
 		MinusAssign:      "-=",
+		MulAssign:        "*=",
 		DivAssign:        "/=",
 		ModAssign:        "%=",
 		XorAssign:        "^=",
