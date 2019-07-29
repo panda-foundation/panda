@@ -268,13 +268,6 @@ type (
 // nodes.
 //
 type (
-	// An ArrayType node represents an array or slice type.
-	ArrayType struct {
-		Lbrack Pos  // position of "["
-		Len    Expr // Ellipsis node for [...]T array types, nil for slice types
-		Elt    Expr // element type
-	}
-
 	// A StructType node represents a struct type.
 	StructType struct {
 		Struct     Pos        // position of "struct" keyword
@@ -322,7 +315,6 @@ func (x *RefExpr) Pos() Pos      { return x.Ref }
 func (x *UnaryExpr) Pos() Pos    { return x.OpPos }
 func (x *BinaryExpr) Pos() Pos   { return x.X.Pos() }
 func (x *KeyValueExpr) Pos() Pos { return x.Key.Pos() }
-func (x *ArrayType) Pos() Pos    { return x.Lbrack }
 func (x *StructType) Pos() Pos   { return x.Struct }
 func (x *FuncType) Pos() Pos {
 	if x.Func.IsValid() || x.Params == nil { // see issue 3870
@@ -351,7 +343,6 @@ func (x *RefExpr) End() Pos      { return x.X.End() }
 func (x *UnaryExpr) End() Pos    { return x.X.End() }
 func (x *BinaryExpr) End() Pos   { return x.Y.End() }
 func (x *KeyValueExpr) End() Pos { return x.Value.End() }
-func (x *ArrayType) End() Pos    { return x.Elt.End() }
 func (x *StructType) End() Pos   { return x.Fields.End() }
 func (x *FuncType) End() Pos {
 	if x.Results != nil {
@@ -378,7 +369,6 @@ func (*UnaryExpr) exprNode()    {}
 func (*BinaryExpr) exprNode()   {}
 func (*KeyValueExpr) exprNode() {}
 
-func (*ArrayType) exprNode()     {}
 func (*StructType) exprNode()    {}
 func (*FuncType) exprNode()      {}
 func (*InterfaceType) exprNode() {}

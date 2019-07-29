@@ -66,6 +66,27 @@ func (f *File) LineCount() int {
 	return n
 }
 
+// Base returns the base offset of file f as registered with AddFile.
+func (f *File) Base() int {
+	return f.base
+}
+
+// Size returns the size of file f as registered with AddFile.
+func (f *File) Size() int {
+	return f.size
+}
+
+// Offset returns the offset for the given file position p;
+// p must be a valid Pos value in that file.
+// f.Offset(f.Pos(offset)) == offset.
+//
+func (f *File) Offset(p Pos) int {
+	if int(p) < f.base || int(p) > f.base+f.size {
+		panic("illegal Pos value")
+	}
+	return int(p) - f.base
+}
+
 // AddLine adds the line offset for a new line.
 // The line offset must be larger than the offset for the previous line
 // and smaller than the file size; otherwise the line offset is ignored.

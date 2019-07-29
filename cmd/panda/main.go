@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/panda-foundation/panda/compiler"
+	"../../compiler"
 )
 
 func main() {
