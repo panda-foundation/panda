@@ -4,12 +4,50 @@ package main;
 import system;
 import net network;
 
-public var a, b int;
-public const c string = "hellow world";
+//@doc `scalar types`
+const b bool = true;
 
-function do_nothing() // void return type can be ommited
+const c char = 'a'; // alias u8
+
+var short_v short; // alias i16
+var int_v int; // alias i32
+var long_v long; // alias i64
+var int8_v i8;
+var int16_v i16;
+var int32_v i32;
+var int64_v i64;
+
+var ushort_v ushort; // alias u16
+var uint_v uint; // alias u32
+var ulong_v ulong; // alias u64
+var uint8_v u8;
+var uint16_v u16;
+var uint32_v u32;
+var uint64_v u64;
+
+var float_v float; // alias f32
+var double_v double; // alias f64
+var f32_v f32;
+var f64_v f64;
+
+var string_v string;
+
+//@doc main function
+public function main() int
 {
+    return 0;
 }
+
+//@doc void return type can be ommited
+function print() 
+{
+    //@cpp(emit=`std::cout << << std::endl;`)
+}
+
+//@doc scalar cast
+
+//@doc all operators
+
 
 /*
 public class empty
@@ -93,7 +131,6 @@ public class derive_generic : generic<int, int>
 {
 
 }
-*/
 
 function main()
 {
@@ -102,7 +139,6 @@ function main()
     var c = a + b;
     print(c);
 
-    /*
     var b : base_class = new base_class();
     b.print();
 
@@ -111,5 +147,6 @@ function main()
 
     var g ： generic<int, int> = new generic(1, 2);
     g.print();
-    */
+    
 }
+*/
