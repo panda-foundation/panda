@@ -37,10 +37,10 @@ const (
 	Import
 	Interface
 	If
-	Namespace
 	New
 	Null
 	Operator
+	Package
 	Public
 	Return
 	Static
@@ -151,10 +151,10 @@ var (
 		Import:    "import",
 		Interface: "interface",
 		If:        "if",
-		Namespace: "namespace",
 		New:       "new",
 		Null:      "null",
 		Operator:  "operator",
+		Package:   "package",
 		Public:    "public",
 		Return:    "return",
 		Static:    "static",

@@ -595,7 +595,7 @@ type (
 		specNode()
 	}
 
-	NamespaceSpec struct {
+	PackageSpec struct {
 		Doc    *Comment  // associated documentation; or nil
 		Path   *BasicLit // import path
 		EndPos Pos       // end of spec (overrides Path.Pos if nonzero)
@@ -629,7 +629,7 @@ type (
 )
 
 // Pos and End implementations for spec nodes.
-func (s *NamespaceSpec) Pos() Pos {
+func (s *PackageSpec) Pos() Pos {
 	if s.Path != nil {
 		return s.Path.Pos()
 	}
@@ -643,7 +643,7 @@ func (s *ImportSpec) Pos() Pos {
 }
 func (s *ValueSpec) Pos() Pos { return s.Names[0].Pos() }
 func (s *TypeSpec) Pos() Pos  { return s.Name.Pos() }
-func (s *NamespaceSpec) End() Pos {
+func (s *PackageSpec) End() Pos {
 	if s.EndPos != 0 {
 		return s.EndPos
 	}
@@ -670,7 +670,7 @@ func (s *TypeSpec) End() Pos { return s.Type.End() }
 // specNode() ensures that only spec nodes can be
 // assigned to a Spec.
 //
-func (*NamespaceSpec) specNode() {}
+func (*PackageSpec) specNode() {}
 func (*ImportSpec) specNode()    {}
 func (*ValueSpec) specNode()     {}
 func (*TypeSpec) specNode()      {}
@@ -765,33 +765,33 @@ func (*FuncDecl) declNode() {}
 // are "free-floating" (see also issues #18593, #20744).
 //
 type ProgramFile struct {
-	Namespace  *NamespaceSpec // position of "namespace" keyword
+	Package    *PackageSpec // position of "namespace" keyword
 	Decls      []Decl         // top-level declarations; or nil
 	Scope      *Scope         // package scope (this file only)
 	Imports    []*ImportSpec  // imports in this file
 	Unresolved []*Ident       // unresolved identifiers in this file
 }
 
-func (f *ProgramFile) Pos() Pos { return f.Namespace.Pos() }
+func (f *ProgramFile) Pos() Pos { return f.Package.Pos() }
 func (f *ProgramFile) End() Pos {
 	if n := len(f.Decls); n > 0 {
 		return f.Decls[n-1].End()
 	}
-	return f.Namespace.End()
+	return f.Package.End()
 }
 
 // A Package node represents a set of source files
 // collectively building a Go package.
 //
-type ProgramNamespace struct {
+type ProgramPackage struct {
 	Name    string                  // package name
 	Scope   *Scope                  // package scope across all files
 	Imports map[string]*Object      // map of package id -> package object
 	Files   map[string]*ProgramFile // Go source files by filename
 }
 
-func (p *ProgramNamespace) Pos() Pos { return NoPos }
-func (p *ProgramNamespace) End() Pos { return NoPos }
+func (p *ProgramPackage) Pos() Pos { return NoPos }
+func (p *ProgramPackage) End() Pos { return NoPos }
 
 // A Scope maintains the set of named language entities declared
 // in the scope and a link to the immediately surrounding (outer)
@@ -872,7 +872,7 @@ func (obj *Object) Pos() Pos {
 				return n.Pos()
 			}
 		}
-	case *NamespaceSpec:
+	case *PackageSpec:
 		return d.Path.Pos()
 	case *ImportSpec:
 		if d.Name != nil && d.Name.Name == name {
@@ -934,7 +934,7 @@ func (kind ObjKind) String() string { return objKindStrings[kind] }
 /*
 type ProgramUnit struct {
 	Document  []string
-	Namespace string
+	Package string
 	Includes  []string
 
 	Declarations []*IdentifierDecl

@@ -1,7 +1,7 @@
-namespace main;
+package main;
 
-//@doc `use json package`
-import serializer.json;
+//@doc `import system package`
+import system;
 import net network;
 
 public var a, b int;

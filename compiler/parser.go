@@ -10,23 +10,6 @@ import (
 	"fmt"
 	"io/ioutil"
 )
-
-// A Mode value is a set of flags (or 0).
-// They control the amount of source code parsed and other optional
-// parser functionality.
-//
-type Mode uint
-
-const (
-	PackageClauseOnly Mode             = 1 << iota // stop parsing after package clause
-	ImportsOnly                                    // stop parsing after import declarations
-	ParseComments                                  // parse comments and add them to AST
-	Trace                                          // print a trace of parsed productions
-	DeclarationErrors                              // report declaration errors
-	SpuriousErrors                                 // same as AllErrors, for backward-compatibility
-	AllErrors         = SpuriousErrors             // report all errors (not just the first 10 on different lines)
-)
-
 /*
 func ParseString() {
 
@@ -143,7 +126,7 @@ type parser struct {
 	inRhs   bool // if set, the parser is parsing a rhs expression
 
 	// Ordinary identifier scopes
-	nsScope    *Scope        // namespaceScope.Outer == nil
+	pkgScope    *Scope        // namespaceScope.Outer == nil
 	topScope   *Scope        // top-most scope; may be pkgScope
 	unresolved []*Ident      // unresolved identifiers
 	imports    []*ImportSpec // list of imports
@@ -1598,7 +1581,7 @@ func (p *parser) parseStmt() (s Stmt) {
 
 type parseSpecFunction func(doc *Comment, keyword Token, iota int) Spec
 
-func (p *parser) parseNamespaceSpec(doc *Comment) *NamespaceSpec {
+func (p *parser) parsePackageSpec(doc *Comment) *PackageSpec {
 	// The namespace clause is not a declaration;
 	// the package name does not appear in any scope.
 	ident := p.parseQualifiedIdent()
@@ -1608,7 +1591,7 @@ func (p *parser) parseNamespaceSpec(doc *Comment) *NamespaceSpec {
 		return nil
 	}
 
-	spec := &NamespaceSpec{
+	spec := &PackageSpec{
 		Doc:  doc,
 		Path: &BasicLit{ValuePos: ident.Pos(), Kind: STRING, Value: ident.Name},
 	}
@@ -1727,7 +1710,7 @@ func (p *parser) parseFuncDecl(doc *Comment, m *Modifier) *FuncDecl {
 		// init() functions cannot be referred to and there may
 		// be more than one - don't put them in the pkgScope
 		if ident.Name != "init" {
-			p.declare(decl, p.nsScope, FunctionObj, ident)
+			p.declare(decl, p.pkgScope, FunctionObj, ident)
 		}
 	}
 
@@ -1771,14 +1754,14 @@ func (p *parser) parseFile() *ProgramFile {
 	}
 
 	// namespace
-	p.expect(Namespace)
-	program.Namespace = p.parseNamespaceSpec(p.leadComment)
+	p.expect(Package)
+	program.Package = p.parsePackageSpec(p.leadComment)
 
 	if p.errors.Len() != 0 {
 		return nil
 	}
 	p.openScope()
-	p.nsScope = p.topScope
+	p.pkgScope = p.topScope
 
 	// import
 	for p.tok == Import {
