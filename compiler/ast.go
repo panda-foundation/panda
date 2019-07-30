@@ -692,18 +692,18 @@ type (
 	//
 	// Relationship between Tok value and Specs element type:
 	//
-	//	IMPORT  *ImportSpec
-	//	CONST   *ValueSpec
-	//	TYPE    *TypeSpec
-	//	VAR     *ValueSpec
+	//	IMPORT    *ImportSpec
+	//	Const     *ValueSpec
+	//	VAR       *ValueSpec
+	//	Class     *ClassSpec
+	//  Enum      *EnumSpec
+	//  Interface *InterfaceSpec
 	//
 	GenDecl struct {
 		Doc    *Comment // associated documentation; or nil
 		TokPos Pos      // position of Tok
-		Tok    Token    // IMPORT, CONST, TYPE, VAR
-		Lparen Pos      // position of '(', if any
-		Specs  []Spec
-		Rparen Pos // position of ')', if any
+		Tok    Token    // Const, Var, Class, Enum. Interface
+		Spec   Spec
 	}
 
 	// A FuncDecl node represents a function declaration.
@@ -726,10 +726,7 @@ func (d *FuncDecl) Pos() Pos { return d.Type.Pos() }
 
 func (d *BadDecl) End() Pos { return d.To }
 func (d *GenDecl) End() Pos {
-	if d.Rparen.IsValid() {
-		return d.Rparen + 1
-	}
-	return d.Specs[0].End()
+	return d.Spec.End()
 }
 func (d *FuncDecl) End() Pos {
 	if d.Body != nil {
@@ -855,7 +852,6 @@ type Object struct {
 	Kind ObjKind
 	Name string      // declared name
 	Decl interface{} // corresponding Field, XxxSpec, FuncDecl, AssignStmt, Scope; or nil
-	Data interface{} // object-specific data; or nil
 	Type interface{} // placeholder for type information; may be nil
 }
 

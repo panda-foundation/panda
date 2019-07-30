@@ -169,14 +169,13 @@ func (p *parser) closeScope() {
 	p.topScope = p.topScope.Outer
 }
 
-func (p *parser) declare(decl, data interface{}, scope *Scope, kind ObjKind, idents ...*Ident) {
+func (p *parser) declare(decl interface{}, scope *Scope, kind ObjKind, idents ...*Ident) {
 	for _, ident := range idents {
 		assert(ident.Obj == nil, "identifier already declared or resolved")
 		obj := NewObj(kind, ident.Name)
 		// remember the corresponding declaration for redeclaration
 		// errors and global variable resolution/typechecking phase
 		obj.Decl = decl
-		obj.Data = data
 		ident.Obj = obj
 		if ident.Name != "_" {
 			if alt := scope.Insert(obj); alt != nil {
@@ -621,7 +620,7 @@ func (p *parser) parseFieldDecl(scope *Scope) *Field {
 	p.expect(Semi) // call before accessing p.linecomment
 
 	field := &Field{Doc: doc, Names: idents, Type: typ, Tag: tag}
-	p.declare(field, nil, scope, VarObj, idents...)
+	p.declare(field, scope, VarObj, idents...)
 	p.resolve(typ)
 
 	return field
@@ -632,7 +631,7 @@ func (p *parser) parseStructType() *StructType {
 	lbrace := p.expect(LeftBrace)
 	scope := NewScope(nil) // struct scope
 	var list []*Field
-	for p.tok == IDENT || p.tok == MUL || p.tok == LPAREN {
+	for p.tok == IDENT || p.tok == MUL || p.tok == LeftParen {
 		// a field declaration cannot start with a '(' but we accept
 		// it here for more robust parsing and better error messages
 		// (parseFieldDecl will check and complain if necessary)
@@ -702,7 +701,7 @@ func (p *parser) parseParameterList(scope *Scope, ellipsisOk bool) (params []*Fi
 		params = append(params, field)
 		// Go spec: The scope of an identifier denoting a function
 		// parameter or result variable is the function body.
-		p.declare(field, nil, scope, VarObj, idents...)
+		p.declare(field, scope, VarObj, idents...)
 		p.resolve(typ)
 		if !p.atComma("parameter list", RightParen) {
 			return
@@ -715,7 +714,7 @@ func (p *parser) parseParameterList(scope *Scope, ellipsisOk bool) (params []*Fi
 			params = append(params, field)
 			// Go spec: The scope of an identifier denoting a function
 			// parameter or result variable is the function body.
-			p.declare(field, nil, scope, VarObj, idents...)
+			p.declare(field, scope, VarObj, idents...)
 			p.resolve(typ)
 			if !p.atComma("parameter list", RightParen) {
 				break
@@ -794,7 +793,7 @@ func (p *parser) parseMethodSpec(scope *Scope) *Field {
 	p.expect(Semi) // call before accessing p.linecomment
 
 	spec := &Field{Doc: doc, Names: idents, Type: typ}
-	p.declare(spec, nil, scope, Fun, idents...)
+	p.declare(spec, scope, FunctionObj, idents...)
 
 	return spec
 }
@@ -943,18 +942,14 @@ func (p *parser) parseSelector(x Expr) Expr {
 }
 
 func (p *parser) parseIndex(x Expr) Expr {
-	const N = 3 // change the 3 to 2 to disable 3-index slices
 	lbrack := p.expect(LeftBracket)
 	p.exprLev++
-	var index [N]Expr
-	var colons [N - 1]Pos
-	if p.tok != Colon {
-		index[0] = p.parseRhs()
-	}
+	var index Expr
+	index = p.parseRhs()
 	p.exprLev--
 	rbrack := p.expect(RightBracket)
 
-	return &IndexExpr{X: x, Lbrack: lbrack, Index: index[0], Rbrack: rbrack}
+	return &IndexExpr{X: x, Lbrack: lbrack, Index: index, Rbrack: rbrack}
 }
 
 func (p *parser) parseCallOrConversion(fun Expr) *CallExpr {
@@ -1125,11 +1120,10 @@ func unparen(x Expr) Expr {
 // (and not a raw type such as [...]T).
 //
 func (p *parser) checkExprOrType(x Expr) Expr {
-	switch t := unparen(x).(type) {
+	switch unparen(x).(type) {
 	case *ParenExpr:
 		panic("unreachable")
 	}
-
 	// all other nodes are expressions or types
 	return x
 }
@@ -1158,7 +1152,7 @@ func (p *parser) parsePrimaryExpr(lhs bool) Expr {
 			if lhs {
 				p.resolve(x)
 			}
-			x = p.parseIndexOrSlice(p.checkExpr(x))
+			x = p.parseIndex(p.checkExpr(x))
 		case LeftParen:
 			if lhs {
 				p.resolve(x)
@@ -1365,7 +1359,7 @@ func (p *parser) parseIfHeader() (init Stmt, cond Expr) {
 		// accept potential variable declaration but complain
 		if p.tok == Var {
 			p.next()
-			p.error(p.pos, fmt.Sprintf("var declaration not allowed in 'IF' initializer"))
+			p.error(p.pos, fmt.Sprintf("var declaration not allowed in 'If' initializer"))
 		}
 		init = p.parseSimpleStmt(basic)
 	}
@@ -1505,7 +1499,7 @@ func (p *parser) parseSwitchStmt() Stmt {
 
 	lbrace := p.expect(LeftBrace)
 	var list []Stmt
-	for p.tok == Case || p.tok == DEFAULT {
+	for p.tok == Case || p.tok == Default {
 		list = append(list, p.parseCaseClause())
 	}
 	rbrace := p.expect(RightBrace)
@@ -1516,12 +1510,12 @@ func (p *parser) parseSwitchStmt() Stmt {
 }
 
 func (p *parser) parseForStmt() Stmt {
-	pos := p.expect(FOR)
+	pos := p.expect(For)
 	p.openScope()
 	defer p.closeScope()
 
 	var s1, s2, s3 Stmt
-	var isRange bool
+	//var isRange bool
 	if p.tok != LeftBrace {
 		prevLev := p.exprLev
 		p.exprLev = -1
@@ -1533,11 +1527,11 @@ func (p *parser) parseForStmt() Stmt {
 			s1 = s2
 			s2 = nil
 			if p.tok != Semi {
-				s2, _ = p.parseSimpleStmt(basic)
+				s2 = p.parseSimpleStmt(basic)
 			}
 			p.expect(Semi)
 			if p.tok != LeftBrace {
-				s3, _ = p.parseSimpleStmt(basic)
+				s3 = p.parseSimpleStmt(basic)
 			}
 		}
 		p.exprLev = prevLev
@@ -1545,35 +1539,6 @@ func (p *parser) parseForStmt() Stmt {
 
 	body := p.parseBlockStmt()
 	p.expect(Semi)
-
-	if isRange {
-		as := s2.(*AssignStmt)
-		// check lhs
-		var key, value Expr
-		switch len(as.Lhs) {
-		case 0:
-			// nothing to do
-		case 1:
-			key = as.Lhs[0]
-		case 2:
-			key, value = as.Lhs[0], as.Lhs[1]
-		default:
-			p.errorExpected(as.Lhs[len(as.Lhs)-1].Pos(), "at most 2 expressions")
-			return &BadStmt{From: pos, To: p.safePos(body.End())}
-		}
-		// parseSimpleStmt returned a right-hand side that
-		// is a single unary expression of the form "range x"
-		x := as.Rhs[0].(*UnaryExpr).X
-		return &RangeStmt{
-			For:    pos,
-			Key:    key,
-			Value:  value,
-			TokPos: as.TokPos,
-			Tok:    as.Tok,
-			X:      x,
-			Body:   body,
-		}
-	}
 
 	// regular for statement
 	return &ForStmt{
@@ -1587,36 +1552,26 @@ func (p *parser) parseForStmt() Stmt {
 
 func (p *parser) parseStmt() (s Stmt) {
 	switch p.tok {
-	case CONST, TYPE, VAR:
+	case Const, Var:
 		s = &DeclStmt{Decl: p.parseDecl(stmtStart)}
 	case
 		// tokens that may start an expression
-		IDENT, INT, FLOAT, IMAG, CHAR, STRING, FUNC, LPAREN, // operands
-		LBRACK, STRUCT, MAP, CHAN, INTERFACE, // composite types
-		ADD, SUB, MUL, AND, XOR, ARROW, NOT: // unary operators
-		s, _ = p.parseSimpleStmt(labelOk)
-		// because of the required look-ahead, labeled statements are
-		// parsed by parseSimpleStmt - don't expect a semicolon after
-		// them
-		if _, isLabeledStmt := s.(*LabeledStmt); !isLabeledStmt {
-			p.expect(Semi)
-		}
-	case GO:
-		s = p.parseGoStmt()
-	case DEFER:
-		s = p.parseDeferStmt()
-	case RETURN:
+		IDENT, INT, FLOAT, CHAR, STRING, Function, LeftParen, // operands
+		LeftBracket, Class, Enum, Interface, // composite types
+		Plus, Minus, Star, And, Caret, Not: // unary operators
+		s = p.parseSimpleStmt(labelOk)
+	case Return:
 		s = p.parseReturnStmt()
-	case BREAK, CONTINUE, GOTO, FALLTHROUGH:
+	case Break, Continue:
 		s = p.parseBranchStmt(p.tok)
 	case LeftBrace:
 		s = p.parseBlockStmt()
 		p.expect(Semi)
-	case IF:
+	case If:
 		s = p.parseIfStmt()
-	case SWITCH:
+	case Switch:
 		s = p.parseSwitchStmt()
-	case FOR:
+	case For:
 		s = p.parseForStmt()
 	case Semi:
 		// Is it ever possible to have an implicit semicolon
@@ -1684,6 +1639,7 @@ func (p *parser) parseImportSpec(doc *Comment) *ImportSpec {
 }
 
 func (p *parser) parseValueSpec(doc *Comment, m *Modifier) *ValueSpec {
+	keyword := p.tok
 	spec := &ValueSpec{
 		Doc: doc,
 		Names: p.parseIdentList(),
@@ -1702,13 +1658,12 @@ func (p *parser) parseValueSpec(doc *Comment, m *Modifier) *ValueSpec {
 		p.error(pos, "missing type or initialization")
 	}
 
-	/* TO-DO
-	kind := Con
-	if keyword == VAR {
-		kind = Var
+	kind := ConstObj
+	if keyword == Var {
+		kind = VarObj
 	}
-	p.declare(spec, iota, p.topScope, kind, idents...)
-	*/
+	p.declare(spec, p.topScope, kind, spec.Names...)
+	
 	return spec
 }
 
@@ -1721,7 +1676,7 @@ func (p *parser) parseTypeSpec(doc *CommentGroup, _ Token, _ int) Spec {
 	// containing block.
 	// (Global identifiers are resolved in a separate phase after parsing.)
 	spec := &TypeSpec{Doc: doc, Name: ident}
-	p.declare(spec, nil, p.topScope, Typ, ident)
+	p.declare(spec, p.topScope, Typ, ident)
 	if p.tok == Assign {
 		spec.Assign = p.pos
 		p.next()
@@ -1734,41 +1689,12 @@ func (p *parser) parseTypeSpec(doc *CommentGroup, _ Token, _ int) Spec {
 }
 */
 
-func (p *parser) parseGenDecl(keyword Token, f parseSpecFunction) *GenDecl {
-	doc := p.leadComment
-	pos := p.expect(keyword)
-	var lparen, rparen Pos
-	var list []Spec
-	if p.tok == LeftParen {
-		lparen = p.pos
-		p.next()
-		for iota := 0; p.tok != RightParen && p.tok != EOF; iota++ {
-			list = append(list, f(p.leadComment, keyword, iota))
-		}
-		rparen = p.expect(RightParen)
-		p.expect(Semi)
-	} else {
-		list = append(list, f(nil, keyword, 0))
-	}
-
-	return &GenDecl{
-		Doc:    doc,
-		TokPos: pos,
-		Tok:    keyword,
-		Lparen: lparen,
-		Specs:  list,
-		Rparen: rparen,
-	}
-}
-
-/*
-func (p *parser) parseFuncDecl() *FuncDecl {
-	doc := p.leadComment
-	pos := p.expect(FUNC)
+func (p *parser) parseFuncDecl(doc *Comment, m *Modifier) *FuncDecl {
+	pos := p.expect(Function)
 	scope := NewScope(p.topScope) // function scope
 
 	var recv *FieldList
-	if p.tok == LPAREN {
+	if p.tok == LeftParen {
 		recv = p.parseParameters(scope, false)
 	}
 
@@ -1801,19 +1727,24 @@ func (p *parser) parseFuncDecl() *FuncDecl {
 		// init() functions cannot be referred to and there may
 		// be more than one - don't put them in the pkgScope
 		if ident.Name != "init" {
-			p.declare(decl, nil, p.pkgScope, Fun, ident)
+			p.declare(decl, p.nsScope, FunctionObj, ident)
 		}
 	}
 
 	return decl
 }
-*/
+
 func (p *parser) parseDecl(sync map[Token]bool) Decl {
 	m := p.parseModifier()
 	switch p.tok {
 	case Const, Var:
 		//pack to general decl
-		return p.parseValueSpec(p.leadComment, m)
+		return 	&GenDecl{
+			Doc:    p.leadComment,
+			TokPos: p.pos,
+			Tok:    p.tok,
+			Spec:   p.parseValueSpec(p.leadComment, m),
+		}
 	/*TO-DO class enum interface
 	case Type:
 		f = p.parseTypeSpec

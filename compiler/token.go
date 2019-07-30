@@ -357,8 +357,6 @@ func (node *OperatorNode) insertOperator(operator string, position int) {
 	}
 }
 
-/*
-
 // A set of constants for precedence-based expression parsing.
 // Non-operators have lowest precedence, followed by operators
 // starting with precedence 1 up to unary operators. The highest
@@ -377,16 +375,16 @@ const (
 //
 func (op Token) Precedence() int {
 	switch op {
-	case LOR:
+	case OrOr:
 		return 1
-	case LAND:
+	case AndAnd:
 		return 2
-	case EQL, NEQ, LSS, LEQ, GTR, GEQ:
+	case Equal, NotEqual, Less, LessEqual, Greater, GreaterEqual:
 		return 3
-	case ADD, SUB, OR, XOR:
+	case Plus, Minus, Or, Caret:
 		return 4
-	case MUL, QUO, REM, SHL, SHR, AND, AND_NOT:
+	case Star, Div, Mod, LeftShift, RightShift, And:
 		return 5
 	}
 	return LowestPrec
-}*/
+}

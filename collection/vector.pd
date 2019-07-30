@@ -1,4 +1,4 @@
-package
+namespace collection;
 
 @emit 
 //#include <vector>

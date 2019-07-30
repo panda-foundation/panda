@@ -1,5 +1,16 @@
-namespace global;
+namespace system;
 
-print()
-printf()
-sprintf()
+public function print()
+{
+
+}
+
+public function printf()
+{
+
+}
+
+public function sprintf() string
+{
+    
+}
