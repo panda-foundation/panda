@@ -152,6 +152,11 @@ type (
 		From, To Pos // position range of bad expression
 	}
 
+	Scalar struct {
+		From, To Pos
+		Token    Token
+	}
+
 	// An Ident node represents an identifier.
 	Ident struct {
 		NamePos Pos     // identifier position
@@ -279,9 +284,9 @@ type (
 
 	// A FuncType node represents a function type.
 	FuncType struct {
-		Func    Pos        // position of "func" keyword (NoPos if there is no "func")
-		Params  *FieldList // (incoming) parameters; non-nil
-		Results *FieldList // (outgoing) results; or nil
+		Func   Pos        // position of "func" keyword (NoPos if there is no "func")
+		Params *FieldList // (incoming) parameters; non-nil
+		Result *Field     // (outgoing) results; or nil
 	}
 
 	// An InterfaceType node represents an interface type.
@@ -297,6 +302,7 @@ type (
 // Pos and End implementations for expression/type nodes.
 
 func (x *BadExpr) Pos() Pos     { return x.From }
+func (x *Scalar) Pos() Pos      { return x.From }
 func (x *Ident) Pos() Pos       { return x.NamePos }
 func (x *EllipsisLit) Pos() Pos { return x.Ellipsis }
 func (x *BasicLit) Pos() Pos    { return x.ValuePos }
@@ -325,6 +331,7 @@ func (x *FuncType) Pos() Pos {
 func (x *InterfaceType) Pos() Pos { return x.Interface }
 
 func (x *BadExpr) End() Pos { return x.To }
+func (x *Scalar) End() Pos  { return x.To }
 func (x *Ident) End() Pos   { return Pos(int(x.NamePos) + len(x.Name)) }
 func (x *EllipsisLit) End() Pos {
 	if x.Elt != nil {
@@ -345,8 +352,8 @@ func (x *BinaryExpr) End() Pos   { return x.Y.End() }
 func (x *KeyValueExpr) End() Pos { return x.Value.End() }
 func (x *StructType) End() Pos   { return x.Fields.End() }
 func (x *FuncType) End() Pos {
-	if x.Results != nil {
-		return x.Results.End()
+	if x.Result != nil {
+		return x.Result.End()
 	}
 	return x.Params.End()
 }
@@ -356,6 +363,7 @@ func (x *InterfaceType) End() Pos { return x.Methods.End() }
 // assigned to an Expr.
 //
 func (*BadExpr) exprNode()      {}
+func (*Scalar) exprNode()       {}
 func (*Ident) exprNode()        {}
 func (*EllipsisLit) exprNode()  {}
 func (*BasicLit) exprNode()     {}
@@ -428,8 +436,8 @@ type (
 
 	// A ReturnStmt node represents a return statement.
 	ReturnStmt struct {
-		Return  Pos    // position of "return" keyword
-		Results []Expr // result expressions; or nil
+		Return Pos  // position of "return" keyword
+		Result Expr // result expressions; or nil
 	}
 
 	// A BranchStmt node represents a break, continue, goto,
@@ -529,8 +537,8 @@ func (s *IncDecStmt) End() Pos {
 }
 func (s *AssignStmt) End() Pos { return s.Rhs[len(s.Rhs)-1].End() }
 func (s *ReturnStmt) End() Pos {
-	if n := len(s.Results); n > 0 {
-		return s.Results[n-1].End()
+	if s.Result != nil {
+		return s.Result.End()
 	}
 	return s.Return + 6 // len("return")
 }
@@ -671,9 +679,9 @@ func (s *TypeSpec) End() Pos { return s.Type.End() }
 // assigned to a Spec.
 //
 func (*PackageSpec) specNode() {}
-func (*ImportSpec) specNode()    {}
-func (*ValueSpec) specNode()     {}
-func (*TypeSpec) specNode()      {}
+func (*ImportSpec) specNode()  {}
+func (*ValueSpec) specNode()   {}
+func (*TypeSpec) specNode()    {}
 
 // A declaration is represented by one of the following declaration nodes.
 //
@@ -709,7 +717,6 @@ type (
 	// A FuncDecl node represents a function declaration.
 	FuncDecl struct {
 		Doc  *Comment   // associated documentation; or nil
-		Recv *FieldList // receiver (methods); or nil (functions)
 		Name *Ident     // function/method name
 		Type *FuncType  // function signature: parameters, results, and position of "func" keyword
 		Body *BlockStmt // function body; or nil for external (non-Go) function
@@ -765,11 +772,11 @@ func (*FuncDecl) declNode() {}
 // are "free-floating" (see also issues #18593, #20744).
 //
 type ProgramFile struct {
-	Package    *PackageSpec // position of "namespace" keyword
-	Decls      []Decl         // top-level declarations; or nil
-	Scope      *Scope         // package scope (this file only)
-	Imports    []*ImportSpec  // imports in this file
-	Unresolved []*Ident       // unresolved identifiers in this file
+	Package    *PackageSpec  // position of "namespace" keyword
+	Decls      []Decl        // top-level declarations; or nil
+	Scope      *Scope        // package scope (this file only)
+	Imports    []*ImportSpec // imports in this file
+	Unresolved []*Ident      // unresolved identifiers in this file
 }
 
 func (f *ProgramFile) Pos() Pos { return f.Package.Pos() }

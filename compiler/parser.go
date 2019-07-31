@@ -730,24 +730,17 @@ func (p *parser) parseParameters(scope *Scope, ellipsisOk bool) *FieldList {
 	return &FieldList{Opening: lparen, List: params, Closing: rparen}
 }
 
-func (p *parser) parseResult(scope *Scope) *FieldList {
-	if p.tok == LeftParen {
-		return p.parseParameters(scope, false)
-	}
-
+func (p *parser) parseResult(scope *Scope) *Field {
 	typ := p.tryType()
 	if typ != nil {
-		list := make([]*Field, 1)
-		list[0] = &Field{Type: typ}
-		return &FieldList{List: list}
+		return &Field{Type: typ}
 	}
-
 	return nil
 }
 
-func (p *parser) parseSignature(scope *Scope) (params, results *FieldList) {
+func (p *parser) parseSignature(scope *Scope) (params *FieldList, result *Field) {
 	params = p.parseParameters(scope, true)
-	results = p.parseResult(scope)
+	result = p.parseResult(scope)
 
 	return
 }
@@ -755,9 +748,9 @@ func (p *parser) parseSignature(scope *Scope) (params, results *FieldList) {
 func (p *parser) parseFuncType() (*FuncType, *Scope) {
 	pos := p.expect(Function)
 	scope := NewScope(p.topScope) // function scope
-	params, results := p.parseSignature(scope)
+	params, result := p.parseSignature(scope)
 
-	return &FuncType{Func: pos, Params: params, Results: results}, scope
+	return &FuncType{Func: pos, Params: params, Result: result}, scope
 }
 
 func (p *parser) parseMethodSpec(scope *Scope) *Field {
@@ -769,8 +762,8 @@ func (p *parser) parseMethodSpec(scope *Scope) *Field {
 		// method
 		idents = []*Ident{ident}
 		scope := NewScope(nil) // method scope
-		params, results := p.parseSignature(scope)
-		typ = &FuncType{Func: NoPos, Params: params, Results: results}
+		params, result := p.parseSignature(scope)
+		typ = &FuncType{Func: NoPos, Params: params, Result: result}
 	} else {
 		// embedded interface
 		typ = x
@@ -806,15 +799,18 @@ func (p *parser) parseInterfaceType() *InterfaceType {
 
 // If the result is an identifier, it is not resolved.
 func (p *parser) tryIdentOrType() Expr {
-	switch p.tok {
-	case IDENT:
-		return p.parseTypeName()
-		/*
-			case Function:
-				typ, _ := p.parseFuncType()
-				return typ*/
-	}
+	if p.tok.IsScalar() {
+		scalar := &Scalar{
+			From:  p.pos,
+			Token: p.tok,
+		}
+		p.next()
+		scalar.To = p.pos
+		return scalar
 
+	} else if p.tok == IDENT {
+		return p.parseTypeName()
+	}
 	// no type found
 	return nil
 }
@@ -888,7 +884,7 @@ func (p *parser) parseOperand(lhs bool) Expr {
 		}
 		return x
 
-	case INT, FLOAT, CHAR, STRING:
+	case INT, FLOAT, CHAR, STRING, True, False, Void, Null:
 		x := &BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
 		p.next()
 		return x
@@ -1289,13 +1285,13 @@ func (p *parser) parseCallExpr(callType string) *CallExpr {
 func (p *parser) parseReturnStmt() *ReturnStmt {
 	pos := p.pos
 	p.expect(Return)
-	var x []Expr
-	if p.tok != Semi && p.tok != RightBrace {
-		x = p.parseRhsList()
+	var result Expr
+	if p.tok != Semi {
+		result = p.checkExpr(p.parseExpr(false))
 	}
 	p.expect(Semi)
-
-	return &ReturnStmt{Return: pos, Results: x}
+	//TO-DO parse one Rhs instead list
+	return &ReturnStmt{Return: pos, Result: result}
 }
 
 func (p *parser) parseBranchStmt(tok Token) *BranchStmt {
@@ -1626,6 +1622,7 @@ func (p *parser) parseImportSpec(doc *Comment) *ImportSpec {
 
 func (p *parser) parseValueSpec(doc *Comment, m *Modifier) *ValueSpec {
 	keyword := p.tok
+	p.next()
 	spec := &ValueSpec{
 		Doc:   doc,
 		Names: p.parseIdentList(),
@@ -1679,14 +1676,10 @@ func (p *parser) parseFuncDecl(doc *Comment, m *Modifier) *FuncDecl {
 	pos := p.expect(Function)
 	scope := NewScope(p.topScope) // function scope
 
-	var recv *FieldList
-	if p.tok == LeftParen {
-		recv = p.parseParameters(scope, false)
-	}
-
+	//TO-DO parse <> generic
 	ident := p.parseIdent()
 
-	params, results := p.parseSignature(scope)
+	params, result := p.parseSignature(scope)
 
 	var body *BlockStmt
 	if p.tok == LeftBrace {
@@ -1696,26 +1689,16 @@ func (p *parser) parseFuncDecl(doc *Comment, m *Modifier) *FuncDecl {
 
 	decl := &FuncDecl{
 		Doc:  doc,
-		Recv: recv,
 		Name: ident,
 		Type: &FuncType{
-			Func:    pos,
-			Params:  params,
-			Results: results,
+			Func:   pos,
+			Params: params,
+			Result: result,
 		},
 		Body: body,
 	}
-	if recv == nil {
-		// Go spec: The scope of an identifier denoting a constant, type,
-		// variable, or function (but not method) declared at top level
-		// (outside any function) is the package block.
-		//
-		// init() functions cannot be referred to and there may
-		// be more than one - don't put them in the pkgScope
-		if ident.Name != "init" {
-			p.declare(decl, p.pkgScope, FunctionObj, ident)
-		}
-	}
+
+	p.declare(decl, p.pkgScope, FunctionObj, ident)
 
 	return decl
 }
@@ -1725,10 +1708,11 @@ func (p *parser) parseDecl(sync map[Token]bool) Decl {
 	switch p.tok {
 	case Const, Var:
 		//pack to general decl
+		tok := p.tok
 		return &GenDecl{
 			Doc:    p.leadComment,
 			TokPos: p.pos,
-			Tok:    p.tok,
+			Tok:    tok,
 			Spec:   p.parseValueSpec(p.leadComment, m),
 		}
 	/*TO-DO class enum interface
