@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 )
+
 /*
 func ParseString() {
 
@@ -126,7 +127,7 @@ type parser struct {
 	inRhs   bool // if set, the parser is parsing a rhs expression
 
 	// Ordinary identifier scopes
-	pkgScope    *Scope        // namespaceScope.Outer == nil
+	pkgScope   *Scope        // namespaceScope.Outer == nil
 	topScope   *Scope        // top-most scope; may be pkgScope
 	unresolved []*Ident      // unresolved identifiers
 	imports    []*ImportSpec // list of imports
@@ -247,11 +248,12 @@ func (p *parser) next() {
 	p.leadComment = nil
 	prev := p.pos
 	p.pos, p.tok, p.lit = p.scanner.Scan()
-	if p.tok == COMMENT {
+	for p.tok == COMMENT {
 		// if the comment is on same line as the previous token; it cannot be a lead comment
 		if p.file.Line(p.pos) != p.file.Line(prev) {
 			p.leadComment = p.consumeComment()
 		}
+		p.next()
 	}
 }
 
@@ -608,6 +610,7 @@ func (p *parser) parseFieldDecl(scope *Scope) *Field {
 
 	return field
 }
+
 /*
 func (p *parser) parseStructType() *StructType {
 	pos := p.expect(STRUCT)
@@ -1624,9 +1627,9 @@ func (p *parser) parseImportSpec(doc *Comment) *ImportSpec {
 func (p *parser) parseValueSpec(doc *Comment, m *Modifier) *ValueSpec {
 	keyword := p.tok
 	spec := &ValueSpec{
-		Doc: doc,
+		Doc:   doc,
 		Names: p.parseIdentList(),
-		Type:   p.tryType(),
+		Type:  p.tryType(),
 	}
 
 	pos := p.pos
@@ -1646,7 +1649,7 @@ func (p *parser) parseValueSpec(doc *Comment, m *Modifier) *ValueSpec {
 		kind = VarObj
 	}
 	p.declare(spec, p.topScope, kind, spec.Names...)
-	
+
 	return spec
 }
 
@@ -1722,7 +1725,7 @@ func (p *parser) parseDecl(sync map[Token]bool) Decl {
 	switch p.tok {
 	case Const, Var:
 		//pack to general decl
-		return 	&GenDecl{
+		return &GenDecl{
 			Doc:    p.leadComment,
 			TokPos: p.pos,
 			Tok:    p.tok,
