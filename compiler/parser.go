@@ -1685,7 +1685,6 @@ func (p *parser) parseFuncDecl(doc *Comment, m *Modifier) *FuncDecl {
 	if p.tok == LeftBrace {
 		body = p.parseBody(scope)
 	}
-	p.expect(Semi)
 
 	decl := &FuncDecl{
 		Doc:  doc,

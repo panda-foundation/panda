@@ -166,8 +166,12 @@ func (s *Scanner) scanNumber() (Token, string) {
 				case 'o':
 					base = 8
 				default:
-					s.error(offset, "invalid integer")
-					token = ILLEGAL
+					if s.isDecimal(s.char) {
+						s.error(offset, "invalid integer")
+						token = ILLEGAL
+					} else {
+						return token, "0"
+					}
 				}
 				if token != ILLEGAL {
 					s.next()
