@@ -3,14 +3,13 @@ package compiler
 import (
 	"bytes"
 	"fmt"
-	"io"
 )
 
 // All node types implement the Node interface.
 type Node interface {
 	Pos() Pos // position of first character belonging to the node
 	End() Pos // position of first character immediately after the node
-	Print(writer io.Writer, indent int)
+	Print(buffer *bytes.Buffer, indent int)
 }
 
 // All expression nodes implement the Expr interface.
@@ -29,7 +28,7 @@ type Stmt interface {
 type Decl interface {
 	Node
 	declNode()
-	PrintDecl(writer io.Writer, indent int)
+	PrintDecl(buffer *bytes.Buffer, indent int)
 }
 
 // ----------------------------------------------------------------------------
@@ -97,7 +96,7 @@ func (f *Field) End() Pos {
 	return f.Type.End()
 }
 
-func (f *Field) Print(writer io.Writer, indent int) {
+func (f *Field) Print(buffer *bytes.Buffer, indent int) {
 }
 
 // A FieldList represents a list of Fields, enclosed by parentheses or braces.
@@ -131,9 +130,9 @@ func (f *FieldList) End() Pos {
 	return NoPos
 }
 
-func (f *FieldList) Print(writer io.Writer, indent int) {
+func (f *FieldList) Print(buffer *bytes.Buffer, indent int) {
 	for _, v := range f.List {
-		v.Print(writer, indent)
+		v.Print(buffer, indent)
 	}
 }
 
@@ -393,59 +392,59 @@ func (*StructType) exprNode()    {}
 func (*FuncType) exprNode()      {}
 func (*InterfaceType) exprNode() {}
 
-func (x *BadExpr) Print(writer io.Writer, indent int) {
-	writer.Write([]byte("//Bad expr here"))
+func (x *BadExpr) Print(buffer *bytes.Buffer, indent int) {
+	buffer.WriteString("//Bad expr declared")
 }
-func (x *Scalar) Print(writer io.Writer, indent int) {
-	x.Token.Print(writer)
+func (x *Scalar) Print(buffer *bytes.Buffer, indent int) {
+	x.Token.Print(buffer)
 }
-func (x *Ident) Print(writer io.Writer, indent int) {
-	writer.Write([]byte(x.Name))
-}
-
-func (x *EllipsisLit) Print(writer io.Writer, indent int) {
+func (x *Ident) Print(buffer *bytes.Buffer, indent int) {
+	buffer.WriteString(x.Name)
 }
 
-func (x *BasicLit) Print(writer io.Writer, indent int) {
+func (x *EllipsisLit) Print(buffer *bytes.Buffer, indent int) {
 }
 
-func (x *FuncLit) Print(writer io.Writer, indent int) {
+func (x *BasicLit) Print(buffer *bytes.Buffer, indent int) {
 }
 
-func (x *CompositeLit) Print(writer io.Writer, indent int) {
+func (x *FuncLit) Print(buffer *bytes.Buffer, indent int) {
 }
 
-func (x *ParenExpr) Print(writer io.Writer, indent int) {
+func (x *CompositeLit) Print(buffer *bytes.Buffer, indent int) {
 }
 
-func (x *SelectorExpr) Print(writer io.Writer, indent int) {
+func (x *ParenExpr) Print(buffer *bytes.Buffer, indent int) {
 }
 
-func (x *IndexExpr) Print(writer io.Writer, indent int) {
+func (x *SelectorExpr) Print(buffer *bytes.Buffer, indent int) {
 }
 
-func (x *CallExpr) Print(writer io.Writer, indent int) {
+func (x *IndexExpr) Print(buffer *bytes.Buffer, indent int) {
 }
 
-func (x *RefExpr) Print(writer io.Writer, indent int) {
+func (x *CallExpr) Print(buffer *bytes.Buffer, indent int) {
 }
 
-func (x *UnaryExpr) Print(writer io.Writer, indent int) {
+func (x *RefExpr) Print(buffer *bytes.Buffer, indent int) {
 }
 
-func (x *BinaryExpr) Print(writer io.Writer, indent int) {
+func (x *UnaryExpr) Print(buffer *bytes.Buffer, indent int) {
 }
 
-func (x *KeyValueExpr) Print(writer io.Writer, indent int) {
+func (x *BinaryExpr) Print(buffer *bytes.Buffer, indent int) {
 }
 
-func (x *StructType) Print(writer io.Writer, indent int) {
+func (x *KeyValueExpr) Print(buffer *bytes.Buffer, indent int) {
 }
 
-func (x *FuncType) Print(writer io.Writer, indent int) {
+func (x *StructType) Print(buffer *bytes.Buffer, indent int) {
 }
 
-func (x *InterfaceType) Print(writer io.Writer, indent int) {
+func (x *FuncType) Print(buffer *bytes.Buffer, indent int) {
+}
+
+func (x *InterfaceType) Print(buffer *bytes.Buffer, indent int) {
 }
 
 // ----------------------------------------------------------------------------
@@ -657,49 +656,49 @@ func (*CommClause) stmtNode() {}
 func (*SelectStmt) stmtNode() {}
 func (*ForStmt) stmtNode()    {}
 
-func (s *BadStmt) Print(writer io.Writer, indent int) {
+func (s *BadStmt) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *DeclStmt) Print(writer io.Writer, indent int) {
+func (s *DeclStmt) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *EmptyStmt) Print(writer io.Writer, indent int) {
+func (s *EmptyStmt) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *ExprStmt) Print(writer io.Writer, indent int) {
+func (s *ExprStmt) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *IncDecStmt) Print(writer io.Writer, indent int) {
+func (s *IncDecStmt) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *AssignStmt) Print(writer io.Writer, indent int) {
+func (s *AssignStmt) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *ReturnStmt) Print(writer io.Writer, indent int) {
+func (s *ReturnStmt) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *BranchStmt) Print(writer io.Writer, indent int) {
+func (s *BranchStmt) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *BlockStmt) Print(writer io.Writer, indent int) {
+func (s *BlockStmt) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *IfStmt) Print(writer io.Writer, indent int) {
+func (s *IfStmt) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *CaseClause) Print(writer io.Writer, indent int) {
+func (s *CaseClause) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *SwitchStmt) Print(writer io.Writer, indent int) {
+func (s *SwitchStmt) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *CommClause) Print(writer io.Writer, indent int) {
+func (s *CommClause) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *SelectStmt) Print(writer io.Writer, indent int) {
+func (s *SelectStmt) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (s *ForStmt) Print(writer io.Writer, indent int) {
+func (s *ForStmt) Print(buffer *bytes.Buffer, indent int) {
 
 }
 
@@ -796,16 +795,16 @@ func (*ImportSpec) specNode()  {}
 func (*ValueSpec) specNode()   {}
 func (*TypeSpec) specNode()    {}
 
-func (*PackageSpec) Print(writer io.Writer, indent int) {
+func (*PackageSpec) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (*ImportSpec) Print(writer io.Writer, indent int) {
+func (*ImportSpec) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (*ValueSpec) Print(writer io.Writer, indent int) {
+func (*ValueSpec) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (*TypeSpec) Print(writer io.Writer, indent int) {
+func (*TypeSpec) Print(buffer *bytes.Buffer, indent int) {
 
 }
 
@@ -875,24 +874,26 @@ func (*BadDecl) declNode()  {}
 func (*GenDecl) declNode()  {}
 func (*FuncDecl) declNode() {}
 
-func (*BadDecl) Print(writer io.Writer, indent int) {
+func (*BadDecl) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (*GenDecl) Print(writer io.Writer, indent int) {
+func (*GenDecl) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (*FuncDecl) Print(writer io.Writer, indent int) {
+func (*FuncDecl) Print(buffer *bytes.Buffer, indent int) {
 
 }
 
-func (*BadDecl) PrintDecl(writer io.Writer, indent int) {
+func (*BadDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
 
 }
-func (*GenDecl) PrintDecl(writer io.Writer, indent int) {
+func (*GenDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
 
 }
-func (*FuncDecl) PrintDecl(writer io.Writer, indent int) {
-
+func (f *FuncDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
+	f.Type.Print(buffer, indent)
+	buffer.WriteString(" ")
+	f.Name.Print(buffer, indent)
 }
 
 // ----------------------------------------------------------------------------
@@ -932,13 +933,13 @@ func (f *ProgramFile) End() Pos {
 	}
 	return f.Package.End()
 }
-func (f *ProgramFile) Print() (writer io.Writer, indent int) {
+func (f *ProgramFile) Print(buffer *bytes.Buffer, indent int) {
 	for _, v := range f.Decls {
-		v.PrintDecl(writer, indent)
+		v.PrintDecl(buffer, indent)
 	}
 
 	for _, v := range f.Decls {
-		v.Print(writer, indent)
+		v.Print(buffer, indent)
 	}
 }
 

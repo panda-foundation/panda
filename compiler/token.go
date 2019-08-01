@@ -1,6 +1,6 @@
 package compiler
 
-import "io"
+import "bytes"
 
 type Token int
 
@@ -410,9 +410,9 @@ func (token Token) IsScalar() bool {
 	return scalar_begin < token && token < scalar_end
 }
 
-func (token Token) Print(writer io.Writer) {
+func (token Token) Print(buffer *bytes.Buffer) {
 	if int(token) < len(cppTokens) {
-		writer.Write([]byte(cppTokens[token]))
+		buffer.WriteString(cppTokens[token])
 	}
 }
 
