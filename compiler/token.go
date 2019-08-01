@@ -1,5 +1,7 @@
 package compiler
 
+import "io"
+
 type Token int
 
 const (
@@ -55,25 +57,27 @@ const (
 	// scalars
 	scalar_begin
 	Bool
-	Char
-	Int
+	Char //16 bit unicode char
 	Int8
 	Int16
 	Int32
 	Int64
-	Uint
 	Uint8
 	Uint16
 	Uint32
 	Uint64
+	SByte //int8
 	Short
+	Int
 	Long
+	Byte //uint8
 	Ushort
+	Uint
 	Ulong
-	Double
-	Float
 	Float32
 	Float64
+	Float
+	Double
 	String
 	Void
 	scalar_end
@@ -167,24 +171,26 @@ var (
 
 		Bool:    "bool",
 		Char:    "char",
-		Int:     "int",
 		Int8:    "i8",
 		Int16:   "i16",
 		Int32:   "i32",
 		Int64:   "i64",
-		Uint:    "uint",
 		Uint8:   "u8",
 		Uint16:  "u16",
 		Uint32:  "u32",
 		Uint64:  "u64",
+		SByte:   "sbyte",
 		Short:   "short",
+		Int:     "int",
 		Long:    "long",
+		Byte:    "byte",
 		Ushort:  "ushort",
+		Uint:    "uint",
 		Ulong:   "ulong",
-		Double:  "double",
-		Float:   "float",
 		Float32: "f32",
 		Float64: "f64",
+		Float:   "float",
+		Double:  "double",
 		String:  "string",
 		Void:    "void",
 
@@ -247,9 +253,113 @@ var (
 		META:   "META",
 	}
 
-	keywords     map[string]Token
-	scalars      map[string]Token
-	operators    map[string]Token
+	cppTokens = [...]string{
+
+		Base:      "base",
+		Break:     "break",
+		Case:      "case",
+		Catch:     "catch",
+		Class:     "class",
+		Const:     "const",
+		Continue:  "continue",
+		Default:   "default",
+		Else:      "else",
+		Enum:      "enum class",
+		False:     "false",
+		For:       "for",
+		Function:  "",
+		Import:    "#include",
+		Interface: "class",
+		If:        "if",
+		New:       "new",
+		Null:      "nullptr",
+		Operator:  "operator",
+		Package:   "namespace",
+		Public:    "",
+		Return:    "return",
+		Static:    "static",
+		Switch:    "switch",
+		This:      "this",
+		Throw:     "throw",
+		True:      "true",
+		Try:       "try",
+		Var:       "",
+
+		Bool:    "bool",
+		Char:    "uint32_t",
+		Int8:    "int8_t",
+		Int16:   "int16_t",
+		Int32:   "int32_t",
+		Int64:   "int64_t",
+		Uint8:   "uint8_t",
+		Uint16:  "uint16_t",
+		Uint32:  "uint32_t",
+		Uint64:  "uint64_t",
+		SByte:   "int8_t",
+		Short:   "int16_t",
+		Int:     "int32_t",
+		Long:    "int64_t",
+		Byte:    "uint8_t",
+		Ushort:  "uint16_t",
+		Uint:    "uint32_t",
+		Ulong:   "uint64_t",
+		Float32: "float",
+		Float64: "double",
+		Float:   "float",
+		Double:  "double",
+		String:  "std::string",
+		Void:    "void",
+
+		LeftParen:        "(",
+		RightParen:       ")",
+		LeftBracket:      "[",
+		RightBracket:     "]",
+		LeftBrace:        "{",
+		RightBrace:       "}",
+		Plus:             "+",
+		Minus:            "-",
+		Star:             "*",
+		Div:              "/",
+		Mod:              "%",
+		Caret:            "^",
+		And:              "&",
+		Or:               "|",
+		Tilde:            "~",
+		Not:              "!",
+		Assign:           "=",
+		Less:             "<",
+		Greater:          ">",
+		PlusAssign:       "+=",
+		MinusAssign:      "-=",
+		MulAssign:        "*=",
+		DivAssign:        "/=",
+		ModAssign:        "%=",
+		XorAssign:        "^=",
+		AndAssign:        "&=",
+		OrAssign:         "|=",
+		LeftShift:        "<<",
+		RightShift:       ">>",
+		LeftShiftAssign:  "<<=",
+		RightShiftAssign: ">>=",
+		Equal:            "==",
+		NotEqual:         "!=",
+		LessEqual:        "<=",
+		GreaterEqual:     ">=",
+		AndAnd:           "&&",
+		OrOr:             "||",
+		PlusPlus:         "++",
+		MinusMinus:       "--",
+		Comma:            ",",
+		Question:         "?",
+		Colon:            ":",
+		Semi:             ";",
+		Dot:              ".",
+		Ellipsis:         "...",
+	}
+
+	//keywords     map[string]Token
+	//scalars      map[string]Token
+	//operators    map[string]Token
 	allTokens    map[string]Token
 	operatorRoot *OperatorNode
 )
@@ -257,22 +367,22 @@ var (
 func init() {
 	allTokens = make(map[string]Token)
 
-	keywords = make(map[string]Token)
+	//keywords = make(map[string]Token)
 	for i := keyword_begin + 1; i < keyword_end; i++ {
-		keywords[tokens[i]] = i
+		//keywords[tokens[i]] = i
 		allTokens[tokens[i]] = i
 	}
 
-	scalars = make(map[string]Token)
+	//scalars = make(map[string]Token)
 	for i := scalar_begin + 1; i < scalar_end; i++ {
-		scalars[tokens[i]] = i
+		//scalars[tokens[i]] = i
 		allTokens[tokens[i]] = i
 	}
 
-	operators = make(map[string]Token)
+	//operators = make(map[string]Token)
 	operatorRoot = NewOperatorNode()
 	for i := operator_begin + 1; i < operator_end; i++ {
-		operators[tokens[i]] = i
+		//operators[tokens[i]] = i
 		allTokens[tokens[i]] = i
 		operatorRoot.Insert(tokens[i])
 	}
@@ -298,6 +408,12 @@ func (token Token) IsKeyword() bool {
 
 func (token Token) IsScalar() bool {
 	return scalar_begin < token && token < scalar_end
+}
+
+func (token Token) Print(writer io.Writer) {
+	if int(token) < len(cppTokens) {
+		writer.Write([]byte(cppTokens[token]))
+	}
 }
 
 func GetToken(identifier string) Token {

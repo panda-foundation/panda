@@ -3,12 +3,14 @@ package compiler
 import (
 	"bytes"
 	"fmt"
+	"io"
 )
 
 // All node types implement the Node interface.
 type Node interface {
 	Pos() Pos // position of first character belonging to the node
 	End() Pos // position of first character immediately after the node
+	Print(writer io.Writer, indent int)
 }
 
 // All expression nodes implement the Expr interface.
@@ -27,6 +29,7 @@ type Stmt interface {
 type Decl interface {
 	Node
 	declNode()
+	PrintDecl(writer io.Writer, indent int)
 }
 
 // ----------------------------------------------------------------------------
@@ -94,6 +97,9 @@ func (f *Field) End() Pos {
 	return f.Type.End()
 }
 
+func (f *Field) Print(writer io.Writer, indent int) {
+}
+
 // A FieldList represents a list of Fields, enclosed by parentheses or braces.
 type FieldList struct {
 	Opening Pos      // position of opening parenthesis/brace, if any
@@ -123,6 +129,12 @@ func (f *FieldList) End() Pos {
 		return f.List[n-1].End()
 	}
 	return NoPos
+}
+
+func (f *FieldList) Print(writer io.Writer, indent int) {
+	for _, v := range f.List {
+		v.Print(writer, indent)
+	}
 }
 
 // NumFields returns the number of parameters or struct fields represented by a FieldList.
@@ -381,6 +393,61 @@ func (*StructType) exprNode()    {}
 func (*FuncType) exprNode()      {}
 func (*InterfaceType) exprNode() {}
 
+func (x *BadExpr) Print(writer io.Writer, indent int) {
+	writer.Write([]byte("//Bad expr here"))
+}
+func (x *Scalar) Print(writer io.Writer, indent int) {
+	x.Token.Print(writer)
+}
+func (x *Ident) Print(writer io.Writer, indent int) {
+	writer.Write([]byte(x.Name))
+}
+
+func (x *EllipsisLit) Print(writer io.Writer, indent int) {
+}
+
+func (x *BasicLit) Print(writer io.Writer, indent int) {
+}
+
+func (x *FuncLit) Print(writer io.Writer, indent int) {
+}
+
+func (x *CompositeLit) Print(writer io.Writer, indent int) {
+}
+
+func (x *ParenExpr) Print(writer io.Writer, indent int) {
+}
+
+func (x *SelectorExpr) Print(writer io.Writer, indent int) {
+}
+
+func (x *IndexExpr) Print(writer io.Writer, indent int) {
+}
+
+func (x *CallExpr) Print(writer io.Writer, indent int) {
+}
+
+func (x *RefExpr) Print(writer io.Writer, indent int) {
+}
+
+func (x *UnaryExpr) Print(writer io.Writer, indent int) {
+}
+
+func (x *BinaryExpr) Print(writer io.Writer, indent int) {
+}
+
+func (x *KeyValueExpr) Print(writer io.Writer, indent int) {
+}
+
+func (x *StructType) Print(writer io.Writer, indent int) {
+}
+
+func (x *FuncType) Print(writer io.Writer, indent int) {
+}
+
+func (x *InterfaceType) Print(writer io.Writer, indent int) {
+}
+
 // ----------------------------------------------------------------------------
 // Statements
 
@@ -590,6 +657,52 @@ func (*CommClause) stmtNode() {}
 func (*SelectStmt) stmtNode() {}
 func (*ForStmt) stmtNode()    {}
 
+func (s *BadStmt) Print(writer io.Writer, indent int) {
+
+}
+func (s *DeclStmt) Print(writer io.Writer, indent int) {
+
+}
+func (s *EmptyStmt) Print(writer io.Writer, indent int) {
+
+}
+func (s *ExprStmt) Print(writer io.Writer, indent int) {
+
+}
+func (s *IncDecStmt) Print(writer io.Writer, indent int) {
+
+}
+func (s *AssignStmt) Print(writer io.Writer, indent int) {
+
+}
+func (s *ReturnStmt) Print(writer io.Writer, indent int) {
+
+}
+func (s *BranchStmt) Print(writer io.Writer, indent int) {
+
+}
+func (s *BlockStmt) Print(writer io.Writer, indent int) {
+
+}
+func (s *IfStmt) Print(writer io.Writer, indent int) {
+
+}
+func (s *CaseClause) Print(writer io.Writer, indent int) {
+
+}
+func (s *SwitchStmt) Print(writer io.Writer, indent int) {
+
+}
+func (s *CommClause) Print(writer io.Writer, indent int) {
+
+}
+func (s *SelectStmt) Print(writer io.Writer, indent int) {
+
+}
+func (s *ForStmt) Print(writer io.Writer, indent int) {
+
+}
+
 // ----------------------------------------------------------------------------
 // Declarations
 
@@ -683,6 +796,19 @@ func (*ImportSpec) specNode()  {}
 func (*ValueSpec) specNode()   {}
 func (*TypeSpec) specNode()    {}
 
+func (*PackageSpec) Print(writer io.Writer, indent int) {
+
+}
+func (*ImportSpec) Print(writer io.Writer, indent int) {
+
+}
+func (*ValueSpec) Print(writer io.Writer, indent int) {
+
+}
+func (*TypeSpec) Print(writer io.Writer, indent int) {
+
+}
+
 // A declaration is represented by one of the following declaration nodes.
 //
 type (
@@ -748,6 +874,26 @@ func (d *FuncDecl) End() Pos {
 func (*BadDecl) declNode()  {}
 func (*GenDecl) declNode()  {}
 func (*FuncDecl) declNode() {}
+
+func (*BadDecl) Print(writer io.Writer, indent int) {
+
+}
+func (*GenDecl) Print(writer io.Writer, indent int) {
+
+}
+func (*FuncDecl) Print(writer io.Writer, indent int) {
+
+}
+
+func (*BadDecl) PrintDecl(writer io.Writer, indent int) {
+
+}
+func (*GenDecl) PrintDecl(writer io.Writer, indent int) {
+
+}
+func (*FuncDecl) PrintDecl(writer io.Writer, indent int) {
+
+}
 
 // ----------------------------------------------------------------------------
 // Files and packages
