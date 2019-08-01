@@ -932,6 +932,15 @@ func (f *ProgramFile) End() Pos {
 	}
 	return f.Package.End()
 }
+func (f *ProgramFile) Print() (writer io.Writer, indent int) {
+	for _, v := range f.Decls {
+		v.PrintDecl(writer, indent)
+	}
+
+	for _, v := range f.Decls {
+		v.Print(writer, indent)
+	}
+}
 
 // A Package node represents a set of source files
 // collectively building a Go package.
