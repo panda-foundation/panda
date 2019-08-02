@@ -1,62 +1,62 @@
 namespace collection;
 
-@emit 
-//#include <vector>
+@include "<vector>"
 
-@class(std::vector)
+@ref "std::vector"
 class vector<T>
 {
-    @function(size)
-    u64 size();
+    @ref "size"
+    u32 size();
 
-    @function(resize)
-    void resize(u64 n);
+    @ref "resize"
+    void resize(u32 n);
 
-    @function(capacity)
-    u64 capacity;
+    @ref "capacity"
+    u32 capacity;
 
-    @function(empty)
+    @ref "empty"
     bool empty();
 
-    @function(reserve)
-    void reserve(u64 n);
+    @ref "reserve"
+    void reserve(u32 n);
 
-    @function(shrink_to_fit)
+    @ref "shrink_to_fit"
     void shrink();
 
-    //TO-DO operator[] //reference operator[] (size_type n);
+    //TO-DO operator[] 
+    //reference operator[] (u32 n);
 
-    @function(at)
-    T at(u64 n);
+    @ref "at"
+    T at(u32 n);
     
-    @function(front)
+    @ref "front"
     T front();
     
-    @function(back)
+    @ref "back"
     T back();
 
-    @function(assign)
-    void fill(u64 n, T val);
+    @ref "assign"
+    void fill(u32 n, T val);
 
-    @function(push_back)
+    @ref "push_back"
     void push(T val);
 
     @macro
     T pop()
     {
-        @return @call(back())
-        @call(pop_back())
+        @return "$.back()"
+        @call "$.pop_back()"
     }
 
     @macro
-    void insert(u64 position, T val)
+    void insert(u32 position, T val)
     {
-        @call(insert(begin() + position, val))
+        @call "$.insert($.begin() + ${position}, ${val})"
     }
 
-    @function(erase)
-    void erase(u64 position);
+    @ref "erase"
+    void erase(u32 position);
 
-    @function(clear)
+    @ref "clear"
     void clear();
 }

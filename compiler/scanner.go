@@ -1,5 +1,20 @@
 package compiler
 
+/**
+Meta programming
+
+@serializer(name:"name", omit_empty, index:1)
+@emit string
+@doc string
+@ref string
+@call "$.insert($.begin() + ${position}, ${val})"
+@return "$.back()"
+@include "<vector>"
+@macro
+@meta(name:"name", data:"data") // runtime meta
+
+**/
+
 import (
 	"fmt"
 	"io"
@@ -23,9 +38,8 @@ type Scanner struct {
 	err        ErrorHandler
 	ErrorCount int // total errors
 
-	scanComments bool
-	flags        map[string]bool // flags for condition compiler
-	flagStarted  bool            // if #if is true
+	flags       map[string]bool // flags for condition compiler
+	flagStarted bool            // if #if is true
 
 	char       rune
 	offset     int
@@ -41,7 +55,6 @@ func (scanner *Scanner) Init(file *File, src []byte, err ErrorHandler, scanComme
 	scanner.file = file
 	scanner.src = src
 	scanner.err = err
-	scanner.scanComments = scanComment
 	//scanner.dir, _ = filepath.Split(file.name)
 
 	scanner.char = ' '
@@ -282,6 +295,7 @@ func (s *Scanner) scanString() string {
 
 func (s *Scanner) scanChar() string {
 	// '\'' opening already consumed
+	//TO-DO conver to uint32
 	offset := s.offset - 1
 
 	valid := true
@@ -457,21 +471,13 @@ func (s *Scanner) Scan() (pos Pos, token Token, literal string) {
 			literal = s.scanChar()
 		case '/': // alse maybe operator /
 			if s.char == '/' || s.char == '*' {
-				literal = s.scanComment()
-				if !s.scanComments {
-					return s.Scan()
-				}
-				token = COMMENT
-			} else {
-				token, literal = s.scanOperators()
+				s.scanComment()
+				return s.Scan()
 			}
+			token, literal = s.scanOperators()
 		case '@':
-			if s.isLetter(s.char) {
-				token = META
-				literal = s.scanIdentifier()
-			} else {
-				s.error(s.offset, "invalid meta name")
-			}
+			token = META
+			literal = "@"
 		case '#':
 			//#if #end, flag can add '!' for not operation
 			//nested # is not supported

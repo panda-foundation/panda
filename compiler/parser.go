@@ -104,11 +104,8 @@ type parser struct {
 	errors  ErrorList
 	scanner Scanner
 
-	scanComments bool // if scan comments
-	indent       int  // indentation used for tracing output
-
-	// Comments
-	leadComment *Comment // last lead comment
+	document *Metadata // last lead comment
+	meta     []*Metadata
 
 	// Next token
 	pos Pos    // token position
@@ -214,25 +211,6 @@ func (p *parser) resolve(x Expr) {
 	p.tryResolve(x, true)
 }
 
-// ----------------------------------------------------------------------------
-// Parsing support
-
-// Consume comments, keep the last one
-func (p *parser) consumeComment() *Comment {
-	pos, tok, lit := p.pos, p.tok, p.lit
-	for p.tok == COMMENT {
-		p.pos, p.tok, p.lit = p.scanner.Scan()
-		if p.tok == COMMENT {
-			pos, tok, lit = p.pos, p.tok, p.lit
-		}
-	}
-
-	if tok == COMMENT {
-		return &Comment{Slash: pos, Text: lit}
-	}
-	return nil
-}
-
 // Advance to the next non-comment  In the process, collect
 // any comment groups encountered, and remember the last lead and
 // line comments.
@@ -245,13 +223,24 @@ func (p *parser) consumeComment() *Comment {
 // token on the same line, and that has no tokens after it on the line
 // where it ends.
 func (p *parser) next() {
-	p.leadComment = nil
+	p.document = nil
+	p.meta = p.meta[:0]
 	prev := p.pos
 	p.pos, p.tok, p.lit = p.scanner.Scan()
-	for p.tok == COMMENT {
+	for p.tok == META {
 		// if the comment is on same line as the previous token; it cannot be a lead comment
-		if p.file.Line(p.pos) != p.file.Line(prev) {
-			p.leadComment = p.consumeComment()
+		if p.file.Line(p.pos) == p.file.Line(prev) {
+			p.error(p.pos, "meta data must start from newline")
+			p.parseMetadata()
+		} else {
+			p.meta = p.parseMetadata()
+			for i := len(p.meta) - 1; i > -1; i-- {
+				if p.meta[i].Name == MetaDoc {
+					p.document = p.meta[i]
+					p.meta[i] = p.meta[len(p.meta)-1]
+					p.meta = p.meta[:len(p.meta)-1]
+				}
+			}
 		}
 		p.next()
 	}
@@ -484,6 +473,56 @@ func (p *parser) parseModifier() *Modifier {
 	return m
 }
 
+func (p *parser) parseMetadata() []*Metadata {
+	if p.tok != META {
+		return nil
+	}
+	var meta []*Metadata
+	for p.tok == META {
+		p.next()
+		if p.tok != IDENT {
+			p.expect(IDENT)
+		}
+		m := &Metadata{StartPos: p.pos}
+		if p.tok == STRING {
+			m.Text = p.lit
+			p.next()
+		} else if p.tok == LeftParen {
+			m.Values = make(map[string]*BasicLit)
+			p.next()
+			for {
+				if p.tok == IDENT {
+					name := p.lit
+					p.next()
+					if p.tok == Equal {
+						p.next()
+						switch p.tok {
+						case INT, FLOAT, CHAR, STRING:
+							//TO-DO check if duplicated
+							m.Values[name] = &BasicLit{
+								ValuePos: p.pos,
+								Kind:     p.tok,
+								Value:    p.lit,
+							}
+						default:
+							p.errorExpected(p.pos, "basic literal (char, int, float, string)")
+						}
+						p.next()
+					}
+					if p.tok == RightParen {
+						break
+					}
+					p.expect(Comma)
+				} else {
+					p.expect(IDENT)
+				}
+			}
+		}
+		meta = append(meta, m)
+	}
+	return meta
+}
+
 // ----------------------------------------------------------------------------
 // Common productions
 
@@ -567,8 +606,6 @@ func (p *parser) makeIdentList(list []Expr) []*Ident {
 }
 
 func (p *parser) parseFieldDecl(scope *Scope) *Field {
-	doc := p.leadComment
-
 	// 1st FieldDecl
 	// A type name used as an anonymous field looks like a field identifier.
 	var list []Expr
@@ -608,7 +645,7 @@ func (p *parser) parseFieldDecl(scope *Scope) *Field {
 
 	p.expect(Semi) // call before accessing p.linecomment
 
-	field := &Field{Doc: doc, Names: idents, Type: typ, Tag: tag}
+	field := &Field{Names: idents, Type: typ, Tag: tag}
 	p.declare(field, scope, VarObj, idents...)
 	p.resolve(typ)
 
@@ -757,7 +794,6 @@ func (p *parser) parseFuncType() (*FuncType, *Scope) {
 }
 
 func (p *parser) parseMethodSpec(scope *Scope) *Field {
-	doc := p.leadComment
 	var idents []*Ident
 	var typ Expr
 	x := p.parseTypeName()
@@ -774,7 +810,7 @@ func (p *parser) parseMethodSpec(scope *Scope) *Field {
 	}
 	p.expect(Semi) // call before accessing p.linecomment
 
-	spec := &Field{Doc: doc, Names: idents, Type: typ}
+	spec := &Field{Names: idents, Type: typ}
 	p.declare(spec, scope, FunctionObj, idents...)
 
 	return spec
@@ -1581,7 +1617,7 @@ func (p *parser) parseStmt() (s Stmt) {
 // ----------------------------------------------------------------------------
 // Declarations
 
-func (p *parser) parsePackageDecl(doc *Comment) *PackageDecl {
+func (p *parser) parsePackageDecl(doc *Metadata) *PackageDecl {
 	// The namespace clause is not a declaration;
 	// the package name does not appear in any scope.
 	ident := p.parseQualifiedIdent()
@@ -1598,7 +1634,7 @@ func (p *parser) parsePackageDecl(doc *Comment) *PackageDecl {
 	return spec
 }
 
-func (p *parser) parseImportDecl(doc *Comment) *ImportDecl {
+func (p *parser) parseImportDecl(doc *Metadata) *ImportDecl {
 	ident := p.parseQualifiedIdent()
 	var path *BasicLit
 
@@ -1621,7 +1657,7 @@ func (p *parser) parseImportDecl(doc *Comment) *ImportDecl {
 	}
 }
 
-func (p *parser) parseValueDecl(doc *Comment, m *Modifier) *ValueDecl {
+func (p *parser) parseValueDecl(doc *Metadata, m *Modifier) *ValueDecl {
 	keyword := p.tok
 	p.next()
 	decl := &ValueDecl{
@@ -1674,7 +1710,7 @@ func (p *parser) parseTypeSpec(doc *CommentGroup, _ Token, _ int) Spec {
 }
 */
 
-func (p *parser) parseFuncDecl(doc *Comment, m *Modifier) *FuncDecl {
+func (p *parser) parseFuncDecl(doc *Metadata, m *Modifier) *FuncDecl {
 	pos := p.expect(Function)
 	scope := NewScope(p.topScope) // function scope
 
@@ -1708,13 +1744,13 @@ func (p *parser) parseDecl(sync map[Token]bool) Decl {
 	m := p.parseModifier()
 	switch p.tok {
 	case Const, Var:
-		return p.parseValueDecl(p.leadComment, m)
+		return p.parseValueDecl(p.document, m)
 	/*TO-DO class enum interface
 	case Type:
 		f = p.parseTypeSpec
 	*/
 	case Function:
-		return p.parseFuncDecl(p.leadComment, m)
+		return p.parseFuncDecl(p.document, m)
 
 	default:
 		pos := p.pos
@@ -1736,7 +1772,7 @@ func (p *parser) parseFile() *ProgramFile {
 
 	// namespace
 	p.expect(Package)
-	program.Package = p.parsePackageDecl(p.leadComment)
+	program.Package = p.parsePackageDecl(p.document)
 
 	if p.errors.Len() != 0 {
 		return nil
@@ -1747,7 +1783,7 @@ func (p *parser) parseFile() *ProgramFile {
 	// import
 	for p.tok == Import {
 		p.next()
-		program.Imports = append(program.Imports, p.parseImportDecl(p.leadComment))
+		program.Imports = append(program.Imports, p.parseImportDecl(p.document))
 	}
 
 	// rest of namespace body

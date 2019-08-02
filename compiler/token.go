@@ -8,7 +8,6 @@ const (
 	// special tokens
 	ILLEGAL Token = iota
 	EOF
-	COMMENT
 	DOCUMENT
 
 	// literals
@@ -244,7 +243,6 @@ var (
 
 		ILLEGAL:  "ILLEGAL",
 		EOF:      "EOF",
-		COMMENT:  "COMMENT",
 		DOCUMENT: "DOCUMENT",
 
 		IDENT:  "IDENT",

@@ -5,6 +5,31 @@ import (
 	"fmt"
 )
 
+const (
+	MetaSerialilzer = "serializer"
+	MetaDoc         = "doc"
+	MetaRef         = "ref"
+	MetaCall        = "call"
+	MetaReturn      = "return"
+	MetaInclude     = "include"
+	MetaMacro       = "macro"
+	MetaMeta        = "meta"
+)
+
+var (
+	// max indent
+	indents = []byte("                    ")
+)
+
+func WriteIndent(buffer *bytes.Buffer, indent int) {
+	if indent > len(indents) {
+		for i := indent - len(indents); i > -1; i-- {
+			indents = append(indents, byte(' '))
+		}
+	}
+	buffer.Write(indents[:indent])
+}
+
 // All node types implement the Node interface.
 type Node interface {
 	Pos() Pos // position of first character belonging to the node
@@ -32,30 +57,19 @@ type Decl interface {
 }
 
 // ----------------------------------------------------------------------------
-// Comments
+// Meta
 
-// A Comment node represents a single //-style or /*-style comment.
-type Comment struct {
-	Slash Pos // position of "/" starting the comment
-	Text  string
+// A Metadata node represents a single //-style or /*-style comment.
+type Metadata struct {
+	StartPos Pos // position of "@" starting the comment
+	EndPos   Pos
+	Name     string
+	Text     string
+	Values   map[string]*BasicLit
 }
 
-func (commnet *Comment) Pos() Pos { return commnet.Slash }
-func (commnet *Comment) End() Pos { return Pos(int(commnet.Slash) + len(commnet.Text)) }
-
-func (comment *Comment) GetText() string {
-	text := ""
-	switch comment.Text[1] {
-	case '/':
-		//-style comment (no newline at the end)
-		text = comment.Text[2:]
-	case '*':
-		/*-style comment */
-		text = comment.Text[2 : len(comment.Text)-2]
-	}
-
-	return text
-}
+func (meta *Metadata) Pos() Pos { return meta.StartPos }
+func (meta *Metadata) End() Pos { return Pos(int(meta.StartPos) + len(meta.Text)) }
 
 // ----------------------------------------------------------------------------
 // Modifier
@@ -77,7 +91,6 @@ func (modifier *Modifier) End() Pos { return modifier.To }
 
 // A Field represents a Field declaration list in a struct type
 type Field struct {
-	Doc   *Comment  // associated documentation; or nil
 	Names []*Ident  // field/method/parameter names; or nil
 	Type  Expr      // field/method/parameter type
 	Tag   *BasicLit // field tag; or nil
@@ -256,6 +269,10 @@ type (
 		Rparen   Pos    // position of ")"
 	}
 
+	EmitExpr struct {
+		Meta *Metadata
+	}
+
 	// A RefExpr node represents an expression of the form "*" Expression.
 	// Semantically it could be a unary "*" expression, or a pointer type.
 	//
@@ -350,6 +367,7 @@ func (x *ParenExpr) Pos() Pos    { return x.Lparen }
 func (x *SelectorExpr) Pos() Pos { return x.X.Pos() }
 func (x *IndexExpr) Pos() Pos    { return x.X.Pos() }
 func (x *CallExpr) Pos() Pos     { return x.Fun.Pos() }
+func (x *EmitExpr) Pos() Pos     { return x.Meta.StartPos }
 func (x *RefExpr) Pos() Pos      { return x.Ref }
 func (x *UnaryExpr) Pos() Pos    { return x.OpPos }
 func (x *BinaryExpr) Pos() Pos   { return x.X.Pos() }
@@ -380,6 +398,7 @@ func (x *ParenExpr) End() Pos    { return x.Rparen + 1 }
 func (x *SelectorExpr) End() Pos { return x.Sel.End() }
 func (x *IndexExpr) End() Pos    { return x.Rbrack + 1 }
 func (x *CallExpr) End() Pos     { return x.Rparen + 1 }
+func (x *EmitExpr) End() Pos     { return x.Meta.StartPos + x.Meta.EndPos }
 func (x *RefExpr) End() Pos      { return x.X.End() }
 func (x *UnaryExpr) End() Pos    { return x.X.End() }
 func (x *BinaryExpr) End() Pos   { return x.Y.End() }
@@ -460,6 +479,11 @@ func (x *IndexExpr) Print(buffer *bytes.Buffer, indent int) {
 }
 
 func (x *CallExpr) Print(buffer *bytes.Buffer, indent int) {
+}
+
+func (x *EmitExpr) Print(buffer *bytes.Buffer, indent int) {
+	WriteIndent(buffer, indent)
+	buffer.WriteString(x.Meta.Text)
 }
 
 func (x *RefExpr) Print(buffer *bytes.Buffer, indent int) {
@@ -752,20 +776,20 @@ type (
 	}
 
 	PackageDecl struct {
-		Doc    *Comment  // associated documentation; or nil
+		Doc    *Metadata // associated documentation; or nil
 		Path   *BasicLit // import path
 		EndPos Pos       // end of spec (overrides Path.Pos if nonzero)
 	}
 
 	ImportDecl struct {
-		Doc    *Comment  // associated documentation; or nil
+		Doc    *Metadata // associated documentation; or nil
 		Name   *Ident    // local package name (including "."); or nil
 		Path   *BasicLit // import path
 		EndPos Pos       // end of spec (overrides Path.Pos if nonzero)
 	}
 
 	ValueDecl struct {
-		Doc      *Comment // associated documentation; or nil
+		Doc      *Metadata // associated documentation; or nil
 		Modifier *Modifier
 		Names    []*Ident // value names (len(Names) > 0)
 		Type     Expr     // value type; or nil //TO-DO Generic *GenericLit
@@ -773,7 +797,7 @@ type (
 	}
 
 	ClassDecl struct {
-		Doc       *Comment // associated documentation; or nil
+		Doc       *Metadata // associated documentation; or nil
 		Modifier  *Modifier
 		Parents   []*Expr
 		Name      *Ident // type name
@@ -784,7 +808,7 @@ type (
 	}
 
 	EnumDecl struct {
-		Doc      *Comment // associated documentation; or nil
+		Doc      *Metadata // associated documentation; or nil
 		Modifier *Modifier
 		Parent   Expr
 		Name     *Ident // type name
@@ -793,7 +817,7 @@ type (
 	}
 
 	InterfaceDecl struct {
-		Doc       *Comment // associated documentation; or nil
+		Doc       *Metadata // associated documentation; or nil
 		Modifier  *Modifier
 		Name      *Ident      // type name
 		Functions []*FuncDecl // position of '=', if any
@@ -802,7 +826,7 @@ type (
 
 	// A FuncDecl node represents a function declaration.
 	FuncDecl struct {
-		Doc     *Comment   // associated documentation; or nil
+		Doc     *Metadata  // associated documentation; or nil
 		Name    *Ident     // function/method name
 		Type    *FuncType  // function signature: parameters, results, and position of "func" keyword
 		Body    *BlockStmt // function body; or nil for external (non-Go) function
@@ -1080,7 +1104,6 @@ type ObjKind int
 // The list of possible Object kinds.
 const (
 	Bad         ObjKind = iota // for error handling
-	NS                         // namespace
 	ConstObj                   // constant
 	VarObj                     // variable
 	ClassObj                   // class
@@ -1090,7 +1113,6 @@ const (
 
 var objKindStrings = [...]string{
 	Bad:         "bad",
-	NS:          "namespace",
 	ConstObj:    "const",
 	VarObj:      "var",
 	ClassObj:    "class",
