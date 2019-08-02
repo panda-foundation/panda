@@ -739,13 +739,12 @@ func (p *parser) parseResult(scope *Scope) *Field {
 	if typ != nil {
 		return &Field{Type: typ}
 	}
-	return nil
+	return &Field{Type: &Scalar{Token: Void}}
 }
 
 func (p *parser) parseSignature(scope *Scope) (params *FieldList, result *Field) {
 	params = p.parseParameters(scope, true)
 	result = p.parseResult(scope)
-
 	return
 }
 

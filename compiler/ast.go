@@ -98,6 +98,16 @@ func (f *Field) End() Pos {
 }
 
 func (f *Field) Print(buffer *bytes.Buffer, indent int) {
+	if f.Names != nil {
+		for i, v := range f.Names {
+			if i != 0 {
+				buffer.WriteString(", ")
+			}
+			f.Type.Print(buffer, indent)
+			buffer.WriteString(" ")
+			v.Print(buffer, indent)
+		}
+	}
 }
 
 // A FieldList represents a list of Fields, enclosed by parentheses or braces.
@@ -132,7 +142,10 @@ func (f *FieldList) End() Pos {
 }
 
 func (f *FieldList) Print(buffer *bytes.Buffer, indent int) {
-	for _, v := range f.List {
+	for i, v := range f.List {
+		if i != 0 {
+			buffer.WriteString(", ")
+		}
 		v.Print(buffer, indent)
 	}
 }
@@ -416,6 +429,19 @@ func (x *EllipsisLit) Print(buffer *bytes.Buffer, indent int) {
 }
 
 func (x *BasicLit) Print(buffer *bytes.Buffer, indent int) {
+	switch x.Kind {
+	case INT, FLOAT:
+		buffer.WriteString(x.Value)
+	case CHAR:
+		//TO-DO convert to unicode char
+		buffer.WriteString(x.Value)
+	case STRING:
+		buffer.WriteString(x.Value)
+	case True, False, Void, Null:
+		x.Kind.Print(buffer)
+	default:
+		//TO-DO panic to error
+	}
 }
 
 func (x *FuncLit) Print(buffer *bytes.Buffer, indent int) {
@@ -843,8 +869,17 @@ func (*InterfaceDecl) declNode() {}
 func (*BadDecl) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (*ValueDecl) Print(buffer *bytes.Buffer, indent int) {
-
+func (v *ValueDecl) Print(buffer *bytes.Buffer, indent int) {
+	for i, n := range v.Names {
+		v.Type.Print(buffer, indent)
+		buffer.WriteString(" ")
+		buffer.WriteString(n.Name)
+		if len(v.Values) == len(v.Names) {
+			buffer.WriteString(" = ")
+			v.Values[i].Print(buffer, indent)
+		}
+		buffer.WriteString(";\n")
+	}
 }
 func (*FuncDecl) Print(buffer *bytes.Buffer, indent int) {
 
@@ -865,9 +900,12 @@ func (*ValueDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
 
 }
 func (f *FuncDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
-	f.Type.Print(buffer, indent)
+	f.Type.Result.Type.Print(buffer, indent)
 	buffer.WriteString(" ")
 	f.Name.Print(buffer, indent)
+	buffer.WriteString("(")
+	f.Type.Params.Print(buffer, indent)
+	buffer.WriteString(");\n")
 }
 func (*ClassDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
 
@@ -902,10 +940,12 @@ func (f *ProgramFile) Print(buffer *bytes.Buffer, indent int) {
 	for _, v := range f.Functions {
 		v.PrintDecl(buffer, indent)
 	}
+	buffer.WriteString("\n")
 
 	for _, v := range f.Values {
 		v.Print(buffer, indent)
 	}
+	buffer.WriteString("\n")
 
 	for _, v := range f.Functions {
 		v.Print(buffer, indent)
@@ -1059,49 +1099,3 @@ var objKindStrings = [...]string{
 }
 
 func (kind ObjKind) String() string { return objKindStrings[kind] }
-
-/*
-type ProgramUnit struct {
-	Document  []string
-	Package string
-	Includes  []string
-
-	Declarations []*IdentifierDecl
-	Functions    []*FunctionDecl
-	Enums        []*EnumDecl
-	Classes      []*ClassDecl
-}
-
-type Type struct {
-	Scalar      Token
-	QualifiedId string
-	//TO-DO generic
-}
-
-type EnumDecl struct {
-	Document []string
-	Modifier *Modifier
-}
-
-type ClassDecl struct {
-	Document []string
-	Modifier *Modifier
-
-	Parents      []string
-	Templates    []string
-	Declarations []*IdentifierDecl
-	Functions    []*FunctionDecl
-}
-
-type FunctionDecl struct {
-	Document []string
-	Modifier *Modifier
-
-	Templates []string
-}
-
-type IdentifierDecl struct {
-	Document []string
-	Modifier *Modifier
-	IsVar    bool
-}*/

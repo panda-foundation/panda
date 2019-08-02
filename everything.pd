@@ -30,7 +30,7 @@ var double_v double; // alias f64
 var f32_v f32;
 var f64_v f64;
 
-var string_v string;
+var string_v string = "hello world\n";
 
 //@doc main function
 public function main() int
@@ -41,6 +41,12 @@ public function main() int
 //@doc void return type can be ommited
 function print() 
 {
+    //@cpp(emit=`std::cout << << std::endl;`)
+}
+
+function add(a, b int) int
+{
+    return a + b;
     //@cpp(emit=`std::cout << << std::endl;`)
 }
 
