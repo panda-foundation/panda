@@ -52,6 +52,7 @@ const (
 	True
 	Try
 	Var
+	Weak
 	keyword_end
 
 	// scalars
@@ -168,6 +169,7 @@ var (
 		True:      "true",
 		Try:       "try",
 		Var:       "var",
+		Weak:      "weak",
 
 		Bool:    "bool",
 		Char:    "char",
@@ -357,9 +359,6 @@ var (
 		Ellipsis:         "...",
 	}
 
-	//keywords     map[string]Token
-	//scalars      map[string]Token
-	//operators    map[string]Token
 	allTokens    map[string]Token
 	operatorRoot *OperatorNode
 )
@@ -367,22 +366,16 @@ var (
 func init() {
 	allTokens = make(map[string]Token)
 
-	//keywords = make(map[string]Token)
 	for i := keyword_begin + 1; i < keyword_end; i++ {
-		//keywords[tokens[i]] = i
 		allTokens[tokens[i]] = i
 	}
 
-	//scalars = make(map[string]Token)
 	for i := scalar_begin + 1; i < scalar_end; i++ {
-		//scalars[tokens[i]] = i
 		allTokens[tokens[i]] = i
 	}
 
-	//operators = make(map[string]Token)
 	operatorRoot = NewOperatorNode()
 	for i := operator_begin + 1; i < operator_end; i++ {
-		//operators[tokens[i]] = i
 		allTokens[tokens[i]] = i
 		operatorRoot.Insert(tokens[i])
 	}

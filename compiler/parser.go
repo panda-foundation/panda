@@ -125,13 +125,13 @@ type parser struct {
 	// Non-syntactic parser control
 	exprLev int  // < 0: in control clause, >= 0: in expression
 	inRhs   bool // if set, the parser is parsing a rhs expression
+	class   *ClassDecl
 
 	// Ordinary identifier scopes
-	pkgScope   *Scope        // namespaceScope.Outer == nil
-	topScope   *Scope        // top-most scope; may be pkgScope
-	unresolved []*Ident      // unresolved identifiers
-	imports    []*ImportSpec // list of imports
-
+	pkgScope    *Scope   // namespaceScope.Outer == nil
+	topScope    *Scope   // top-most scope; may be pkgScope
+	unresolved  []*Ident // unresolved identifiers
+	badDecl     []*BadDecl
 	targetStack [][]*Ident // stack of unresolved labels
 }
 
@@ -475,6 +475,10 @@ func (p *parser) parseModifier() *Modifier {
 	}
 	if p.tok == Static {
 		m.Static = true
+		p.next()
+	}
+	if p.tok == Weak {
+		m.Weak = true
 		p.next()
 	}
 	return m
@@ -1578,9 +1582,7 @@ func (p *parser) parseStmt() (s Stmt) {
 // ----------------------------------------------------------------------------
 // Declarations
 
-type parseSpecFunction func(doc *Comment, keyword Token, iota int) Spec
-
-func (p *parser) parsePackageSpec(doc *Comment) *PackageSpec {
+func (p *parser) parsePackageDecl(doc *Comment) *PackageDecl {
 	// The namespace clause is not a declaration;
 	// the package name does not appear in any scope.
 	ident := p.parseQualifiedIdent()
@@ -1590,14 +1592,14 @@ func (p *parser) parsePackageSpec(doc *Comment) *PackageSpec {
 		return nil
 	}
 
-	spec := &PackageSpec{
+	spec := &PackageDecl{
 		Doc:  doc,
 		Path: &BasicLit{ValuePos: ident.Pos(), Kind: STRING, Value: ident.Name},
 	}
 	return spec
 }
 
-func (p *parser) parseImportSpec(doc *Comment) *ImportSpec {
+func (p *parser) parseImportDecl(doc *Comment) *ImportDecl {
 	ident := p.parseQualifiedIdent()
 	var path *BasicLit
 
@@ -1613,31 +1615,32 @@ func (p *parser) parseImportSpec(doc *Comment) *ImportSpec {
 	}
 
 	// collect imports
-	return &ImportSpec{
+	return &ImportDecl{
 		Doc:  doc,
 		Name: ident,
 		Path: path,
 	}
 }
 
-func (p *parser) parseValueSpec(doc *Comment, m *Modifier) *ValueSpec {
+func (p *parser) parseValueDecl(doc *Comment, m *Modifier) *ValueDecl {
 	keyword := p.tok
 	p.next()
-	spec := &ValueSpec{
-		Doc:   doc,
-		Names: p.parseIdentList(),
-		Type:  p.tryType(),
+	decl := &ValueDecl{
+		Doc:      doc,
+		Modifier: m,
+		Names:    p.parseIdentList(),
+		Type:     p.tryType(),
 	}
 
 	pos := p.pos
 	// always permit optional initialization for more tolerant parsing
 	if p.tok == Assign {
 		p.next()
-		spec.Values = p.parseRhsList()
+		decl.Values = p.parseRhsList()
 	}
 	p.expect(Semi) // call before accessing p.linecomment
 
-	if spec.Values == nil && spec.Type == nil {
+	if decl.Values == nil && decl.Type == nil {
 		p.error(pos, "missing type or initialization")
 	}
 
@@ -1645,9 +1648,9 @@ func (p *parser) parseValueSpec(doc *Comment, m *Modifier) *ValueSpec {
 	if keyword == Var {
 		kind = VarObj
 	}
-	p.declare(spec, p.topScope, kind, spec.Names...)
+	p.declare(decl, p.topScope, kind, decl.Names...)
 
-	return spec
+	return decl
 }
 
 /*
@@ -1706,14 +1709,7 @@ func (p *parser) parseDecl(sync map[Token]bool) Decl {
 	m := p.parseModifier()
 	switch p.tok {
 	case Const, Var:
-		//pack to general decl
-		tok := p.tok
-		return &GenDecl{
-			Doc:    p.leadComment,
-			TokPos: p.pos,
-			Tok:    tok,
-			Spec:   p.parseValueSpec(p.leadComment, m),
-		}
+		return p.parseValueDecl(p.leadComment, m)
 	/*TO-DO class enum interface
 	case Type:
 		f = p.parseTypeSpec
@@ -1741,7 +1737,7 @@ func (p *parser) parseFile() *ProgramFile {
 
 	// namespace
 	p.expect(Package)
-	program.Package = p.parsePackageSpec(p.leadComment)
+	program.Package = p.parsePackageDecl(p.leadComment)
 
 	if p.errors.Len() != 0 {
 		return nil
@@ -1752,12 +1748,21 @@ func (p *parser) parseFile() *ProgramFile {
 	// import
 	for p.tok == Import {
 		p.next()
-		program.Imports = append(program.Imports, p.parseImportSpec(p.leadComment))
+		program.Imports = append(program.Imports, p.parseImportDecl(p.leadComment))
 	}
 
 	// rest of namespace body
 	for p.tok != EOF {
-		program.Decls = append(program.Decls, p.parseDecl(declStart))
+		decl := p.parseDecl(declStart)
+		switch v := decl.(type) {
+		case *ValueDecl:
+			program.Values = append(program.Values, v)
+		case *FuncDecl:
+			program.Functions = append(program.Functions, v)
+		case *BadDecl:
+			p.badDecl = append(p.badDecl, v)
+
+		}
 	}
 
 	p.closeScope()

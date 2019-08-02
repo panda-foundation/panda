@@ -66,6 +66,7 @@ type Modifier struct {
 	To     Pos
 	Public bool
 	Static bool
+	Weak   bool
 }
 
 func (modifier *Modifier) Pos() Pos { return modifier.From }
@@ -205,6 +206,13 @@ type (
 		Incomplete bool   // true if (source) expressions are missing in the Elts list
 	}
 
+	// A GenericLit node represents a literal of generic define.
+	GenericLit struct {
+		Less    Pos    // Pos position
+		Types   []Expr // <int, int> <T>
+		Greater Pos    // > position
+	}
+
 	// A ParenExpr node represents a parenthesized expression.
 	ParenExpr struct {
 		Lparen Pos  // position of "("
@@ -324,6 +332,7 @@ func (x *CompositeLit) Pos() Pos {
 	}
 	return x.Lbrace
 }
+func (x *GenericLit) Pos() Pos   { return x.Less }
 func (x *ParenExpr) Pos() Pos    { return x.Lparen }
 func (x *SelectorExpr) Pos() Pos { return x.X.Pos() }
 func (x *IndexExpr) Pos() Pos    { return x.X.Pos() }
@@ -353,6 +362,7 @@ func (x *EllipsisLit) End() Pos {
 func (x *BasicLit) End() Pos     { return Pos(int(x.ValuePos) + len(x.Value)) }
 func (x *FuncLit) End() Pos      { return x.Body.End() }
 func (x *CompositeLit) End() Pos { return x.Rbrace + 1 }
+func (x *GenericLit) End() Pos   { return x.Greater }
 func (x *ParenExpr) End() Pos    { return x.Rparen + 1 }
 func (x *SelectorExpr) End() Pos { return x.Sel.End() }
 func (x *IndexExpr) End() Pos    { return x.Rbrack + 1 }
@@ -704,110 +714,6 @@ func (s *ForStmt) Print(buffer *bytes.Buffer, indent int) {
 
 // ----------------------------------------------------------------------------
 // Declarations
-
-// A Spec node represents a single (non-parenthesized) import,
-// constant, type, or variable declaration.
-//
-type (
-	// The Spec type stands for any of *ImportSpec, *ValueSpec, and *TypeSpec.
-	Spec interface {
-		Node
-		specNode()
-	}
-
-	PackageSpec struct {
-		Doc    *Comment  // associated documentation; or nil
-		Path   *BasicLit // import path
-		EndPos Pos       // end of spec (overrides Path.Pos if nonzero)
-	}
-
-	// An ImportSpec node represents a single package import.
-	ImportSpec struct {
-		Doc    *Comment  // associated documentation; or nil
-		Name   *Ident    // local package name (including "."); or nil
-		Path   *BasicLit // import path
-		EndPos Pos       // end of spec (overrides Path.Pos if nonzero)
-	}
-
-	// A ValueSpec node represents a constant or variable declaration
-	// (ConstSpec or VarSpec production).
-	//
-	ValueSpec struct {
-		Doc    *Comment // associated documentation; or nil
-		Names  []*Ident // value names (len(Names) > 0)
-		Type   Expr     // value type; or nil
-		Values []Expr   // initial values; or nil
-	}
-
-	// A TypeSpec node represents a type declaration (TypeSpec production).
-	TypeSpec struct {
-		Doc    *Comment // associated documentation; or nil
-		Name   *Ident   // type name
-		Assign Pos      // position of '=', if any
-		Type   Expr     // *Ident, *ParenExpr, *SelectorExpr, *StarExpr, or any of the *XxxTypes
-	}
-)
-
-// Pos and End implementations for spec nodes.
-func (s *PackageSpec) Pos() Pos {
-	if s.Path != nil {
-		return s.Path.Pos()
-	}
-	return s.Path.Pos()
-}
-func (s *ImportSpec) Pos() Pos {
-	if s.Name != nil {
-		return s.Name.Pos()
-	}
-	return s.Path.Pos()
-}
-func (s *ValueSpec) Pos() Pos { return s.Names[0].Pos() }
-func (s *TypeSpec) Pos() Pos  { return s.Name.Pos() }
-func (s *PackageSpec) End() Pos {
-	if s.EndPos != 0 {
-		return s.EndPos
-	}
-	return s.Path.End()
-}
-func (s *ImportSpec) End() Pos {
-	if s.EndPos != 0 {
-		return s.EndPos
-	}
-	return s.Path.End()
-}
-
-func (s *ValueSpec) End() Pos {
-	if n := len(s.Values); n > 0 {
-		return s.Values[n-1].End()
-	}
-	if s.Type != nil {
-		return s.Type.End()
-	}
-	return s.Names[len(s.Names)-1].End()
-}
-func (s *TypeSpec) End() Pos { return s.Type.End() }
-
-// specNode() ensures that only spec nodes can be
-// assigned to a Spec.
-//
-func (*PackageSpec) specNode() {}
-func (*ImportSpec) specNode()  {}
-func (*ValueSpec) specNode()   {}
-func (*TypeSpec) specNode()    {}
-
-func (*PackageSpec) Print(buffer *bytes.Buffer, indent int) {
-
-}
-func (*ImportSpec) Print(buffer *bytes.Buffer, indent int) {
-
-}
-func (*ValueSpec) Print(buffer *bytes.Buffer, indent int) {
-
-}
-func (*TypeSpec) Print(buffer *bytes.Buffer, indent int) {
-
-}
-
 // A declaration is represented by one of the following declaration nodes.
 //
 type (
@@ -819,46 +725,100 @@ type (
 		From, To Pos // position range of bad declaration
 	}
 
-	// A GenDecl node (generic declaration node) represents an import,
-	// constant, type or variable declaration. A valid Lparen position
-	// (Lparen.IsValid()) indicates a parenthesized declaration.
-	//
-	// Relationship between Tok value and Specs element type:
-	//
-	//	IMPORT    *ImportSpec
-	//	Const     *ValueSpec
-	//	VAR       *ValueSpec
-	//	Class     *ClassSpec
-	//  Enum      *EnumSpec
-	//  Interface *InterfaceSpec
-	//
-	GenDecl struct {
-		Doc    *Comment // associated documentation; or nil
-		TokPos Pos      // position of Tok
-		Tok    Token    // Const, Var, Class, Enum. Interface
-		Spec   Spec
+	PackageDecl struct {
+		Doc    *Comment  // associated documentation; or nil
+		Path   *BasicLit // import path
+		EndPos Pos       // end of spec (overrides Path.Pos if nonzero)
+	}
+
+	ImportDecl struct {
+		Doc    *Comment  // associated documentation; or nil
+		Name   *Ident    // local package name (including "."); or nil
+		Path   *BasicLit // import path
+		EndPos Pos       // end of spec (overrides Path.Pos if nonzero)
+	}
+
+	ValueDecl struct {
+		Doc      *Comment // associated documentation; or nil
+		Modifier *Modifier
+		Names    []*Ident // value names (len(Names) > 0)
+		Type     Expr     // value type; or nil //TO-DO Generic *GenericLit
+		Values   []Expr   // initial values; or nil
+	}
+
+	ClassDecl struct {
+		Doc       *Comment // associated documentation; or nil
+		Modifier  *Modifier
+		Parents   []*Expr
+		Name      *Ident // type name
+		Generic   *GenericLit
+		Values    []*ValueDecl
+		Functions []*FuncDecl
+		EndPos    Pos
+	}
+
+	EnumDecl struct {
+		Doc      *Comment // associated documentation; or nil
+		Modifier *Modifier
+		Parent   Expr
+		Name     *Ident // type name
+		//TO-DO name, value pair
+		EndPos Pos
+	}
+
+	InterfaceDecl struct {
+		Doc       *Comment // associated documentation; or nil
+		Modifier  *Modifier
+		Name      *Ident      // type name
+		Functions []*FuncDecl // position of '=', if any
+		EndPos    Pos
 	}
 
 	// A FuncDecl node represents a function declaration.
 	FuncDecl struct {
-		Doc  *Comment   // associated documentation; or nil
-		Name *Ident     // function/method name
-		Type *FuncType  // function signature: parameters, results, and position of "func" keyword
-		Body *BlockStmt // function body; or nil for external (non-Go) function
+		Doc     *Comment   // associated documentation; or nil
+		Name    *Ident     // function/method name
+		Type    *FuncType  // function signature: parameters, results, and position of "func" keyword
+		Body    *BlockStmt // function body; or nil for external (non-Go) function
+		Generic *GenericLit
 	}
-
-	// TO-DO class decl, enum decl
 )
 
-// Pos and End implementations for declaration nodes.
-
-func (d *BadDecl) Pos() Pos  { return d.From }
-func (d *GenDecl) Pos() Pos  { return d.TokPos }
-func (d *FuncDecl) Pos() Pos { return d.Type.Pos() }
+func (d *BadDecl) Pos() Pos     { return d.From }
+func (s *PackageDecl) Pos() Pos { return s.Path.Pos() }
+func (s *ImportDecl) Pos() Pos {
+	if s.Name != nil {
+		return s.Name.Pos()
+	}
+	return s.Path.Pos()
+}
+func (s *ValueDecl) Pos() Pos     { return s.Names[0].Pos() }
+func (d *FuncDecl) Pos() Pos      { return d.Type.Pos() }
+func (c *ClassDecl) Pos() Pos     { return c.Name.Pos() }
+func (c *EnumDecl) Pos() Pos      { return c.Name.Pos() }
+func (c *InterfaceDecl) Pos() Pos { return c.Name.Pos() }
 
 func (d *BadDecl) End() Pos { return d.To }
-func (d *GenDecl) End() Pos {
-	return d.Spec.End()
+func (s *PackageDecl) End() Pos {
+	if s.EndPos != 0 {
+		return s.EndPos
+	}
+	return s.Path.End()
+}
+func (s *ImportDecl) End() Pos {
+	if s.EndPos != 0 {
+		return s.EndPos
+	}
+	return s.Path.End()
+}
+func (s *ValueDecl) End() Pos {
+	if n := len(s.Values); n > 0 {
+		return s.Values[n-1].End()
+	}
+	if s.Type != nil {
+		return s.Type.End()
+	}
+	return s.Names[len(s.Names)-1].End()
 }
 func (d *FuncDecl) End() Pos {
 	if d.Body != nil {
@@ -866,28 +826,42 @@ func (d *FuncDecl) End() Pos {
 	}
 	return d.Type.End()
 }
+func (c *ClassDecl) End() Pos     { return c.EndPos }
+func (c *EnumDecl) End() Pos      { return c.EndPos }
+func (c *InterfaceDecl) End() Pos { return c.EndPos }
 
 // declNode() ensures that only declaration nodes can be
 // assigned to a Decl.
 //
-func (*BadDecl) declNode()  {}
-func (*GenDecl) declNode()  {}
-func (*FuncDecl) declNode() {}
+func (*BadDecl) declNode()       {}
+func (*ValueDecl) declNode()     {}
+func (*FuncDecl) declNode()      {}
+func (*ClassDecl) declNode()     {}
+func (*EnumDecl) declNode()      {}
+func (*InterfaceDecl) declNode() {}
 
 func (*BadDecl) Print(buffer *bytes.Buffer, indent int) {
 
 }
-func (*GenDecl) Print(buffer *bytes.Buffer, indent int) {
+func (*ValueDecl) Print(buffer *bytes.Buffer, indent int) {
 
 }
 func (*FuncDecl) Print(buffer *bytes.Buffer, indent int) {
 
 }
+func (*ClassDecl) Print(buffer *bytes.Buffer, indent int) {
 
+}
+func (*EnumDecl) Print(buffer *bytes.Buffer, indent int) {
+
+}
+func (*InterfaceDecl) Print(buffer *bytes.Buffer, indent int) {
+
+}
 func (*BadDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
 
 }
-func (*GenDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
+func (*ValueDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
 
 }
 func (f *FuncDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
@@ -895,50 +869,45 @@ func (f *FuncDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
 	buffer.WriteString(" ")
 	f.Name.Print(buffer, indent)
 }
+func (*ClassDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
+
+}
+func (*EnumDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
+
+}
+func (*InterfaceDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
+
+}
 
 // ----------------------------------------------------------------------------
 // Files and packages
-
-// A File node represents a Go source file.
-//
-// The Comments list contains all comments in the source file in order of
-// appearance, including the comments that are pointed to from other nodes
-// via Doc and Comment fields.
-//
-// For correct printing of source code containing comments (using packages
-// go/format and go/printer), special care must be taken to update comments
-// when a File's syntax tree is modified: For printing, comments are interspersed
-// between tokens based on their position. If syntax tree nodes are
-// removed or moved, relevant comments in their vicinity must also be removed
-// (from the File.Comments list) or moved accordingly (by updating their
-// positions). A CommentMap may be used to facilitate some of these operations.
-//
-// Whether and how a comment is associated with a node depends on the
-// interpretation of the syntax tree by the manipulating program: Except for Doc
-// and Comment comments directly associated with nodes, the remaining comments
-// are "free-floating" (see also issues #18593, #20744).
-//
 type ProgramFile struct {
-	Package    *PackageSpec  // position of "namespace" keyword
-	Decls      []Decl        // top-level declarations; or nil
 	Scope      *Scope        // package scope (this file only)
-	Imports    []*ImportSpec // imports in this file
-	Unresolved []*Ident      // unresolved identifiers in this file
+	Package    *PackageDecl  // position of "namespace" keyword
+	Imports    []*ImportDecl // imports in this file
+	Values     []*ValueDecl
+	Functions  []*FuncDecl
+	Classes    []*ClassDecl
+	Enums      []*EnumDecl
+	Interfaces []*InterfaceDecl
+	EndPos     Pos
+	Unresolved []*Ident // unresolved identifiers in this file
 }
 
 func (f *ProgramFile) Pos() Pos { return f.Package.Pos() }
 func (f *ProgramFile) End() Pos {
-	if n := len(f.Decls); n > 0 {
-		return f.Decls[n-1].End()
-	}
-	return f.Package.End()
+	return f.EndPos
 }
 func (f *ProgramFile) Print(buffer *bytes.Buffer, indent int) {
-	for _, v := range f.Decls {
+	for _, v := range f.Functions {
 		v.PrintDecl(buffer, indent)
 	}
 
-	for _, v := range f.Decls {
+	for _, v := range f.Values {
+		v.Print(buffer, indent)
+	}
+
+	for _, v := range f.Functions {
 		v.Print(buffer, indent)
 	}
 }
@@ -1035,23 +1004,20 @@ func (obj *Object) Pos() Pos {
 				return n.Pos()
 			}
 		}
-	case *PackageSpec:
+	case *PackageDecl:
 		return d.Path.Pos()
-	case *ImportSpec:
+	case *ImportDecl:
 		if d.Name != nil && d.Name.Name == name {
 			return d.Name.Pos()
 		}
 		return d.Path.Pos()
-	case *ValueSpec:
+	case *ValueDecl:
 		for _, n := range d.Names {
 			if n.Name == name {
 				return n.Pos()
 			}
 		}
-	case *TypeSpec:
-		if d.Name.Name == name {
-			return d.Name.Pos()
-		}
+	//TO-DO class enum interface
 	case *FuncDecl:
 		if d.Name.Name == name {
 			return d.Name.Pos()
