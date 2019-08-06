@@ -472,6 +472,33 @@ func (p *parser) parseModifier() *Modifier {
 	return m
 }
 
+func (p *parser) parseGeneric(resolve bool) *GenericLit {
+	if p.tok == Less {
+		g := &GenericLit{
+			Less: p.pos,
+		}
+		p.next()
+		if resolve {
+			g.Types = append(g.Types, p.tryType())
+		} else {
+			g.Types = append(g.Types, p.tryIdentOrType())
+		}
+		for p.tok == Comma {
+			p.next()
+			if resolve {
+				g.Types = append(g.Types, p.tryType())
+			} else {
+				g.Types = append(g.Types, p.tryIdentOrType())
+			}
+		}
+		g.Greater = p.pos
+		p.expect(Greater)
+		return g
+
+	}
+	return nil
+}
+
 func (p *parser) parseMetadata() []*Metadata {
 	if p.tok != META {
 		return nil
@@ -519,6 +546,7 @@ func (p *parser) parseMetadata() []*Metadata {
 					p.expect(IDENT)
 				}
 			}
+			p.next()
 		}
 		meta = append(meta, m)
 	}
@@ -585,8 +613,6 @@ func (p *parser) parseTypeName() Expr {
 		sel := p.parseIdent()
 		return &SelectorExpr{X: ident, Sel: sel}
 	}
-
-	//TO-DO generic eg: <int, int>
 
 	return ident
 }
@@ -710,6 +736,7 @@ func (p *parser) parseVarType(isParam bool) Expr {
 func (p *parser) parseParameterList(scope *Scope, ellipsisOk bool) (params []*Field) {
 	// 1st ParameterDecl
 	// A list of identifiers looks like a list of type names.
+	//TO-DO parse default value
 	var list []Expr
 	for {
 		list = append(list, p.parseVarType(ellipsisOk))
@@ -1729,8 +1756,9 @@ func (p *parser) parseFuncDecl(doc *Metadata, m *Modifier) *FuncDecl {
 	pos := p.expect(Function)
 	scope := NewScope(p.topScope) // function scope
 
-	//TO-DO parse <> generic
 	ident := p.parseIdent()
+	generic := p.parseGeneric(false)
+	//TO-DO parse <> generic
 
 	params, result := p.parseSignature(scope)
 
@@ -1747,7 +1775,8 @@ func (p *parser) parseFuncDecl(doc *Metadata, m *Modifier) *FuncDecl {
 			Params: params,
 			Result: result,
 		},
-		Body: body,
+		Body:    body,
+		Generic: generic,
 	}
 
 	p.declare(decl, p.pkgScope, FunctionObj, ident)

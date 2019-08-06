@@ -39,7 +39,7 @@ public function main() int
 }
 
 @doc "void return type can be ommited"
-function print<T>(T &t) 
+function print<T>(&t T) 
 {
     @emit `std::cout << t << std::endl;`
 }

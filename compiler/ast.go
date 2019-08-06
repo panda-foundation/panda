@@ -200,6 +200,7 @@ type (
 	Ident struct {
 		NamePos Pos     // identifier position
 		Name    string  // identifier name
+		Ref     bool    // if pass by reference
 		Obj     *Object // denoted object; or nil
 	}
 
@@ -796,6 +797,7 @@ type (
 		Names    []*Ident // value names (len(Names) > 0)
 		Type     Expr     // value type; or nil //TO-DO Generic *GenericLit
 		Values   []Expr   // initial values; or nil
+		Generic  *GenericLit
 	}
 
 	ClassDecl struct {
@@ -824,6 +826,7 @@ type (
 		Name      *Ident      // type name
 		Functions []*FuncDecl // position of '=', if any
 		EndPos    Pos
+		Generic   *GenericLit
 	}
 
 	// A FuncDecl node represents a function declaration.
