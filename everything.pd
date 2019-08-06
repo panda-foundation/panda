@@ -1,6 +1,6 @@
 package main;
 
-//@doc `import system package`
+@doc `import other packages`
 import system;
 import net network;
 
@@ -32,16 +32,16 @@ var f64_v f64;
 
 var string_v string = "hello world\n";
 
-//@doc main function
+@doc "main function"
 public function main() int
 {
     return 0;
 }
 
-//@doc void return type can be ommited
-function print() 
+@doc "void return type can be ommited"
+function print<T>(T &t) 
 {
-    //@cpp(emit=`std::cout << << std::endl;`)
+    @emit `std::cout << t << std::endl;`
 }
 
 function add(a, b int) int

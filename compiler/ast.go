@@ -6,8 +6,9 @@ import (
 )
 
 const (
-	MetaSerialilzer = "serializer"
 	MetaDoc         = "doc"
+	MetaEmit        = "emit"
+	MetaSerialilzer = "serializer"
 	MetaRef         = "ref"
 	MetaCall        = "call"
 	MetaReturn      = "return"
@@ -426,6 +427,7 @@ func (*ParenExpr) exprNode()    {}
 func (*SelectorExpr) exprNode() {}
 func (*IndexExpr) exprNode()    {}
 func (*CallExpr) exprNode()     {}
+func (*EmitExpr) exprNode()     {}
 func (*UnaryExpr) exprNode()    {}
 func (*BinaryExpr) exprNode()   {}
 func (*KeyValueExpr) exprNode() {}

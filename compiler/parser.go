@@ -228,10 +228,10 @@ func (p *parser) next() {
 	prev := p.pos
 	p.pos, p.tok, p.lit = p.scanner.Scan()
 	for p.tok == META {
-		// if the comment is on same line as the previous token; it cannot be a lead comment
+		// invalid: if the meta is on same line as the previous token
 		if p.file.Line(p.pos) == p.file.Line(prev) {
 			p.error(p.pos, "meta data must start from newline")
-			p.parseMetadata()
+			p.parseMetadata() // skip meta
 		} else {
 			p.meta = p.parseMetadata()
 			for i := len(p.meta) - 1; i > -1; i-- {
@@ -242,7 +242,6 @@ func (p *parser) next() {
 				}
 			}
 		}
-		p.next()
 	}
 }
 
@@ -484,6 +483,9 @@ func (p *parser) parseMetadata() []*Metadata {
 			p.expect(IDENT)
 		}
 		m := &Metadata{StartPos: p.pos}
+		m.Name = p.lit
+		p.next()
+
 		if p.tok == STRING {
 			m.Text = p.lit
 			p.next()
@@ -869,7 +871,6 @@ func (p *parser) parseStmtList() (list []Stmt) {
 	for p.tok != Case && p.tok != Default && p.tok != RightBrace && p.tok != EOF {
 		list = append(list, p.parseStmt())
 	}
-
 	return
 }
 
@@ -1572,6 +1573,20 @@ func (p *parser) parseForStmt() Stmt {
 }
 
 func (p *parser) parseStmt() (s Stmt) {
+	if len(p.meta) > 0 {
+		// only 1 "@emit" is valid here
+		if len(p.meta) > 1 || p.meta[0].Name != MetaEmit {
+			p.error(p.meta[0].StartPos, "invalid meta.")
+			s = &BadStmt{From: p.meta[0].StartPos, To: p.meta[0].EndPos}
+			p.meta = p.meta[:0]
+			return
+		}
+		s = &ExprStmt{X: &EmitExpr{
+			Meta: p.meta[0],
+		}}
+		p.meta = p.meta[:0]
+		return
+	}
 	switch p.tok {
 	case Const, Var:
 		s = &DeclStmt{Decl: p.parseDecl(stmtStart)}

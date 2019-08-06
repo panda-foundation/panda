@@ -3,15 +3,22 @@ package compiler
 /**
 Meta programming
 
-@serializer(name:"name", omit_empty, index:1)
+// stmt
 @emit string
+
+// include
+@include "<vector>"
+
+// doc and auto generation related
 @doc string
+@serializer(name:"name", omit_empty, index:1)
+@meta(name:"name", data:"data") // runtime meta
+
+// cpp related // later
 @ref string
 @call "$.insert($.begin() + ${position}, ${val})"
 @return "$.back()"
-@include "<vector>"
 @macro
-@meta(name:"name", data:"data") // runtime meta
 
 **/
 
@@ -49,9 +56,9 @@ type Scanner struct {
 
 // Init scanner
 func (scanner *Scanner) Init(file *File, src []byte, err ErrorHandler, scanComment bool, flags []string) {
-	//if file.size != len(src) {
-	//panic(fmt.Sprintf("file size (%d) does not match src len (%d)", file.size, len(src)))
-	//}
+	if file.size != len(src) {
+		panic(fmt.Sprintf("file size (%d) does not match src len (%d)", file.size, len(src)))
+	}
 	scanner.file = file
 	scanner.src = src
 	scanner.err = err
@@ -77,7 +84,7 @@ func (s *Scanner) next() {
 	if s.readOffset < len(s.src) {
 		s.offset = s.readOffset
 		if s.char == '\n' {
-			//s.file.AddLine(s.offset)
+			s.file.AddLine(s.offset)
 		}
 		r, w := rune(s.src[s.readOffset]), 1
 		switch {
@@ -97,7 +104,7 @@ func (s *Scanner) next() {
 	} else {
 		s.offset = len(s.src)
 		if s.char == '\n' {
-			//s.file.AddLine(s.offset)
+			s.file.AddLine(s.offset)
 		}
 		s.char = eof
 	}
@@ -113,7 +120,7 @@ func (s *Scanner) peek() byte {
 func (s *Scanner) error(offset int, msg string) {
 	fmt.Println("error:", msg)
 	if s.err != nil {
-		//s.err(s.file.Position(s.file.Pos(offset)), msg)
+		s.err(s.file.Position(Pos(offset)), msg)
 	}
 	s.ErrorCount++
 }
@@ -443,7 +450,7 @@ func (s *Scanner) Scan() (pos Pos, token Token, literal string) {
 		s.next()
 	}
 
-	//pos = s.file.Pos(s.offset)
+	pos = Pos(s.offset)
 
 	token = ILLEGAL
 	if s.isLetter(s.char) {
