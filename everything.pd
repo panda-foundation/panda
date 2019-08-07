@@ -1,8 +1,8 @@
 package main;
 
 @doc `import other packages`
-import system;
-import net network;
+import "system";
+import net "network";
 
 //@doc `scalar types`
 const b bool = true;
