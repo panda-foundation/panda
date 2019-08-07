@@ -31,30 +31,25 @@ func WriteIndent(buffer *bytes.Buffer, indent int) {
 	buffer.Write(indents[:indent])
 }
 
-// All node types implement the Node interface.
 type Node interface {
 	Pos() Pos // position of first character belonging to the node
-	End() Pos // position of first character immediately after the node
-	Print(buffer *bytes.Buffer, indent int)
+	Print(buffer *bytes.Buffer)
 }
 
-// All expression nodes implement the Expr interface.
 type Expr interface {
 	Node
 	exprNode()
 }
 
-// All statement nodes implement the Stmt interface.
 type Stmt interface {
 	Node
 	stmtNode()
 }
 
-// All declaration nodes implement the Decl interface.
 type Decl interface {
 	Node
 	declNode()
-	PrintDecl(buffer *bytes.Buffer, indent int)
+	PrintDecl(buffer *bytes.Buffer)
 }
 
 // ----------------------------------------------------------------------------
@@ -62,452 +57,367 @@ type Decl interface {
 
 // A Metadata node represents a single //-style or /*-style comment.
 type Metadata struct {
-	StartPos Pos // position of "@" starting the comment
-	EndPos   Pos
-	Name     string
-	Text     string
-	Values   map[string]*BasicLit
+	Start  Pos // position of "@" starting the comment
+	Name   string
+	Text   string
+	Values map[string]*BasicLit
 }
 
-func (meta *Metadata) Pos() Pos { return meta.StartPos }
-func (meta *Metadata) End() Pos { return Pos(int(meta.StartPos) + len(meta.Text)) }
+func (meta *Metadata) Pos() Pos { return meta.Start }
 
 // ----------------------------------------------------------------------------
 // Modifier
 
 // A Modifier node represents public or static to var, function, class, enum
 type Modifier struct {
-	From   Pos
-	To     Pos
+	Start  Pos
 	Public bool
 	Static bool
 	Weak   bool
 }
 
-func (modifier *Modifier) Pos() Pos { return modifier.From }
-func (modifier *Modifier) End() Pos { return modifier.To }
+func (modifier *Modifier) Pos() Pos { return modifier.Start }
 
 // ----------------------------------------------------------------------------
-// Expressions and types
+// Field
 
 // A Field represents a Field declaration list in a struct type
 type Field struct {
-	Names []*Ident  // field/method/parameter names; or nil
-	Type  Expr      // field/method/parameter type
-	Tag   *BasicLit // field tag; or nil
+	Name    *Ident    // field/method/parameter names; or nil
+	Type    Expr      // field/method/parameter type
+	Default Expr      // default value
+	Meta    *Metadata // metadata; or nil
+	Ref     bool      // pass as reference; only available in function
 }
 
 func (f *Field) Pos() Pos {
-	if len(f.Names) > 0 {
-		return f.Names[0].Pos()
+	if f.Meta != nil {
+		return f.Meta.Pos()
+	}
+	if f.Name != nil {
+		return f.Name.Pos()
 	}
 	return f.Type.Pos()
 }
 
-func (f *Field) End() Pos {
-	if f.Tag != nil {
-		return f.Tag.End()
-	}
-	return f.Type.End()
-}
-
-func (f *Field) Print(buffer *bytes.Buffer, indent int) {
-	if f.Names != nil {
-		for i, v := range f.Names {
-			if i != 0 {
-				buffer.WriteString(", ")
-			}
-			f.Type.Print(buffer, indent)
-			buffer.WriteString(" ")
-			v.Print(buffer, indent)
+func (f *Field) Print(buffer *bytes.Buffer) {
+	f.Type.Print(buffer)
+	if f.Name != nil {
+		buffer.WriteString(" ")
+		if f.Ref {
+			buffer.WriteString("&")
+		}
+		f.Name.Print(buffer)
+		if f.Default != nil {
+			buffer.WriteString(" =")
+			f.Default.Print(buffer)
 		}
 	}
 }
 
 // A FieldList represents a list of Fields, enclosed by parentheses or braces.
 type FieldList struct {
-	Opening Pos      // position of opening parenthesis/brace, if any
-	List    []*Field // field list; or nil
-	Closing Pos      // position of closing parenthesis/brace, if any
+	Start  Pos      // position of opening parenthesis/brace, if any
+	Fields []*Field // field list; or nil
 }
 
 func (f *FieldList) Pos() Pos {
-	if f.Opening.IsValid() {
-		return f.Opening
+	if f.Start.IsValid() {
+		return f.Start
 	}
-	// the list should not be empty in this case;
-	// be conservative and guard against bad ASTs
-	if len(f.List) > 0 {
-		return f.List[0].Pos()
+	if len(f.Fields) > 0 {
+		return f.Fields[0].Pos()
 	}
 	return NoPos
 }
 
-func (f *FieldList) End() Pos {
-	if f.Closing.IsValid() {
-		return f.Closing + 1
-	}
-	// the list should not be empty in this case;
-	// be conservative and guard against bad ASTs
-	if n := len(f.List); n > 0 {
-		return f.List[n-1].End()
-	}
-	return NoPos
-}
-
-func (f *FieldList) Print(buffer *bytes.Buffer, indent int) {
-	for i, v := range f.List {
+func (f *FieldList) Print(buffer *bytes.Buffer) {
+	for i, v := range f.Fields {
 		if i != 0 {
 			buffer.WriteString(", ")
 		}
-		v.Print(buffer, indent)
+		v.Print(buffer)
 	}
 }
 
-// NumFields returns the number of parameters or struct fields represented by a FieldList.
-func (f *FieldList) NumFields() int {
-	n := 0
-	if f != nil {
-		for _, g := range f.List {
-			m := len(g.Names)
-			if m == 0 {
-				m = 1
-			}
-			n += m
-		}
-	}
-	return n
+// ----------------------------------------------------------------------------
+// Expressions
+
+type BadExpr struct {
+	Start Pos
 }
 
-// An expression is represented by a tree consisting of one
-// or more of the following concrete expression nodes.
-//
-type (
-	// A BadExpr node is a placeholder for expressions containing
-	// syntax errors for which no correct expression nodes can be
-	// created.
-	//
-	BadExpr struct {
-		From, To Pos // position range of bad expression
+func (x *BadExpr) Pos() Pos { return x.Start }
+
+func (*BadExpr) exprNode() {}
+
+func (x *BadExpr) Print(buffer *bytes.Buffer) {
+	buffer.WriteString("/* Bad expr declared here */")
+}
+
+type Scalar struct {
+	Start Pos
+	Token Token
+}
+
+func (x *Scalar) Pos() Pos { return x.Start }
+
+func (*Scalar) exprNode() {}
+
+func (x *Scalar) Print(buffer *bytes.Buffer) {
+	x.Token.Print(buffer)
+}
+
+// An Ident node represents an identifier.
+type Ident struct {
+	Start Pos     // identifier position
+	Name  string  // identifier name
+	Obj   *Object // denoted object; or nil
+}
+
+func (x *Ident) Pos() Pos { return x.Start }
+
+func (*Ident) exprNode() {}
+
+func (x *Ident) Print(buffer *bytes.Buffer) {
+	buffer.WriteString(x.Name)
+}
+
+type EllipsisLit struct {
+	Start Pos  // position of "..."
+	Expr  Expr // ellipsis element type (parameter lists only); or nil
+}
+
+func (x *EllipsisLit) Pos() Pos { return x.Start }
+
+func (x *EllipsisLit) Print(buffer *bytes.Buffer) {
+	buffer.WriteString("...")
+	x.Expr.Print(buffer)
+}
+
+// A BasicLit node represents a literal of basic type.
+type BasicLit struct {
+	Start Pos    // literal position
+	Kind  Token  // INT, FLOAT, CHAR, or STRING
+	Value string // literal string; e.g. 42, 0x7f, 3.14, 1e-9, 2.4i, 'a', '\x7f', "foo" or `\m\n\o`
+}
+
+func (*BasicLit) exprNode() {}
+
+func (x *BasicLit) Pos() Pos { return x.Start }
+
+func (x *BasicLit) Print(buffer *bytes.Buffer) {
+	switch x.Kind {
+	case INT, FLOAT, STRING:
+		buffer.WriteString(x.Value)
+
+	case CHAR:
+		//TO-DO convert to unicode char
+		buffer.WriteString(x.Value)
+
+	case True, False, Void, Null:
+		x.Kind.Print(buffer)
+
+	default:
+		//TO-DO panic of error
 	}
+}
 
-	Scalar struct {
-		From, To Pos
-		Token    Token
-	}
+// A CompositeLit node represents a composite literal.
+type CompositeLit struct {
+	Start  Pos
+	Type   Expr   // literal type; or nil
+	Values []Expr // list of composite elements; or nil
+}
 
-	// An Ident node represents an identifier.
-	Ident struct {
-		NamePos Pos     // identifier position
-		Name    string  // identifier name
-		Ref     bool    // if pass by reference
-		Obj     *Object // denoted object; or nil
-	}
-
-	// An EllipsisLit node stands for the "..." type in a
-	// parameter list or the "..." length in an array type.
-	//
-	EllipsisLit struct {
-		Ellipsis Pos  // position of "..."
-		Elt      Expr // ellipsis element type (parameter lists only); or nil
-	}
-
-	// A BasicLit node represents a literal of basic type.
-	BasicLit struct {
-		ValuePos Pos    // literal position
-		Kind     Token  // INT, FLOAT, CHAR, or STRING
-		Value    string // literal string; e.g. 42, 0x7f, 3.14, 1e-9, 2.4i, 'a', '\x7f', "foo" or `\m\n\o`
-	}
-
-	// A FuncLit node represents a function literal.
-	FuncLit struct {
-		Type *FuncType  // function type
-		Body *BlockStmt // function body
-	}
-
-	// A CompositeLit node represents a composite literal.
-	CompositeLit struct {
-		Type       Expr   // literal type; or nil
-		Lbrace     Pos    // position of "{"
-		Elts       []Expr // list of composite elements; or nil
-		Rbrace     Pos    // position of "}"
-		Incomplete bool   // true if (source) expressions are missing in the Elts list
-	}
-
-	// A GenericLit node represents a literal of generic define.
-	GenericLit struct {
-		Less    Pos    // Pos position
-		Types   []Expr // <int, int> <T>
-		Greater Pos    // > position
-	}
-
-	// A ParenExpr node represents a parenthesized expression.
-	ParenExpr struct {
-		Lparen Pos  // position of "("
-		X      Expr // parenthesized expression
-		Rparen Pos  // position of ")"
-	}
-
-	// A SelectorExpr node represents an expression followed by a selector.
-	SelectorExpr struct {
-		X   Expr   // expression
-		Sel *Ident // field selector
-	}
-
-	// An IndexExpr node represents an expression followed by an index.
-	IndexExpr struct {
-		X      Expr // expression
-		Lbrack Pos  // position of "["
-		Index  Expr // index expression
-		Rbrack Pos  // position of "]"
-	}
-
-	// A CallExpr node represents an expression followed by an argument list.
-	CallExpr struct {
-		Fun      Expr   // function expression
-		Lparen   Pos    // position of "("
-		Args     []Expr // function arguments; or nil
-		Ellipsis Pos    // position of "..." (NoPos if there is no "...")
-		Rparen   Pos    // position of ")"
-	}
-
-	EmitExpr struct {
-		Meta *Metadata
-	}
-
-	// A RefExpr node represents an expression of the form "*" Expression.
-	// Semantically it could be a unary "*" expression, or a pointer type.
-	//
-	RefExpr struct {
-		Ref Pos  // position of "&"
-		X   Expr // operand
-	}
-
-	// A UnaryExpr node represents a unary expression.
-	// Unary "*" expressions are represented via StarExpr nodes.
-	//
-	UnaryExpr struct {
-		OpPos Pos   // position of Op
-		Op    Token // operator
-		X     Expr  // operand
-	}
-
-	// A BinaryExpr node represents a binary expression.
-	BinaryExpr struct {
-		X     Expr  // left operand
-		OpPos Pos   // position of Op
-		Op    Token // operator
-		Y     Expr  // right operand
-	}
-
-	// A TernaryExpr node represents a ternary expression.
-	// TO-DO impl
-	TernaryExpr struct {
-		X     Expr  // left operand
-		OpPos Pos   // position of Op
-		Op    Token // operator
-		Y     Expr  // right operand
-	}
-
-	// A KeyValueExpr node represents (key : value) pairs
-	// in composite literals.
-	//
-	KeyValueExpr struct {
-		Key   Expr
-		Colon Pos // position of ":"
-		Value Expr
-	}
-)
-
-// A type is represented by a tree consisting of one
-// or more of the following type-specific expression
-// nodes.
-//
-type (
-	// A StructType node represents a struct type.
-	StructType struct {
-		Struct     Pos        // position of "struct" keyword
-		Fields     *FieldList // list of field declarations
-		Incomplete bool       // true if (source) fields are missing in the Fields list
-	}
-
-	// Reference types are represented via RefExpr nodes.
-
-	// A FuncType node represents a function type.
-	FuncType struct {
-		Func   Pos        // position of "func" keyword (NoPos if there is no "func")
-		Params *FieldList // (incoming) parameters; non-nil
-		Result *Field     // (outgoing) results; or nil
-	}
-
-	// An InterfaceType node represents an interface type.
-	InterfaceType struct {
-		Interface  Pos        // position of "interface" keyword
-		Methods    *FieldList // list of methods
-		Incomplete bool       // true if (source) methods are missing in the Methods list
-	}
-
-	//TO-DO enum type, class type
-)
-
-// Pos and End implementations for expression/type nodes.
-
-func (x *BadExpr) Pos() Pos     { return x.From }
-func (x *Scalar) Pos() Pos      { return x.From }
-func (x *Ident) Pos() Pos       { return x.NamePos }
-func (x *EllipsisLit) Pos() Pos { return x.Ellipsis }
-func (x *BasicLit) Pos() Pos    { return x.ValuePos }
-func (x *FuncLit) Pos() Pos     { return x.Type.Pos() }
 func (x *CompositeLit) Pos() Pos {
 	if x.Type != nil {
 		return x.Type.Pos()
 	}
-	return x.Lbrace
+	return x.Start
 }
-func (x *GenericLit) Pos() Pos   { return x.Less }
-func (x *ParenExpr) Pos() Pos    { return x.Lparen }
-func (x *SelectorExpr) Pos() Pos { return x.X.Pos() }
-func (x *IndexExpr) Pos() Pos    { return x.X.Pos() }
-func (x *CallExpr) Pos() Pos     { return x.Fun.Pos() }
-func (x *EmitExpr) Pos() Pos     { return x.Meta.StartPos }
-func (x *RefExpr) Pos() Pos      { return x.Ref }
-func (x *UnaryExpr) Pos() Pos    { return x.OpPos }
-func (x *BinaryExpr) Pos() Pos   { return x.X.Pos() }
-func (x *KeyValueExpr) Pos() Pos { return x.Key.Pos() }
-func (x *StructType) Pos() Pos   { return x.Struct }
-func (x *FuncType) Pos() Pos {
-	if x.Func.IsValid() || x.Params == nil { // see issue 3870
-		return x.Func
-	}
-	return x.Params.Pos() // interface method declarations have no "func" keyword
-}
-func (x *InterfaceType) Pos() Pos { return x.Interface }
-
-func (x *BadExpr) End() Pos { return x.To }
-func (x *Scalar) End() Pos  { return x.To }
-func (x *Ident) End() Pos   { return Pos(int(x.NamePos) + len(x.Name)) }
-func (x *EllipsisLit) End() Pos {
-	if x.Elt != nil {
-		return x.Elt.End()
-	}
-	return x.Ellipsis + 3 // len("...")
-}
-func (x *BasicLit) End() Pos     { return Pos(int(x.ValuePos) + len(x.Value)) }
-func (x *FuncLit) End() Pos      { return x.Body.End() }
-func (x *CompositeLit) End() Pos { return x.Rbrace + 1 }
-func (x *GenericLit) End() Pos   { return x.Greater }
-func (x *ParenExpr) End() Pos    { return x.Rparen + 1 }
-func (x *SelectorExpr) End() Pos { return x.Sel.End() }
-func (x *IndexExpr) End() Pos    { return x.Rbrack + 1 }
-func (x *CallExpr) End() Pos     { return x.Rparen + 1 }
-func (x *EmitExpr) End() Pos     { return x.Meta.StartPos + x.Meta.EndPos }
-func (x *RefExpr) End() Pos      { return x.X.End() }
-func (x *UnaryExpr) End() Pos    { return x.X.End() }
-func (x *BinaryExpr) End() Pos   { return x.Y.End() }
-func (x *KeyValueExpr) End() Pos { return x.Value.End() }
-func (x *StructType) End() Pos   { return x.Fields.End() }
-func (x *FuncType) End() Pos {
-	if x.Result != nil {
-		return x.Result.End()
-	}
-	return x.Params.End()
-}
-func (x *InterfaceType) End() Pos { return x.Methods.End() }
-
-// exprNode() ensures that only expression/type nodes can be
-// assigned to an Expr.
-//
-func (*BadExpr) exprNode()      {}
-func (*Scalar) exprNode()       {}
-func (*Ident) exprNode()        {}
-func (*EllipsisLit) exprNode()  {}
-func (*BasicLit) exprNode()     {}
-func (*FuncLit) exprNode()      {}
 func (*CompositeLit) exprNode() {}
-func (*ParenExpr) exprNode()    {}
-func (*SelectorExpr) exprNode() {}
-func (*IndexExpr) exprNode()    {}
-func (*CallExpr) exprNode()     {}
-func (*EmitExpr) exprNode()     {}
-func (*UnaryExpr) exprNode()    {}
-func (*BinaryExpr) exprNode()   {}
-func (*KeyValueExpr) exprNode() {}
 
-func (*StructType) exprNode()    {}
-func (*FuncType) exprNode()      {}
-func (*InterfaceType) exprNode() {}
-
-func (x *BadExpr) Print(buffer *bytes.Buffer, indent int) {
-	buffer.WriteString("//Bad expr declared")
-}
-func (x *Scalar) Print(buffer *bytes.Buffer, indent int) {
-	x.Token.Print(buffer)
-}
-func (x *Ident) Print(buffer *bytes.Buffer, indent int) {
-	buffer.WriteString(x.Name)
-}
-
-func (x *EllipsisLit) Print(buffer *bytes.Buffer, indent int) {
-}
-
-func (x *BasicLit) Print(buffer *bytes.Buffer, indent int) {
-	switch x.Kind {
-	case INT, FLOAT:
-		buffer.WriteString(x.Value)
-	case CHAR:
-		//TO-DO convert to unicode char
-		buffer.WriteString(x.Value)
-	case STRING:
-		buffer.WriteString(x.Value)
-	case True, False, Void, Null:
-		x.Kind.Print(buffer)
-	default:
-		//TO-DO panic to error
+func (x *CompositeLit) Print(buffer *bytes.Buffer) {
+	buffer.WriteString("{")
+	for i, v := range x.Values {
+		if i != 0 {
+			buffer.WriteString(", ")
+		}
+		v.Print(buffer)
 	}
+	buffer.WriteString("}")
 }
 
-func (x *FuncLit) Print(buffer *bytes.Buffer, indent int) {
+// A GenericLit node represents a literal of generic define.
+type GenericLit struct {
+	Start Pos    // < position
+	Types []Expr // <int, int> <T>
 }
 
-func (x *CompositeLit) Print(buffer *bytes.Buffer, indent int) {
+func (x *GenericLit) Pos() Pos { return x.Start }
+func (x *GenericLit) Print(buffer *bytes.Buffer) {
+	buffer.WriteString("<")
+	for i, v := range x.Types {
+		if i != 0 {
+			buffer.WriteString(", ")
+		}
+		v.Print(buffer)
+	}
+	buffer.WriteString(">")
 }
 
-func (x *ParenExpr) Print(buffer *bytes.Buffer, indent int) {
+// A ParenExpr node represents a parenthesized expression.
+type ParenExpr struct {
+	Start Pos  // position of "("
+	Expr  Expr // parenthesized expression
 }
 
-func (x *SelectorExpr) Print(buffer *bytes.Buffer, indent int) {
+func (x *ParenExpr) Pos() Pos { return x.Start }
+
+func (*ParenExpr) exprNode() {}
+
+func (x *ParenExpr) Print(buffer *bytes.Buffer) {
+	buffer.WriteString("(")
+	x.Expr.Print(buffer)
+	buffer.WriteString(")")
 }
 
-func (x *IndexExpr) Print(buffer *bytes.Buffer, indent int) {
+// A SelectorExpr node represents an expression followed by a selector.
+type SelectorExpr struct {
+	Expr     Expr   // expression
+	Selector *Ident // field selector
 }
 
-func (x *CallExpr) Print(buffer *bytes.Buffer, indent int) {
+func (x *SelectorExpr) Pos() Pos { return x.Expr.Pos() }
+
+func (*SelectorExpr) exprNode() {}
+
+func (x *SelectorExpr) Print(buffer *bytes.Buffer) {
+	x.Expr.Print(buffer)
+	buffer.WriteString(".")
+	x.Selector.Print(buffer)
 }
 
-func (x *EmitExpr) Print(buffer *bytes.Buffer, indent int) {
-	WriteIndent(buffer, indent)
+// An IndexExpr node represents an expression followed by an index.
+type IndexExpr struct {
+	Expr  Expr // expression
+	Index Expr // index expression
+}
+
+func (x *IndexExpr) Pos() Pos { return x.Expr.Pos() }
+
+func (*IndexExpr) exprNode() {}
+
+func (x *IndexExpr) Print(buffer *bytes.Buffer) {
+	x.Expr.Print(buffer)
+	buffer.WriteString("[")
+	x.Index.Print(buffer)
+	buffer.WriteString("]")
+}
+
+// A CallExpr node represents an expression followed by an argument list.
+type CallExpr struct {
+	Func Expr   // function expression
+	Args []Expr // function arguments; or nil
+	//TO-DO every arg can has an elllipsis
+	//Ellipsis Pos    // position of "..." (NoPos if there is no "...")
+}
+
+func (*CallExpr) exprNode() {}
+
+func (x *CallExpr) Pos() Pos { return x.Func.Pos() }
+
+func (x *CallExpr) Print(buffer *bytes.Buffer) {
+	x.Func.Print(buffer)
+	buffer.WriteString("(")
+	for i, v := range x.Args {
+		if i != 0 {
+			buffer.WriteString(", ")
+			v.Print(buffer)
+		}
+	}
+	buffer.WriteString(")")
+}
+
+type EmitExpr struct {
+	Meta *Metadata
+}
+
+func (x *EmitExpr) Pos() Pos { return x.Meta.Pos() }
+
+func (*EmitExpr) exprNode() {}
+
+func (x *EmitExpr) Print(buffer *bytes.Buffer) {
 	buffer.WriteString(x.Meta.Text)
 }
 
-func (x *RefExpr) Print(buffer *bytes.Buffer, indent int) {
+type UnaryExpr struct {
+	Start Pos   // position of Op
+	Op    Token // operator
+	Expr  Expr  // operand
 }
 
-func (x *UnaryExpr) Print(buffer *bytes.Buffer, indent int) {
+func (x *UnaryExpr) Pos() Pos { return x.Start }
+
+func (*UnaryExpr) exprNode() {}
+
+func (x *UnaryExpr) Print(buffer *bytes.Buffer) {
+	x.Op.Print(buffer)
+	x.Expr.Print(buffer)
 }
 
-func (x *BinaryExpr) Print(buffer *bytes.Buffer, indent int) {
+type BinaryExpr struct {
+	Left  Expr  // left operand
+	Op    Token // operator
+	Right Expr  // right operand
 }
 
-func (x *KeyValueExpr) Print(buffer *bytes.Buffer, indent int) {
+func (x *BinaryExpr) Pos() Pos { return x.Left.Pos() }
+
+func (*BinaryExpr) exprNode() {}
+
+func (x *BinaryExpr) Print(buffer *bytes.Buffer) {
+	x.Left.Print(buffer)
+	x.Op.Print(buffer)
+	x.Right.Print(buffer)
 }
 
-func (x *StructType) Print(buffer *bytes.Buffer, indent int) {
+// A TernaryExpr node represents a ternary expression.
+type TernaryExpr struct {
+	Value  Expr // operator
+	First  Expr // left operand
+	Second Expr // right operand
 }
 
-func (x *FuncType) Print(buffer *bytes.Buffer, indent int) {
+func (x *TernaryExpr) Pos() Pos { return x.Value.Pos() }
+
+func (*TernaryExpr) exprNode() {}
+
+func (x *TernaryExpr) Print(buffer *bytes.Buffer) {
+	x.Value.Print(buffer)
+	buffer.WriteString(" ? ")
+	x.First.Print(buffer)
+	buffer.WriteString(" : ")
+	x.Second.Print(buffer)
 }
 
-func (x *InterfaceType) Print(buffer *bytes.Buffer, indent int) {
+// A KeyValueExpr node represents (key : value) pairs
+// in composite literals.
+//
+type KeyValueExpr struct {
+	Key   Expr
+	Value Expr
+}
+
+func (x *KeyValueExpr) Pos() Pos { return x.Key.Pos() }
+
+func (*KeyValueExpr) exprNode() {}
+
+func (x *KeyValueExpr) Print(buffer *bytes.Buffer) {
+	x.Key.Print(buffer)
+	buffer.WriteString(" : ")
+	x.Value.Print(buffer)
 }
 
 // ----------------------------------------------------------------------------
@@ -652,54 +562,6 @@ func (s *CommClause) Pos() Pos { return s.Case }
 func (s *SelectStmt) Pos() Pos { return s.Select }
 func (s *ForStmt) Pos() Pos    { return s.For }
 
-func (s *BadStmt) End() Pos  { return s.To }
-func (s *DeclStmt) End() Pos { return s.Decl.End() }
-func (s *EmptyStmt) End() Pos {
-	if s.Implicit {
-		return s.Semicolon
-	}
-	return s.Semicolon + 1 /* len(";") */
-}
-func (s *ExprStmt) End() Pos { return s.X.End() }
-func (s *IncDecStmt) End() Pos {
-	return s.TokPos + 2 /* len("++") */
-}
-func (s *AssignStmt) End() Pos { return s.Rhs[len(s.Rhs)-1].End() }
-func (s *ReturnStmt) End() Pos {
-	if s.Result != nil {
-		return s.Result.End()
-	}
-	return s.Return + 6 // len("return")
-}
-func (s *BranchStmt) End() Pos {
-	if s.Label != nil {
-		return s.Label.End()
-	}
-	return Pos(int(s.TokPos) + len(s.Tok.String()))
-}
-func (s *BlockStmt) End() Pos { return s.Rbrace + 1 }
-func (s *IfStmt) End() Pos {
-	if s.Else != nil {
-		return s.Else.End()
-	}
-	return s.Body.End()
-}
-func (s *CaseClause) End() Pos {
-	if n := len(s.Body); n > 0 {
-		return s.Body[n-1].End()
-	}
-	return s.Colon + 1
-}
-func (s *SwitchStmt) End() Pos { return s.Body.End() }
-func (s *CommClause) End() Pos {
-	if n := len(s.Body); n > 0 {
-		return s.Body[n-1].End()
-	}
-	return s.Colon + 1
-}
-func (s *SelectStmt) End() Pos { return s.Body.End() }
-func (s *ForStmt) End() Pos    { return s.Body.End() }
-
 // stmtNode() ensures that only statement nodes can be
 // assigned to a Stmt.
 //
@@ -719,49 +581,49 @@ func (*CommClause) stmtNode() {}
 func (*SelectStmt) stmtNode() {}
 func (*ForStmt) stmtNode()    {}
 
-func (s *BadStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *BadStmt) Print(buffer *bytes.Buffer) {
 
 }
-func (s *DeclStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *DeclStmt) Print(buffer *bytes.Buffer) {
 
 }
-func (s *EmptyStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *EmptyStmt) Print(buffer *bytes.Buffer) {
 
 }
-func (s *ExprStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *ExprStmt) Print(buffer *bytes.Buffer) {
 
 }
-func (s *IncDecStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *IncDecStmt) Print(buffer *bytes.Buffer) {
 
 }
-func (s *AssignStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *AssignStmt) Print(buffer *bytes.Buffer) {
 
 }
-func (s *ReturnStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *ReturnStmt) Print(buffer *bytes.Buffer) {
 
 }
-func (s *BranchStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *BranchStmt) Print(buffer *bytes.Buffer) {
 
 }
-func (s *BlockStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *BlockStmt) Print(buffer *bytes.Buffer) {
 
 }
-func (s *IfStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *IfStmt) Print(buffer *bytes.Buffer) {
 
 }
-func (s *CaseClause) Print(buffer *bytes.Buffer, indent int) {
+func (s *CaseClause) Print(buffer *bytes.Buffer) {
 
 }
-func (s *SwitchStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *SwitchStmt) Print(buffer *bytes.Buffer) {
 
 }
-func (s *CommClause) Print(buffer *bytes.Buffer, indent int) {
+func (s *CommClause) Print(buffer *bytes.Buffer) {
 
 }
-func (s *SelectStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *SelectStmt) Print(buffer *bytes.Buffer) {
 
 }
-func (s *ForStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *ForStmt) Print(buffer *bytes.Buffer) {
 
 }
 
@@ -833,7 +695,8 @@ type (
 	FuncDecl struct {
 		Doc     *Metadata  // associated documentation; or nil
 		Name    *Ident     // function/method name
-		Type    *FuncType  // function signature: parameters, results, and position of "func" keyword
+		Params  *FieldList // (incoming) parameters; non-nil
+		Result  *Field     // (outgoing) results; or nil
 		Body    *BlockStmt // function body; or nil for external (non-Go) function
 		Generic *GenericLit
 	}
@@ -848,42 +711,10 @@ func (s *ImportDecl) Pos() Pos {
 	return s.Path.Pos()
 }
 func (s *ValueDecl) Pos() Pos     { return s.Names[0].Pos() }
-func (d *FuncDecl) Pos() Pos      { return d.Type.Pos() }
+func (d *FuncDecl) Pos() Pos      { return d.Name.Pos() }
 func (c *ClassDecl) Pos() Pos     { return c.Name.Pos() }
 func (c *EnumDecl) Pos() Pos      { return c.Name.Pos() }
 func (c *InterfaceDecl) Pos() Pos { return c.Name.Pos() }
-
-func (d *BadDecl) End() Pos { return d.To }
-func (s *PackageDecl) End() Pos {
-	if s.EndPos != 0 {
-		return s.EndPos
-	}
-	return s.Path.End()
-}
-func (s *ImportDecl) End() Pos {
-	if s.EndPos != 0 {
-		return s.EndPos
-	}
-	return s.Path.End()
-}
-func (s *ValueDecl) End() Pos {
-	if n := len(s.Values); n > 0 {
-		return s.Values[n-1].End()
-	}
-	if s.Type != nil {
-		return s.Type.End()
-	}
-	return s.Names[len(s.Names)-1].End()
-}
-func (d *FuncDecl) End() Pos {
-	if d.Body != nil {
-		return d.Body.End()
-	}
-	return d.Type.End()
-}
-func (c *ClassDecl) End() Pos     { return c.EndPos }
-func (c *EnumDecl) End() Pos      { return c.EndPos }
-func (c *InterfaceDecl) End() Pos { return c.EndPos }
 
 // declNode() ensures that only declaration nodes can be
 // assigned to a Decl.
@@ -895,54 +726,54 @@ func (*ClassDecl) declNode()     {}
 func (*EnumDecl) declNode()      {}
 func (*InterfaceDecl) declNode() {}
 
-func (*BadDecl) Print(buffer *bytes.Buffer, indent int) {
+func (*BadDecl) Print(buffer *bytes.Buffer) {
 
 }
-func (v *ValueDecl) Print(buffer *bytes.Buffer, indent int) {
+func (v *ValueDecl) Print(buffer *bytes.Buffer) {
 	for i, n := range v.Names {
-		v.Type.Print(buffer, indent)
+		v.Type.Print(buffer)
 		buffer.WriteString(" ")
 		buffer.WriteString(n.Name)
 		if len(v.Values) == len(v.Names) {
 			buffer.WriteString(" = ")
-			v.Values[i].Print(buffer, indent)
+			v.Values[i].Print(buffer)
 		}
 		buffer.WriteString(";\n")
 	}
 }
-func (*FuncDecl) Print(buffer *bytes.Buffer, indent int) {
+func (*FuncDecl) Print(buffer *bytes.Buffer) {
 
 }
-func (*ClassDecl) Print(buffer *bytes.Buffer, indent int) {
+func (*ClassDecl) Print(buffer *bytes.Buffer) {
 
 }
-func (*EnumDecl) Print(buffer *bytes.Buffer, indent int) {
+func (*EnumDecl) Print(buffer *bytes.Buffer) {
 
 }
-func (*InterfaceDecl) Print(buffer *bytes.Buffer, indent int) {
+func (*InterfaceDecl) Print(buffer *bytes.Buffer) {
 
 }
-func (*BadDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
+func (*BadDecl) PrintDecl(buffer *bytes.Buffer) {
 
 }
-func (*ValueDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
+func (*ValueDecl) PrintDecl(buffer *bytes.Buffer) {
 
 }
-func (f *FuncDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
-	f.Type.Result.Type.Print(buffer, indent)
+func (f *FuncDecl) PrintDecl(buffer *bytes.Buffer) {
+	f.Result.Type.Print(buffer)
 	buffer.WriteString(" ")
-	f.Name.Print(buffer, indent)
+	f.Name.Print(buffer)
 	buffer.WriteString("(")
-	f.Type.Params.Print(buffer, indent)
+	f.Params.Print(buffer)
 	buffer.WriteString(");\n")
 }
-func (*ClassDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
+func (*ClassDecl) PrintDecl(buffer *bytes.Buffer) {
 
 }
-func (*EnumDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
+func (*EnumDecl) PrintDecl(buffer *bytes.Buffer) {
 
 }
-func (*InterfaceDecl) PrintDecl(buffer *bytes.Buffer, indent int) {
+func (*InterfaceDecl) PrintDecl(buffer *bytes.Buffer) {
 
 }
 
@@ -965,19 +796,19 @@ func (f *ProgramFile) Pos() Pos { return f.Package.Pos() }
 func (f *ProgramFile) End() Pos {
 	return f.EndPos
 }
-func (f *ProgramFile) Print(buffer *bytes.Buffer, indent int) {
+func (f *ProgramFile) Print(buffer *bytes.Buffer) {
 	for _, v := range f.Functions {
-		v.PrintDecl(buffer, indent)
+		v.PrintDecl(buffer)
 	}
 	buffer.WriteString("\n")
 
 	for _, v := range f.Values {
-		v.Print(buffer, indent)
+		v.Print(buffer)
 	}
 	buffer.WriteString("\n")
 
 	for _, v := range f.Functions {
-		v.Print(buffer, indent)
+		v.Print(buffer)
 	}
 }
 
@@ -992,7 +823,6 @@ type ProgramPackage struct {
 }
 
 func (p *ProgramPackage) Pos() Pos { return NoPos }
-func (p *ProgramPackage) End() Pos { return NoPos }
 
 // A Scope maintains the set of named language entities declared
 // in the scope and a link to the immediately surrounding (outer)
@@ -1068,10 +898,8 @@ func (obj *Object) Pos() Pos {
 	name := obj.Name
 	switch d := obj.Decl.(type) {
 	case *Field:
-		for _, n := range d.Names {
-			if n.Name == name {
-				return n.Pos()
-			}
+		if d.Name.Name == name {
+			return d.Name.Pos()
 		}
 	case *PackageDecl:
 		return d.Path.Pos()

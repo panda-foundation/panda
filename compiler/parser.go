@@ -665,11 +665,13 @@ func (p *parser) parseFieldDecl(scope *Scope) *Field {
 	}
 
 	// Tag
-	var tag *BasicLit
-	if p.tok == STRING {
-		tag = &BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
-		p.next()
-	}
+	//TO-DO use meta instead
+	/*
+		var tag *BasicLit
+		if p.tok == STRING {
+			tag = &BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
+			p.next()
+		}*/
 
 	p.expect(Semi) // call before accessing p.linecomment
 

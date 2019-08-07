@@ -9,7 +9,7 @@ const b bool = true;
 
 const c char = 'a'; // alias u8
 
-var short_v short; // alias i16
+var short_v short = 0; // alias i16
 var int_v int; // alias i32
 var long_v long; // alias i64
 var int8_v i8;
