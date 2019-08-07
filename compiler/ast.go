@@ -597,6 +597,7 @@ func (s *IfStmt) Print(buffer *bytes.Buffer, indent int) {
 }
 
 //Continue-------------
+//TO-DO new expr, class, interface, enum decl
 
 // A CaseClause represents a case of an expression or type switch statement.
 type CaseClause struct {

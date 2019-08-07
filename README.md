@@ -3,25 +3,29 @@ Panda language (compiler and bootstrap)
 
 Roadmap
 
-meta
-os
+meta (part)
 container
-filesystem
-template
-lexer/parser/ebnf
-embed tool for panda
-
-bootstrap
+binary / buffer
+unicode
+filesystem / io
+os / flag / dll
+panda (compiler)
+math
+serilizer framework
 
 thread
 coroutine
-net
-binary
+network
 test
 reflection
-runtime/debug
+debug
+interpreter
 
-extra
+Thirdparty
+
+template
+database / sql / mongo / redis
+
+Extra
 any (int64,float64,string,shared_ptr<void*>) for reflection
-
-boost lexer,stack,coroutine,asio
+boost stack,coroutine2,asio
