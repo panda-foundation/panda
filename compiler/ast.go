@@ -33,23 +33,24 @@ func WriteIndent(buffer *bytes.Buffer, indent int) {
 
 type Node interface {
 	Pos() Pos // position of first character belonging to the node
-	Print(buffer *bytes.Buffer)
 }
 
 type Expr interface {
 	Node
+	Print(buffer *bytes.Buffer)
 	exprNode()
 }
 
 type Stmt interface {
 	Node
+	Print(buffer *bytes.Buffer, indent int)
 	stmtNode()
 }
 
 type Decl interface {
 	Node
 	declNode()
-	PrintDecl(buffer *bytes.Buffer)
+	Print(buffer *bytes.Buffer, indent int)
 }
 
 // ----------------------------------------------------------------------------
@@ -423,209 +424,228 @@ func (x *KeyValueExpr) Print(buffer *bytes.Buffer) {
 // ----------------------------------------------------------------------------
 // Statements
 
-// A statement is represented by a tree consisting of one
-// or more of the following concrete statement nodes.
+// A BadStmt node is a placeholder for statements containing
+// syntax errors for which no correct statement nodes can be
+// created.
 //
-type (
-	// A BadStmt node is a placeholder for statements containing
-	// syntax errors for which no correct statement nodes can be
-	// created.
-	//
-	BadStmt struct {
-		From, To Pos // position range of bad statement
-	}
 
-	// A DeclStmt node represents a declaration in a statement list.
-	DeclStmt struct {
-		Decl Decl // *GenDecl with CONST, TYPE, or VAR token
-	}
+type BadStmt struct {
+	Start Pos // position range of bad statement
+}
 
-	// An EmptyStmt node represents an empty statement.
-	// The "position" of the empty statement is the position
-	// of the immediately following (explicit or implicit) semicolon.
-	//
-	EmptyStmt struct {
-		Semicolon Pos  // position of following ";"
-		Implicit  bool // if set, ";" was omitted in the source
-	}
+func (s *BadStmt) Pos() Pos { return s.Start }
 
-	// An ExprStmt node represents a (stand-alone) expression
-	// in a statement list.
-	//
-	ExprStmt struct {
-		X Expr // expression
-	}
+func (*BadStmt) stmtNode() {}
 
-	// An IncDecStmt node represents an increment or decrement statement.
-	IncDecStmt struct {
-		X      Expr
-		TokPos Pos   // position of Tok
-		Tok    Token // INC or DEC
-	}
+func (s *BadStmt) Print(buffer *bytes.Buffer, indent int) {
+	buffer.WriteString("/* bad statement here. */")
+}
 
-	// An AssignStmt node represents an assignment or
-	// a short variable declaration.
-	//
-	AssignStmt struct {
-		Lhs    []Expr
-		TokPos Pos   // position of Tok
-		Tok    Token // assignment token, DEFINE
-		Rhs    []Expr
-	}
+// A DeclStmt node represents a declaration in a statement list.
+type DeclStmt struct {
+	Decl Decl // *GenDecl with CONST, TYPE, or VAR token
+}
 
-	// A ReturnStmt node represents a return statement.
-	ReturnStmt struct {
-		Return Pos  // position of "return" keyword
-		Result Expr // result expressions; or nil
-	}
+func (s *DeclStmt) Pos() Pos { return s.Decl.Pos() }
 
-	// A BranchStmt node represents a break, continue, goto,
-	// or fallthrough statement.
-	//
-	BranchStmt struct {
-		TokPos Pos    // position of Tok
-		Tok    Token  // keyword token (BREAK, CONTINUE, GOTO, FALLTHROUGH)
-		Label  *Ident // label name; or nil
-	}
+func (*DeclStmt) stmtNode() {}
 
-	// A BlockStmt node represents a braced statement list.
-	BlockStmt struct {
-		Lbrace Pos // position of "{"
-		List   []Stmt
-		Rbrace Pos // position of "}"
-	}
+func (s *DeclStmt) Print(buffer *bytes.Buffer, indent int) {
+	s.Decl.Print(buffer, indent)
+}
 
-	// An IfStmt node represents an if statement.
-	IfStmt struct {
-		If   Pos  // position of "if" keyword
-		Init Stmt // initialization statement; or nil
-		Cond Expr // condition
-		Body *BlockStmt
-		Else Stmt // else branch; or nil
-	}
+// An EmptyStmt node represents an empty statement.
+// The "position" of the empty statement is the position
+// of the immediately following (explicit or implicit) semicolon.
+//
+type EmptyStmt struct {
+	Start Pos // position of following ";"
+}
 
-	// A CaseClause represents a case of an expression or type switch statement.
-	CaseClause struct {
-		Case  Pos    // position of "case" or "default" keyword
-		List  []Expr // list of expressions or types; nil means default case
-		Colon Pos    // position of ":"
-		Body  []Stmt // statement list; or nil
-	}
+func (s *EmptyStmt) Pos() Pos { return s.Start }
 
-	// A SwitchStmt node represents an expression switch statement.
-	SwitchStmt struct {
-		Switch Pos        // position of "switch" keyword
-		Init   Stmt       // initialization statement; or nil
-		Tag    Expr       // tag expression; or nil
-		Body   *BlockStmt // CaseClauses only
-	}
+func (*EmptyStmt) stmtNode() {}
 
-	// A CommClause node represents a case of a select statement.
-	CommClause struct {
-		Case  Pos    // position of "case" or "default" keyword
-		Comm  Stmt   // send or receive statement; nil means default case
-		Colon Pos    // position of ":"
-		Body  []Stmt // statement list; or nil
-	}
+func (s *EmptyStmt) Print(buffer *bytes.Buffer, indent int) {
+	buffer.WriteString(";")
+}
 
-	// An SelectStmt node represents a select statement.
-	SelectStmt struct {
-		Select Pos        // position of "select" keyword
-		Body   *BlockStmt // CommClauses only
-	}
+// An ExprStmt node represents a (stand-alone) expression
+// in a statement list.
+//
+type ExprStmt struct {
+	Expr Expr // expression
+}
 
-	// A ForStmt represents a for statement.
-	ForStmt struct {
-		For  Pos  // position of "for" keyword
-		Init Stmt // initialization statement; or nil
-		Cond Expr // condition; or nil
-		Post Stmt // post iteration statement; or nil
-		Body *BlockStmt
+func (s *ExprStmt) Pos() Pos { return s.Expr.Pos() }
+
+func (*ExprStmt) stmtNode() {}
+func (s *ExprStmt) Print(buffer *bytes.Buffer, indent int) {
+	s.Expr.Print(buffer)
+}
+
+// An IncDecStmt node represents an increment or decrement statement. ++ --
+type IncDecStmt struct {
+	Expr Expr
+	Tok  Token // INC or DEC
+}
+
+func (s *IncDecStmt) Pos() Pos { return s.Expr.Pos() }
+
+func (*IncDecStmt) stmtNode() {}
+
+func (s *IncDecStmt) Print(buffer *bytes.Buffer, indent int) {
+	s.Expr.Print(buffer)
+	s.Tok.Print(buffer)
+}
+
+// An AssignStmt node represents an assignment or
+// a short variable declaration.
+//
+type AssignStmt struct {
+	Left  Expr
+	Tok   Token // assignment token, DEFINE
+	Right Expr
+}
+
+func (s *AssignStmt) Pos() Pos { return s.Left.Pos() }
+
+func (*AssignStmt) stmtNode() {}
+
+func (s *AssignStmt) Print(buffer *bytes.Buffer, indent int) {
+	s.Left.Print(buffer)
+	buffer.WriteString(" = ")
+	s.Right.Print(buffer)
+}
+
+// A ReturnStmt node represents a return statement.
+type ReturnStmt struct {
+	Start  Pos  // position of "return" keyword
+	Result Expr // result expressions; or nil
+}
+
+func (s *ReturnStmt) Pos() Pos { return s.Start }
+
+func (*ReturnStmt) stmtNode() {}
+
+func (s *ReturnStmt) Print(buffer *bytes.Buffer, indent int) {
+	buffer.WriteString("return")
+	if s.Result != nil {
+		buffer.WriteString(" ")
+		s.Result.Print(buffer)
 	}
-)
+}
+
+// A BranchStmt node represents a break, continue, goto,
+// or fallthrough statement.
+//
+type BranchStmt struct {
+	Start Pos   // position of Tok
+	Tok   Token // keyword token (BREAK, CONTINUE)
+}
+
+func (s *BranchStmt) Pos() Pos { return s.Start }
+
+func (*BranchStmt) stmtNode() {}
+
+func (s *BranchStmt) Print(buffer *bytes.Buffer, indent int) {
+	s.Tok.Print(buffer)
+}
+
+// A BlockStmt node represents a braced statement list.
+type BlockStmt struct {
+	Start Pos // position of "{"
+	Stmts []Stmt
+}
+
+func (s *BlockStmt) Pos() Pos { return s.Start }
+
+func (*BlockStmt) stmtNode() {}
+
+func (s *BlockStmt) Print(buffer *bytes.Buffer, indent int) {
+	buffer.WriteString("{\n")
+	for _, v := range s.Stmts {
+		WriteIndent(buffer, indent+4)
+		v.Print(buffer, indent+4)
+		buffer.WriteString(";\n")
+	}
+	buffer.WriteString("}\n")
+}
+
+// An IfStmt node represents an if statement.
+type IfStmt struct {
+	Start     Pos  // position of "if" keyword
+	Condition Expr // condition
+	Body      *BlockStmt
+	Else      Stmt // else branch; or nil
+}
+
+func (s *IfStmt) Pos() Pos { return s.Start }
+
+func (*IfStmt) stmtNode() {}
+
+func (s *IfStmt) Print(buffer *bytes.Buffer, indent int) {
+	WriteIndent(buffer, indent)
+	buffer.WriteString("if (")
+	s.Condition.Print(buffer)
+	buffer.WriteString(")\n")
+	WriteIndent(buffer, indent)
+	buffer.WriteString("{\n")
+	s.Body.Print(buffer, indent+4)
+	WriteIndent(buffer, indent)
+	buffer.WriteString("}\n")
+}
+
+//Continue-------------
+
+// A CaseClause represents a case of an expression or type switch statement.
+type CaseClause struct {
+	Case  Pos    // position of "case" or "default" keyword
+	List  []Expr // list of expressions or types; nil means default case
+	Colon Pos    // position of ":"
+	Body  []Stmt // statement list; or nil
+}
+
+func (s *CaseClause) Pos() Pos { return s.Case }
+func (*CaseClause) stmtNode()  {}
+func (s *CaseClause) Print(buffer *bytes.Buffer, indent int) {
+
+}
+
+// A SwitchStmt node represents an expression switch statement.
+type SwitchStmt struct {
+	Switch Pos        // position of "switch" keyword
+	Init   Stmt       // initialization statement; or nil
+	Tag    Expr       // tag expression; or nil
+	Body   *BlockStmt // CaseClauses only
+}
+
+func (s *SwitchStmt) Pos() Pos { return s.Switch }
+func (*SwitchStmt) stmtNode()  {}
+func (s *SwitchStmt) Print(buffer *bytes.Buffer, indent int) {
+
+}
+
+// A ForStmt represents a for statement.
+type ForStmt struct {
+	For  Pos  // position of "for" keyword
+	Init Stmt // initialization statement; or nil
+	Cond Expr // condition; or nil
+	Post Stmt // post iteration statement; or nil
+	Body *BlockStmt
+}
+
+func (s *ForStmt) Pos() Pos { return s.For }
+func (*ForStmt) stmtNode()  {}
+func (s *ForStmt) Print(buffer *bytes.Buffer, indent int) {
+
+}
 
 // Pos and End implementations for statement nodes.
-
-func (s *BadStmt) Pos() Pos    { return s.From }
-func (s *DeclStmt) Pos() Pos   { return s.Decl.Pos() }
-func (s *EmptyStmt) Pos() Pos  { return s.Semicolon }
-func (s *ExprStmt) Pos() Pos   { return s.X.Pos() }
-func (s *IncDecStmt) Pos() Pos { return s.X.Pos() }
-func (s *AssignStmt) Pos() Pos { return s.Lhs[0].Pos() }
-func (s *ReturnStmt) Pos() Pos { return s.Return }
-func (s *BranchStmt) Pos() Pos { return s.TokPos }
-func (s *BlockStmt) Pos() Pos  { return s.Lbrace }
-func (s *IfStmt) Pos() Pos     { return s.If }
-func (s *CaseClause) Pos() Pos { return s.Case }
-func (s *SwitchStmt) Pos() Pos { return s.Switch }
-func (s *CommClause) Pos() Pos { return s.Case }
-func (s *SelectStmt) Pos() Pos { return s.Select }
-func (s *ForStmt) Pos() Pos    { return s.For }
 
 // stmtNode() ensures that only statement nodes can be
 // assigned to a Stmt.
 //
-func (*BadStmt) stmtNode()    {}
-func (*DeclStmt) stmtNode()   {}
-func (*EmptyStmt) stmtNode()  {}
-func (*ExprStmt) stmtNode()   {}
-func (*IncDecStmt) stmtNode() {}
-func (*AssignStmt) stmtNode() {}
-func (*ReturnStmt) stmtNode() {}
-func (*BranchStmt) stmtNode() {}
-func (*BlockStmt) stmtNode()  {}
-func (*IfStmt) stmtNode()     {}
-func (*CaseClause) stmtNode() {}
-func (*SwitchStmt) stmtNode() {}
-func (*CommClause) stmtNode() {}
-func (*SelectStmt) stmtNode() {}
-func (*ForStmt) stmtNode()    {}
-
-func (s *BadStmt) Print(buffer *bytes.Buffer) {
-
-}
-func (s *DeclStmt) Print(buffer *bytes.Buffer) {
-
-}
-func (s *EmptyStmt) Print(buffer *bytes.Buffer) {
-
-}
-func (s *ExprStmt) Print(buffer *bytes.Buffer) {
-
-}
-func (s *IncDecStmt) Print(buffer *bytes.Buffer) {
-
-}
-func (s *AssignStmt) Print(buffer *bytes.Buffer) {
-
-}
-func (s *ReturnStmt) Print(buffer *bytes.Buffer) {
-
-}
-func (s *BranchStmt) Print(buffer *bytes.Buffer) {
-
-}
-func (s *BlockStmt) Print(buffer *bytes.Buffer) {
-
-}
-func (s *IfStmt) Print(buffer *bytes.Buffer) {
-
-}
-func (s *CaseClause) Print(buffer *bytes.Buffer) {
-
-}
-func (s *SwitchStmt) Print(buffer *bytes.Buffer) {
-
-}
-func (s *CommClause) Print(buffer *bytes.Buffer) {
-
-}
-func (s *SelectStmt) Print(buffer *bytes.Buffer) {
-
-}
-func (s *ForStmt) Print(buffer *bytes.Buffer) {
-
-}
 
 // ----------------------------------------------------------------------------
 // Declarations
@@ -894,6 +914,7 @@ func NewObj(kind ObjKind, name string) *Object {
 // Pos computes the source position of the declaration of an object name.
 // The result may be an invalid position if it cannot be computed
 // (obj.Decl may be nil or not correct).
+/*
 func (obj *Object) Pos() Pos {
 	name := obj.Name
 	switch d := obj.Decl.(type) {
@@ -929,7 +950,7 @@ func (obj *Object) Pos() Pos {
 		// predeclared object - nothing to do for now
 	}
 	return NoPos
-}
+}*/
 
 // ObjKind describes what an object represents.
 type ObjKind int
