@@ -50,7 +50,7 @@ type Stmt interface {
 type Decl interface {
 	Node
 	declNode()
-	Print(buffer *bytes.Buffer, indent int)
+	Print(buffer *bytes.Buffer, indent int, onlyDeclare bool)
 }
 
 // ----------------------------------------------------------------------------
@@ -321,8 +321,8 @@ func (x *IndexExpr) Print(buffer *bytes.Buffer) {
 type CallExpr struct {
 	Func Expr   // function expression
 	Args []Expr // function arguments; or nil
-	//TO-DO every arg can has an elllipsis
-	//Ellipsis Pos    // position of "..." (NoPos if there is no "...")
+	//TO-DO elllipsis
+	//Ellipsis
 }
 
 func (*CallExpr) exprNode() {}
@@ -332,6 +332,28 @@ func (x *CallExpr) Pos() Pos { return x.Func.Pos() }
 func (x *CallExpr) Print(buffer *bytes.Buffer) {
 	x.Func.Print(buffer)
 	buffer.WriteString("(")
+	for i, v := range x.Args {
+		if i != 0 {
+			buffer.WriteString(", ")
+			v.Print(buffer)
+		}
+	}
+	buffer.WriteString(")")
+}
+
+type NewExpr struct {
+	Class Expr   // function expression
+	Args  []Expr // function arguments; or nil
+	//TO-DO elllipsis
+	//Ellipsis
+}
+
+func (*NewExpr) exprNode() {}
+
+func (x *NewExpr) Pos() Pos { return x.Class.Pos() }
+
+func (x *NewExpr) Print(buffer *bytes.Buffer) {
+	buffer.WriteString("std::make_shared<//TO-DO>(")
 	for i, v := range x.Args {
 		if i != 0 {
 			buffer.WriteString(", ")
@@ -438,6 +460,7 @@ func (s *BadStmt) Pos() Pos { return s.Start }
 func (*BadStmt) stmtNode() {}
 
 func (s *BadStmt) Print(buffer *bytes.Buffer, indent int) {
+	WriteIndent(buffer, indent)
 	buffer.WriteString("/* bad statement here. */")
 }
 
@@ -451,7 +474,7 @@ func (s *DeclStmt) Pos() Pos { return s.Decl.Pos() }
 func (*DeclStmt) stmtNode() {}
 
 func (s *DeclStmt) Print(buffer *bytes.Buffer, indent int) {
-	s.Decl.Print(buffer, indent)
+	s.Decl.Print(buffer, indent, false)
 }
 
 // An EmptyStmt node represents an empty statement.
@@ -480,6 +503,7 @@ type ExprStmt struct {
 func (s *ExprStmt) Pos() Pos { return s.Expr.Pos() }
 
 func (*ExprStmt) stmtNode() {}
+
 func (s *ExprStmt) Print(buffer *bytes.Buffer, indent int) {
 	s.Expr.Print(buffer)
 }
@@ -497,6 +521,25 @@ func (*IncDecStmt) stmtNode() {}
 func (s *IncDecStmt) Print(buffer *bytes.Buffer, indent int) {
 	s.Expr.Print(buffer)
 	s.Tok.Print(buffer)
+}
+
+type EnumStmt struct {
+	Name  *Ident
+	Value *BasicLit
+}
+
+func (s *EnumStmt) Pos() Pos { return s.Name.Pos() }
+
+func (*EnumStmt) stmtNode() {}
+
+func (s *EnumStmt) Print(buffer *bytes.Buffer, indent int) {
+	WriteIndent(buffer, indent)
+	s.Name.Print(buffer)
+	if s.Value != nil {
+		buffer.WriteString(" = ")
+		s.Value.Print(buffer)
+	}
+	buffer.WriteString(";\n")
 }
 
 // An AssignStmt node represents an assignment or
@@ -596,161 +639,155 @@ func (s *IfStmt) Print(buffer *bytes.Buffer, indent int) {
 	buffer.WriteString("}\n")
 }
 
-//Continue-------------
-//TO-DO new expr, class, interface, enum decl
-
 // A CaseClause represents a case of an expression or type switch statement.
 type CaseClause struct {
-	Case  Pos    // position of "case" or "default" keyword
+	Start Pos    // position of "case" or "default" keyword
 	List  []Expr // list of expressions or types; nil means default case
-	Colon Pos    // position of ":"
 	Body  []Stmt // statement list; or nil
 }
 
-func (s *CaseClause) Pos() Pos { return s.Case }
+func (s *CaseClause) Pos() Pos { return s.Start }
 func (*CaseClause) stmtNode()  {}
 func (s *CaseClause) Print(buffer *bytes.Buffer, indent int) {
-
+	for _, v := range s.List {
+		WriteIndent(buffer, indent)
+		buffer.WriteString("case ")
+		v.Print(buffer)
+		buffer.WriteString(":\n")
+	}
+	for _, v := range s.Body {
+		v.Print(buffer, indent+4)
+	}
 }
 
 // A SwitchStmt node represents an expression switch statement.
 type SwitchStmt struct {
-	Switch Pos        // position of "switch" keyword
-	Init   Stmt       // initialization statement; or nil
-	Tag    Expr       // tag expression; or nil
-	Body   *BlockStmt // CaseClauses only
+	Start Pos        // position of "switch" keyword
+	Tag   Expr       // tag expression
+	Body  *BlockStmt // CaseClauses only
 }
 
-func (s *SwitchStmt) Pos() Pos { return s.Switch }
-func (*SwitchStmt) stmtNode()  {}
-func (s *SwitchStmt) Print(buffer *bytes.Buffer, indent int) {
+func (s *SwitchStmt) Pos() Pos { return s.Start }
 
+func (*SwitchStmt) stmtNode() {}
+
+func (s *SwitchStmt) Print(buffer *bytes.Buffer, indent int) {
+	WriteIndent(buffer, indent)
+	buffer.WriteString("switch (")
+	s.Tag.Print(buffer)
+	buffer.WriteString(")\n")
+	s.Body.Print(buffer, indent+4)
 }
 
 // A ForStmt represents a for statement.
 type ForStmt struct {
-	For  Pos  // position of "for" keyword
-	Init Stmt // initialization statement; or nil
-	Cond Expr // condition; or nil
-	Post Stmt // post iteration statement; or nil
-	Body *BlockStmt
+	For       Pos  // position of "for" keyword
+	Init      Stmt // initialization statement; or nil
+	Condition Expr // condition; or nil
+	Post      Stmt // post iteration statement; or nil
+	Body      *BlockStmt
 }
 
 func (s *ForStmt) Pos() Pos { return s.For }
-func (*ForStmt) stmtNode()  {}
-func (s *ForStmt) Print(buffer *bytes.Buffer, indent int) {
 
+func (*ForStmt) stmtNode() {}
+
+func (s *ForStmt) Print(buffer *bytes.Buffer, indent int) {
+	WriteIndent(buffer, indent)
+	buffer.WriteString("for (")
+	if s.Init != nil {
+		s.Init.Print(buffer, 0)
+	}
+	buffer.WriteString(" ;")
+	if s.Condition != nil {
+		s.Condition.Print(buffer)
+	}
+	buffer.WriteString(" ;")
+	if s.Post != nil {
+		s.Post.Print(buffer, 0)
+	}
+	buffer.WriteString(" )\n")
+	s.Body.Print(buffer, indent)
 }
 
-// Pos and End implementations for statement nodes.
+type ForInStmt struct {
+	For      Pos  // position of "for" keyword
+	Init     Stmt // initialization statement; or nil
+	Iterator Expr // condition; or nil
+	Body     *BlockStmt
+}
 
-// stmtNode() ensures that only statement nodes can be
-// assigned to a Stmt.
-//
+func (s *ForInStmt) Pos() Pos { return s.For }
+
+func (*ForInStmt) stmtNode() {}
+
+func (s *ForInStmt) Print(buffer *bytes.Buffer, indent int) {
+	WriteIndent(buffer, indent)
+	buffer.WriteString("for (")
+	s.Init.Print(buffer, 0)
+	buffer.WriteString(" : ")
+	s.Iterator.Print(buffer)
+	buffer.WriteString(" )\n")
+	s.Body.Print(buffer, indent)
+}
 
 // ----------------------------------------------------------------------------
 // Declarations
 // A declaration is represented by one of the following declaration nodes.
+
+// A BadDecl node is a placeholder for declarations containing
+// syntax errors for which no correct declaration nodes can be
+// created.
 //
-type (
-	// A BadDecl node is a placeholder for declarations containing
-	// syntax errors for which no correct declaration nodes can be
-	// created.
-	//
-	BadDecl struct {
-		From, To Pos // position range of bad declaration
-	}
+type BadDecl struct {
+	Start Pos // position range of bad declaration
+}
 
-	PackageDecl struct {
-		Doc    *Metadata // associated documentation; or nil
-		Path   *BasicLit // import path
-		EndPos Pos       // end of spec (overrides Path.Pos if nonzero)
-	}
+func (d *BadDecl) Pos() Pos { return d.Start }
 
-	ImportDecl struct {
-		Doc    *Metadata // associated documentation; or nil
-		Name   *Ident    // local package name (including "."); or nil
-		Path   *BasicLit // import path
-		EndPos Pos       // end of spec (overrides Path.Pos if nonzero)
-	}
+func (*BadDecl) declNode() {}
 
-	ValueDecl struct {
-		Doc      *Metadata // associated documentation; or nil
-		Modifier *Modifier
-		Names    []*Ident // value names (len(Names) > 0)
-		Type     Expr     // value type; or nil //TO-DO Generic *GenericLit
-		Values   []Expr   // initial values; or nil
-		Generic  *GenericLit
-	}
+func (*BadDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {}
 
-	ClassDecl struct {
-		Doc       *Metadata // associated documentation; or nil
-		Modifier  *Modifier
-		Parents   []*Expr
-		Name      *Ident // type name
-		Generic   *GenericLit
-		Values    []*ValueDecl
-		Functions []*FuncDecl
-		EndPos    Pos
-	}
+type PackageDecl struct {
+	Doc  *Metadata // associated documentation; or nil
+	Name *Ident    // import path
+}
 
-	EnumDecl struct {
-		Doc      *Metadata // associated documentation; or nil
-		Modifier *Modifier
-		Parent   Expr
-		Name     *Ident // type name
-		//TO-DO name, value pair
-		EndPos Pos
-	}
+func (s *PackageDecl) Pos() Pos { return s.Name.Pos() }
 
-	InterfaceDecl struct {
-		Doc       *Metadata // associated documentation; or nil
-		Modifier  *Modifier
-		Name      *Ident      // type name
-		Functions []*FuncDecl // position of '=', if any
-		EndPos    Pos
-		Generic   *GenericLit
-	}
+func (*PackageDecl) declNode() {}
 
-	// A FuncDecl node represents a function declaration.
-	FuncDecl struct {
-		Doc     *Metadata  // associated documentation; or nil
-		Name    *Ident     // function/method name
-		Params  *FieldList // (incoming) parameters; non-nil
-		Result  *Field     // (outgoing) results; or nil
-		Body    *BlockStmt // function body; or nil for external (non-Go) function
-		Generic *GenericLit
-	}
-)
+type ImportDecl struct {
+	Doc  *Metadata // associated documentation; or nil
+	Name *Ident    // local package name (including "."); or nil
+	Path *BasicLit // import path
+}
 
-func (d *BadDecl) Pos() Pos     { return d.From }
-func (s *PackageDecl) Pos() Pos { return s.Path.Pos() }
 func (s *ImportDecl) Pos() Pos {
 	if s.Name != nil {
 		return s.Name.Pos()
 	}
 	return s.Path.Pos()
 }
-func (s *ValueDecl) Pos() Pos     { return s.Names[0].Pos() }
-func (d *FuncDecl) Pos() Pos      { return d.Name.Pos() }
-func (c *ClassDecl) Pos() Pos     { return c.Name.Pos() }
-func (c *EnumDecl) Pos() Pos      { return c.Name.Pos() }
-func (c *InterfaceDecl) Pos() Pos { return c.Name.Pos() }
+func (*ImportDecl) declNode() {}
 
-// declNode() ensures that only declaration nodes can be
-// assigned to a Decl.
-//
-func (*BadDecl) declNode()       {}
-func (*ValueDecl) declNode()     {}
-func (*FuncDecl) declNode()      {}
-func (*ClassDecl) declNode()     {}
-func (*EnumDecl) declNode()      {}
-func (*InterfaceDecl) declNode() {}
+func (*ImportDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {}
 
-func (*BadDecl) Print(buffer *bytes.Buffer) {
-
+type ValueDecl struct {
+	Doc      *Metadata // associated documentation; or nil
+	Modifier *Modifier
+	Names    []*Ident // value names (len(Names) > 0)
+	Generic  *GenericLit
+	Type     Expr   // value type; or nil
+	Values   []Expr // initial values; or nil
 }
-func (v *ValueDecl) Print(buffer *bytes.Buffer) {
+
+func (s *ValueDecl) Pos() Pos { return s.Names[0].Pos() }
+
+func (*ValueDecl) declNode() {}
+
+func (v *ValueDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
 	for i, n := range v.Names {
 		v.Type.Print(buffer)
 		buffer.WriteString(" ")
@@ -762,40 +799,77 @@ func (v *ValueDecl) Print(buffer *bytes.Buffer) {
 		buffer.WriteString(";\n")
 	}
 }
-func (*FuncDecl) Print(buffer *bytes.Buffer) {
+
+type ClassDecl struct {
+	Doc       *Metadata // associated documentation; or nil
+	Modifier  *Modifier
+	Parents   []*Expr
+	Name      *Ident // type name
+	Generic   *GenericLit
+	Values    []*ValueDecl
+	Functions []*FuncDecl
+}
+
+func (c *ClassDecl) Pos() Pos { return c.Name.Pos() }
+
+func (*ClassDecl) declNode() {}
+
+func (*ClassDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
 
 }
-func (*ClassDecl) Print(buffer *bytes.Buffer) {
+
+type EnumDecl struct {
+	Doc      *Metadata // associated documentation; or nil
+	Modifier *Modifier
+	Name     *Ident // type name
+	List     []*EnumStmt
+}
+
+func (c *EnumDecl) Pos() Pos { return c.Name.Pos() }
+
+func (*EnumDecl) declNode() {}
+
+func (*EnumDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
 
 }
-func (*EnumDecl) Print(buffer *bytes.Buffer) {
+
+type InterfaceDecl struct {
+	Doc       *Metadata // associated documentation; or nil
+	Modifier  *Modifier
+	Name      *Ident // type name
+	Generic   *GenericLit
+	Functions []*FuncDecl // position of '=', if any
+}
+
+func (c *InterfaceDecl) Pos() Pos { return c.Name.Pos() }
+
+func (*InterfaceDecl) declNode() {}
+
+func (*InterfaceDecl) Print(bbuffer *bytes.Buffer, indent int, onlyDeclare bool) {
 
 }
-func (*InterfaceDecl) Print(buffer *bytes.Buffer) {
 
+// A FuncDecl node represents a function declaration.
+type FuncDecl struct {
+	Doc     *Metadata  // associated documentation; or nil
+	Name    *Ident     // function/method name
+	Params  *FieldList // (incoming) parameters; non-nil
+	Result  *Field     // (outgoing) results; or nil
+	Body    *BlockStmt // function body; or nil for external (non-Go) function
+	Generic *GenericLit
 }
-func (*BadDecl) PrintDecl(buffer *bytes.Buffer) {
 
-}
-func (*ValueDecl) PrintDecl(buffer *bytes.Buffer) {
+func (d *FuncDecl) Pos() Pos { return d.Name.Pos() }
 
-}
-func (f *FuncDecl) PrintDecl(buffer *bytes.Buffer) {
+func (*FuncDecl) declNode() {}
+
+func (f *FuncDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
 	f.Result.Type.Print(buffer)
 	buffer.WriteString(" ")
 	f.Name.Print(buffer)
 	buffer.WriteString("(")
 	f.Params.Print(buffer)
 	buffer.WriteString(");\n")
-}
-func (*ClassDecl) PrintDecl(buffer *bytes.Buffer) {
-
-}
-func (*EnumDecl) PrintDecl(buffer *bytes.Buffer) {
-
-}
-func (*InterfaceDecl) PrintDecl(buffer *bytes.Buffer) {
-
 }
 
 // ----------------------------------------------------------------------------
@@ -819,17 +893,17 @@ func (f *ProgramFile) End() Pos {
 }
 func (f *ProgramFile) Print(buffer *bytes.Buffer) {
 	for _, v := range f.Functions {
-		v.PrintDecl(buffer)
+		v.Print(buffer, 0, true)
 	}
 	buffer.WriteString("\n")
 
 	for _, v := range f.Values {
-		v.Print(buffer)
+		v.Print(buffer, 0, false)
 	}
 	buffer.WriteString("\n")
 
 	for _, v := range f.Functions {
-		v.Print(buffer)
+		v.Print(buffer, 0, false)
 	}
 }
 

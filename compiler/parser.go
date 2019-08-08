@@ -104,8 +104,10 @@ type parser struct {
 	errors  ErrorList
 	scanner Scanner
 
+	allMeta  bool
+	allEmit  bool
 	document *Metadata // last lead comment
-	meta     []*Metadata
+	meta     *Metadata
 
 	// Next token
 	pos Pos    // token position
