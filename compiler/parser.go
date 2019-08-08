@@ -95,8 +95,7 @@ func ParseDir(fset *FileSet, path string, filter func(os.FileInfo) bool, mode Mo
 	return
 }*/
 
-// A bailout panic is raised to indicate early termination.
-type bailout struct{}
+type tooManyErrors struct{}
 
 // The parser structure holds the parser's internal state.
 type parser struct {

@@ -1,14 +1,16 @@
+@doc "all types elements of panda language"
 package main;
 
-@doc `import other packages`
+/*
 import "system";
 import net "network";
+*/
 
-//@doc `scalar types`
 const b bool = true;
 
-const c char = 'a'; // alias u8
+const c char = 'a'; // alias u32 //TO-DO
 
+var sbyte_v sbyte = 1; // alias i8
 var short_v short = 0; // alias i16
 var int_v int; // alias i32
 var long_v long; // alias i64
@@ -17,6 +19,7 @@ var int16_v i16;
 var int32_v i32;
 var int64_v i64;
 
+var byte_v byte; // alias u8
 var ushort_v ushort; // alias u16
 var uint_v uint; // alias u32
 var ulong_v ulong; // alias u64
@@ -32,22 +35,23 @@ var f64_v f64;
 
 var string_v string = "hello world\n";
 
-@doc "main function"
+@doc "programe entry"
 public function main() int
 {
+    print(add(1, 1));
     return 0;
 }
 
-@doc "void return type can be ommited"
+@doc "print varable to console; void return type can be ommited"
 function print<T>(&t T) 
 {
     @emit `std::cout << t << std::endl;`
 }
 
+@doc "sample function"
 function add(a, b int) int
 {
     return a + b;
-    //@cpp(emit=`std::cout << << std::endl;`)
 }
 
 //@doc scalar cast
