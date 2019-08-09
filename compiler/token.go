@@ -486,7 +486,7 @@ func (op Token) Precedence() int {
 		return 1
 	case AndAnd:
 		return 2
-	case Equal, NotEqual, Less, LessEqual, Greater, GreaterEqual:
+	case Equal, NotEqual, Less, LessEqual, Greater, GreaterEqual, Question:
 		return 3
 	case Plus, Minus, Or, Caret:
 		return 4

@@ -84,17 +84,13 @@ func (modifier *Modifier) Pos() Pos { return modifier.Start }
 
 // A Field represents a Field declaration list in a struct type
 type Field struct {
-	Name    *Ident    // field/method/parameter names; or nil
-	Type    Expr      // field/method/parameter type
-	Default Expr      // default value
-	Meta    *Metadata // metadata; or nil
-	Ref     bool      // pass as reference; only available in function
+	Name    *Ident // field/method/parameter names; or nil
+	Type    Expr   // field/method/parameter type
+	Default Expr   // default value
+	Ref     bool   // pass as reference; only available in function
 }
 
 func (f *Field) Pos() Pos {
-	if f.Meta != nil {
-		return f.Meta.Pos()
-	}
 	if f.Name != nil {
 		return f.Name.Pos()
 	}
@@ -191,6 +187,8 @@ type EllipsisLit struct {
 
 func (x *EllipsisLit) Pos() Pos { return x.Start }
 
+func (*EllipsisLit) exprNode() {}
+
 func (x *EllipsisLit) Print(buffer *bytes.Buffer) {
 	buffer.WriteString("...")
 	x.Expr.Print(buffer)
@@ -220,7 +218,6 @@ func (x *BasicLit) Print(buffer *bytes.Buffer) {
 		x.Kind.Print(buffer)
 
 	default:
-		//TO-DO panic of error
 	}
 }
 
@@ -319,10 +316,9 @@ func (x *IndexExpr) Print(buffer *bytes.Buffer) {
 
 // A CallExpr node represents an expression followed by an argument list.
 type CallExpr struct {
-	Func Expr   // function expression
-	Args []Expr // function arguments; or nil
-	//TO-DO elllipsis
-	//Ellipsis
+	Func     Expr   // function expression
+	Args     []Expr // function arguments; or nil
+	Ellipsis int    // position of Args array, -1 not ellipsis
 }
 
 func (*CallExpr) exprNode() {}
@@ -408,9 +404,9 @@ func (x *BinaryExpr) Print(buffer *bytes.Buffer) {
 
 // A TernaryExpr node represents a ternary expression.
 type TernaryExpr struct {
-	Value  Expr // operator
-	First  Expr // left operand
-	Second Expr // right operand
+	Condition Expr // operator
+	First     Expr // left operand
+	Second    Expr // right operand
 }
 
 func (x *TernaryExpr) Pos() Pos { return x.Value.Pos() }
@@ -418,7 +414,7 @@ func (x *TernaryExpr) Pos() Pos { return x.Value.Pos() }
 func (*TernaryExpr) exprNode() {}
 
 func (x *TernaryExpr) Print(buffer *bytes.Buffer) {
-	x.Value.Print(buffer)
+	x.Condition.Print(buffer)
 	buffer.WriteString(" ? ")
 	x.First.Print(buffer)
 	buffer.WriteString(" : ")
@@ -989,19 +985,18 @@ func NewObj(kind ObjKind, name string) *Object {
 // Pos computes the source position of the declaration of an object name.
 // The result may be an invalid position if it cannot be computed
 // (obj.Decl may be nil or not correct).
-/*
 func (obj *Object) Pos() Pos {
 	name := obj.Name
 	switch d := obj.Decl.(type) {
 	case *Field:
 		if d.Name.Name == name {
-			return d.Name.Pos()
+			return d.Pos()
 		}
 	case *PackageDecl:
-		return d.Path.Pos()
+		return d.Pos()
 	case *ImportDecl:
 		if d.Name != nil && d.Name.Name == name {
-			return d.Name.Pos()
+			return d.Pos()
 		}
 		return d.Path.Pos()
 	case *ValueDecl:
@@ -1016,16 +1011,14 @@ func (obj *Object) Pos() Pos {
 			return d.Name.Pos()
 		}
 	case *AssignStmt:
-		for _, x := range d.Lhs {
-			if ident, isIdent := x.(*Ident); isIdent && ident.Name == name {
-				return ident.Pos()
-			}
+		if ident, isIdent := d.Left.(*Ident); isIdent && ident.Name == name {
+			return ident.Pos()
 		}
 	case *Scope:
 		// predeclared object - nothing to do for now
 	}
 	return NoPos
-}*/
+}
 
 // ObjKind describes what an object represents.
 type ObjKind int
