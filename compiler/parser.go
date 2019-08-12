@@ -127,11 +127,10 @@ type parser struct {
 	class   *ClassDecl
 
 	// Ordinary identifier scopes
-	pkgScope    *Scope   // namespaceScope.Outer == nil
-	topScope    *Scope   // top-most scope; may be pkgScope
-	unresolved  []*Ident // unresolved identifiers
-	badDecl     []*BadDecl
-	targetStack [][]*Ident // stack of unresolved labels
+	pkgScope   *Scope   // namespaceScope.Outer == nil
+	topScope   *Scope   // top-most scope; may be pkgScope
+	unresolved []*Ident // unresolved identifiers
+	badDecl    []*BadDecl
 }
 
 func (p *parser) init(fset *FileSet, filename string, src []byte, scanComments bool, flags []string) {
@@ -873,7 +872,7 @@ func (p *parser) tokPrec() (Token, int) {
 }
 
 // If lhs is set and the result is an identifier, it is not resolved.
-func (p *parser) parseBinaryExpr(lhs bool, prec1 int) Expr {
+func (p *parser) parseBinaryExprWithPrec(lhs bool, prec1 int) Expr {
 	x := p.parseUnaryExpr(lhs)
 	for {
 		op, oprec := p.tokPrec()
@@ -885,11 +884,11 @@ func (p *parser) parseBinaryExpr(lhs bool, prec1 int) Expr {
 			p.resolve(x, true)
 			lhs = false
 		}
-		y := p.parseBinaryExpr(false, oprec+1)
+		y := p.parseBinaryExprWithPrec(false, oprec+1)
 		if op == Question {
 			// TernaryExpr
 			p.expect(Colon)
-			z := p.parseBinaryExpr(false, oprec+1)
+			z := p.parseBinaryExprWithPrec(false, oprec+1)
 			x = &TernaryExpr{Condition: x, First: y, Second: z}
 		} else {
 			x = &BinaryExpr{Left: x, Op: op, Right: y}
@@ -903,7 +902,7 @@ func (p *parser) parseBinaryExpr(lhs bool, prec1 int) Expr {
 // check the result (using checkExpr or checkExprOrType), depending on
 // context.
 func (p *parser) parseExpr(lhs bool) Expr {
-	return p.parseBinaryExpr(lhs, LowestPrec+1)
+	return p.parseBinaryExprWithPrec(lhs, LowestPrec+1)
 }
 
 func (p *parser) parseRhs() Expr {
@@ -931,39 +930,34 @@ func (p *parser) parseSimpleStmt() Stmt {
 		ModAssign, AndAssign, OrAssign,
 		XorAssign, LeftShiftAssign, RightShiftAssign:
 		// assignment statement, possibly part of a range clause
-		pos, tok := p.pos, p.tok
+		tok := p.tok
 		p.next()
-		var y []Expr
-		y = p.parseRhsList()
-		as := &AssignStmt{Lhs: x, TokPos: pos, Tok: tok, Rhs: y}
+		y := p.parseRhs()
+		as := &AssignStmt{Left: x, Tok: tok, Right: y}
 		return as
-	}
-
-	if len(x) > 1 {
-		p.errorExpected(x[0].Pos(), "1 expression")
-		// continue with first expression
 	}
 
 	switch p.tok {
 	case PlusPlus, MinusMinus:
 		// increment or decrement
-		s := &IncDecStmt{X: x[0], TokPos: p.pos, Tok: p.tok}
+		s := &IncDecStmt{Expr: x, Tok: p.tok}
 		p.next()
 		return s
 	}
 
 	// expression
-	return &ExprStmt{X: x[0]}
+	return &ExprStmt{Expr: x}
 }
 
 func (p *parser) parseCallExpr(callType string) *CallExpr {
-	x := p.parseRhsOrType() // could be a conversion: (some type)(x)
+	pos := p.pos
+	x := p.parseRhs() // could be a conversion: (some type)(x)
 	if call, isCall := x.(*CallExpr); isCall {
 		return call
 	}
 	if _, isBad := x.(*BadExpr); !isBad {
 		// only report error if it's a new one
-		p.error(p.safePos(x.End()), fmt.Sprintf("function must be invoked in %s statement", callType))
+		p.error(pos, fmt.Sprintf("function must be invoked in %s statement", callType))
 	}
 	return nil
 }
@@ -973,25 +967,16 @@ func (p *parser) parseReturnStmt() *ReturnStmt {
 	p.expect(Return)
 	var result Expr
 	if p.tok != Semi {
-		result = p.checkExpr(p.parseExpr(false))
+		result = p.parseExpr(false)
 	}
 	p.expect(Semi)
-	//TO-DO parse one Rhs instead list
-	return &ReturnStmt{Return: pos, Result: result}
+	return &ReturnStmt{Start: pos, Result: result}
 }
 
 func (p *parser) parseBranchStmt(tok Token) *BranchStmt {
 	pos := p.expect(tok)
-	var label *Ident
-	if p.tok == IDENT {
-		label = p.parseIdent()
-		// add to list of unresolved targets
-		n := len(p.targetStack) - 1
-		p.targetStack[n] = append(p.targetStack[n], label)
-	}
 	p.expect(Semi)
-
-	return &BranchStmt{TokPos: pos, Tok: tok, Label: label}
+	return &BranchStmt{Start: pos, Tok: tok}
 }
 
 func (p *parser) makeExpr(s Stmt, want string) Expr {
@@ -999,77 +984,14 @@ func (p *parser) makeExpr(s Stmt, want string) Expr {
 		return nil
 	}
 	if es, isExpr := s.(*ExprStmt); isExpr {
-		return p.checkExpr(es.X)
+		return es.Expr
 	}
 	found := "simple statement"
 	if _, isAss := s.(*AssignStmt); isAss {
 		found = "assignment"
 	}
 	p.error(s.Pos(), fmt.Sprintf("expected %s, found %s (missing parentheses around composite literal?)", want, found))
-	return &BadExpr{From: s.Pos(), To: p.safePos(s.End())}
-}
-
-// parseIfHeader is an adjusted version of parser.header
-// in cmd/compile/internal/syntax/parser.go, which has
-// been tuned for better error handling.
-func (p *parser) parseIfHeader() (init Stmt, cond Expr) {
-	if p.tok == LeftBrace {
-		p.error(p.pos, "missing condition in if statement")
-		cond = &BadExpr{From: p.pos, To: p.pos}
-		return
-	}
-	// p.tok != LeftBrace
-
-	outer := p.exprLev
-	p.exprLev = -1
-
-	if p.tok != Semi {
-		// accept potential variable declaration but complain
-		if p.tok == Var {
-			p.next()
-			p.error(p.pos, fmt.Sprintf("var declaration not allowed in 'If' initializer"))
-		}
-		init = p.parseSimpleStmt(basic)
-	}
-
-	var condStmt Stmt
-	var semi struct {
-		pos Pos
-		lit string // ";" or "\n"; valid if pos.IsValid()
-	}
-	if p.tok != LeftBrace {
-		if p.tok == Semi {
-			semi.pos = p.pos
-			semi.lit = p.lit
-			p.next()
-		} else {
-			p.expect(Semi)
-		}
-		if p.tok != LeftBrace {
-			condStmt = p.parseSimpleStmt(basic)
-		}
-	} else {
-		condStmt = init
-		init = nil
-	}
-
-	if condStmt != nil {
-		cond = p.makeExpr(condStmt, "boolean expression")
-	} else if semi.pos.IsValid() {
-		if semi.lit == "\n" {
-			p.error(semi.pos, "unexpected newline, expecting { after if clause")
-		} else {
-			p.error(semi.pos, "missing condition in if statement")
-		}
-	}
-
-	// make sure we have a valid AST
-	if cond == nil {
-		cond = &BadExpr{From: p.pos, To: p.pos}
-	}
-
-	p.exprLev = outer
-	return
+	return &BadExpr{Start: s.Pos()}
 }
 
 func (p *parser) parseIfStmt() *IfStmt {
@@ -1077,7 +999,7 @@ func (p *parser) parseIfStmt() *IfStmt {
 	p.openScope()
 	defer p.closeScope()
 
-	init, cond := p.parseIfHeader()
+	cond := p.parseExpr(true)
 	body := p.parseBlockStmt()
 
 	var else_ Stmt
@@ -1091,41 +1013,31 @@ func (p *parser) parseIfStmt() *IfStmt {
 			p.expect(Semi)
 		default:
 			p.errorExpected(p.pos, "if statement or block")
-			else_ = &BadStmt{From: p.pos, To: p.pos}
+			else_ = &BadStmt{Start: p.pos}
 		}
 	} else {
 		p.expect(Semi)
 	}
 
-	return &IfStmt{If: pos, Init: init, Cond: cond, Body: body, Else: else_}
-}
-
-func (p *parser) parseTypeList() (list []Expr) {
-	list = append(list, p.parseType())
-	for p.tok == Comma {
-		p.next()
-		list = append(list, p.parseType())
-	}
-
-	return
+	return &IfStmt{Start: pos, Condition: cond, Body: body, Else: else_}
 }
 
 func (p *parser) parseCaseClause() *CaseClause {
 	pos := p.pos
-	var list []Expr
+	var expr Expr
 	if p.tok == Case {
 		p.next()
-		list = p.parseRhsList()
+		expr = p.parseRhs()
 	} else {
 		p.expect(Default)
 	}
 
-	colon := p.expect(Colon)
+	p.expect(Colon)
 	p.openScope()
 	body := p.parseStmtList()
 	p.closeScope()
 
-	return &CaseClause{Case: pos, List: list, Colon: colon, Body: body}
+	return &CaseClause{Start: pos, Expr: expr, Body: body}
 }
 
 func (p *parser) parseSwitchStmt() Stmt {
@@ -1133,48 +1045,16 @@ func (p *parser) parseSwitchStmt() Stmt {
 	p.openScope()
 	defer p.closeScope()
 
-	var s1, s2 Stmt
-	if p.tok != LeftBrace {
-		prevLev := p.exprLev
-		p.exprLev = -1
-		if p.tok != Semi {
-			s2 = p.parseSimpleStmt(basic)
-		}
-		if p.tok == Semi {
-			p.next()
-			s1 = s2
-			s2 = nil
-			if p.tok != LeftBrace {
-				// A TypeSwitchGuard may declare a variable in addition
-				// to the variable declared in the initial SimpleStmt.
-				// Introduce extra scope to avoid redeclaration errors:
-				//
-				//	switch t := 0; t := x.(T) { ... }
-				//
-				// (this code is not valid Go because the first t
-				// cannot be accessed and thus is never used, the extra
-				// scope is needed for the correct error message).
-				//
-				// If we don't have a type switch, s2 must be an expression.
-				// Having the extra nested but empty scope won't affect it.
-				p.openScope()
-				defer p.closeScope()
-				s2 = p.parseSimpleStmt(basic)
-			}
-		}
-		p.exprLev = prevLev
-	}
-
-	lbrace := p.expect(LeftBrace)
+	tag := p.parseSimpleStmt()
+	bodyStart := p.expect(LeftBrace)
 	var list []Stmt
 	for p.tok == Case || p.tok == Default {
 		list = append(list, p.parseCaseClause())
 	}
-	rbrace := p.expect(RightBrace)
-	p.expect(Semi)
-	body := &BlockStmt{Lbrace: lbrace, List: list, Rbrace: rbrace}
+	p.expect(RightBrace)
+	body := &BlockStmt{Start: bodyStart, Stmts: list}
 
-	return &SwitchStmt{Switch: pos, Init: s1, Tag: p.makeExpr(s2, "switch expression"), Body: body}
+	return &SwitchStmt{Start: pos, Tag: p.makeExpr(tag, "switch expression"), Body: body}
 }
 
 func (p *parser) parseForStmt() Stmt {
@@ -1188,18 +1068,18 @@ func (p *parser) parseForStmt() Stmt {
 		prevLev := p.exprLev
 		p.exprLev = -1
 		if p.tok != Semi {
-			s2 = p.parseSimpleStmt(rangeOk)
+			s2 = p.parseSimpleStmt()
 		}
 		if p.tok == Semi {
 			p.next()
 			s1 = s2
 			s2 = nil
 			if p.tok != Semi {
-				s2 = p.parseSimpleStmt(basic)
+				s2 = p.parseSimpleStmt()
 			}
 			p.expect(Semi)
 			if p.tok != LeftBrace {
-				s3 = p.parseSimpleStmt(basic)
+				s3 = p.parseSimpleStmt()
 			}
 		}
 		p.exprLev = prevLev
@@ -1210,29 +1090,28 @@ func (p *parser) parseForStmt() Stmt {
 
 	// regular for statement
 	return &ForStmt{
-		For:  pos,
-		Init: s1,
-		Cond: p.makeExpr(s2, "boolean or range expression"),
-		Post: s3,
-		Body: body,
+		For:       pos,
+		Init:      s1,
+		Condition: p.makeExpr(s2, "boolean"),
+		Post:      s3,
+		Body:      body,
 	}
 }
 
 func (p *parser) parseStmt() (s Stmt) {
-	if len(p.meta) > 0 {
+	if len(p.emits) > 0 {
 		// only 1 "@emit" is valid here
-		if len(p.meta) > 1 || p.meta[0].Name != MetaEmit {
-			p.error(p.meta[0].StartPos, "invalid meta.")
-			s = &BadStmt{From: p.meta[0].StartPos, To: p.meta[0].EndPos}
-			p.meta = p.meta[:0]
-			return
+		var emits []Expr
+		for _, v := range p.emits {
+			emits = append(emits, &EmitExpr{
+				Meta: v,
+			})
 		}
-		s = &ExprStmt{X: &EmitExpr{
-			Meta: p.meta[0],
-		}}
-		p.meta = p.meta[:0]
+		s = &EmitsStmt{Content: emits}
+		p.emits = p.emits[:0]
 		return
 	}
+
 	switch p.tok {
 	case Const, Var:
 		s = &DeclStmt{Decl: p.parseDecl(stmtStart)}
@@ -1241,7 +1120,7 @@ func (p *parser) parseStmt() (s Stmt) {
 		IDENT, INT, FLOAT, CHAR, STRING, Function, LeftParen, // operands
 		LeftBracket, Class, Enum, Interface, // composite types
 		Plus, Minus, Star, And, Caret, Not: // unary operators
-		s = p.parseSimpleStmt(labelOk)
+		s = p.parseSimpleStmt()
 	case Return:
 		s = p.parseReturnStmt()
 	case Break, Continue:
@@ -1255,21 +1134,15 @@ func (p *parser) parseStmt() (s Stmt) {
 		s = p.parseSwitchStmt()
 	case For:
 		s = p.parseForStmt()
-	case Semi:
-		// Is it ever possible to have an implicit semicolon
-		// producing an empty statement in a valid program?
-		// (handle correctly anyway)
-		s = &EmptyStmt{Semicolon: p.pos, Implicit: p.lit == "\n"}
-		p.next()
 	case RightBrace:
 		// a semicolon may be omitted before a closing "}"
-		s = &EmptyStmt{Semicolon: p.pos, Implicit: true}
+		s = &EmptyStmt{Start: p.pos}
 	default:
 		// no statement found
 		pos := p.pos
 		p.errorExpected(pos, "statement")
 		p.advance(stmtStart)
-		s = &BadStmt{From: pos, To: p.pos}
+		s = &BadStmt{Start: pos}
 	}
 
 	return
@@ -1281,7 +1154,7 @@ func (p *parser) parseStmt() (s Stmt) {
 func (p *parser) parsePackageDecl(doc *Metadata) *PackageDecl {
 	// The namespace clause is not a declaration;
 	// the package name does not appear in any scope.
-	ident := p.parseQualifiedIdent()
+	ident := p.parseIdent()
 	p.expect(Semi)
 
 	if p.errors.Len() != 0 {
@@ -1290,24 +1163,24 @@ func (p *parser) parsePackageDecl(doc *Metadata) *PackageDecl {
 
 	spec := &PackageDecl{
 		Doc:  doc,
-		Path: &BasicLit{ValuePos: ident.Pos(), Kind: STRING, Value: ident.Name},
+		Name: ident,
 	}
 	return spec
 }
 
 func (p *parser) parseImportDecl(doc *Metadata) *ImportDecl {
-	ident := p.parseQualifiedIdent()
+	var ident *Ident
 	var path *BasicLit
+	if p.tok == IDENT {
+		ident = p.parseIdent()
+	}
 
-	switch p.tok {
-	case Semi:
-		path = &BasicLit{ValuePos: ident.NamePos, Kind: STRING, Value: ident.Name}
-		ident = nil
+	if p.tok == STRING {
+		pos := p.pos
+		path = &BasicLit{Start: pos, Kind: STRING, Value: p.lit}
 		p.next()
-	case IDENT:
-		qualifiedPath := p.parseQualifiedIdent()
-		path = &BasicLit{ValuePos: qualifiedPath.NamePos, Kind: STRING, Value: qualifiedPath.Name}
-		p.expect(Semi)
+	} else {
+		p.error(p.pos, "expect import path (string)")
 	}
 
 	// collect imports
@@ -1321,30 +1194,34 @@ func (p *parser) parseImportDecl(doc *Metadata) *ImportDecl {
 func (p *parser) parseValueDecl(doc *Metadata, m *Modifier) *ValueDecl {
 	keyword := p.tok
 	p.next()
+	name := p.parseIdent()
+	typ := p.tryType(true)
 	decl := &ValueDecl{
 		Doc:      doc,
 		Modifier: m,
-		Names:    p.parseIdentList(),
-		Type:     p.tryType(true),
+		Name:     name,
+		Type:     typ,
 	}
 
 	pos := p.pos
 	// always permit optional initialization for more tolerant parsing
 	if p.tok == Assign {
 		p.next()
-		decl.Values = p.parseRhsList()
+		decl.Value = p.parseRhs()
 	}
 	p.expect(Semi) // call before accessing p.linecomment
 
-	if decl.Values == nil && decl.Type == nil {
+	if decl.Value == nil && decl.Type == nil {
 		p.error(pos, "missing type or initialization")
+		//TO-DO if type is nil, parse type from value
+
 	}
 
 	kind := ConstObj
 	if keyword == Var {
 		kind = VarObj
 	}
-	p.declare(decl, p.topScope, kind, decl.Names...)
+	p.declare(decl, p.topScope, kind, decl.Name)
 
 	return decl
 }
@@ -1372,7 +1249,7 @@ func (p *parser) parseTypeSpec(doc *CommentGroup, _ Token, _ int) Spec {
 */
 
 func (p *parser) parseFuncDecl(doc *Metadata, m *Modifier) *FuncDecl {
-	pos := p.expect(Function)
+	p.expect(Function)
 	scope := NewScope(p.topScope) // function scope
 
 	ident := p.parseIdent()
@@ -1388,13 +1265,10 @@ func (p *parser) parseFuncDecl(doc *Metadata, m *Modifier) *FuncDecl {
 	}
 
 	decl := &FuncDecl{
-		Doc:  doc,
-		Name: ident,
-		Type: &FuncType{
-			Func:   pos,
-			Params: params,
-			Result: result,
-		},
+		Doc:     doc,
+		Name:    ident,
+		Params:  params,
+		Result:  result,
 		Body:    body,
 		Generic: generic,
 	}
@@ -1420,7 +1294,7 @@ func (p *parser) parseDecl(sync map[Token]bool) Decl {
 		pos := p.pos
 		p.errorExpected(pos, "declaration")
 		p.advance(sync)
-		return &BadDecl{From: pos, To: p.pos}
+		return &BadDecl{Start: pos}
 	}
 }
 

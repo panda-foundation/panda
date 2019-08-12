@@ -409,7 +409,7 @@ type TernaryExpr struct {
 	Second    Expr // right operand
 }
 
-func (x *TernaryExpr) Pos() Pos { return x.Value.Pos() }
+func (x *TernaryExpr) Pos() Pos { return x.Condition.Pos() }
 
 func (*TernaryExpr) exprNode() {}
 
@@ -502,6 +502,25 @@ func (*ExprStmt) stmtNode() {}
 
 func (s *ExprStmt) Print(buffer *bytes.Buffer, indent int) {
 	s.Expr.Print(buffer)
+}
+
+// An ExprStmt node represents a (stand-alone) expression
+// in a statement list.
+//
+type EmitsStmt struct {
+	Content []Expr // expression
+}
+
+func (s *EmitsStmt) Pos() Pos { return s.Content[0].Pos() }
+
+func (*EmitsStmt) stmtNode() {}
+
+func (s *EmitsStmt) Print(buffer *bytes.Buffer, indent int) {
+	for _, v := range s.Content {
+		WriteIndent(buffer, indent)
+		v.Print(buffer)
+		buffer.WriteString(";\n")
+	}
 }
 
 // An IncDecStmt node represents an increment or decrement statement. ++ --
@@ -638,19 +657,18 @@ func (s *IfStmt) Print(buffer *bytes.Buffer, indent int) {
 // A CaseClause represents a case of an expression or type switch statement.
 type CaseClause struct {
 	Start Pos    // position of "case" or "default" keyword
-	List  []Expr // list of expressions or types; nil means default case
+	Expr  Expr   // list of expressions or types; nil means default case
 	Body  []Stmt // statement list; or nil
 }
 
 func (s *CaseClause) Pos() Pos { return s.Start }
 func (*CaseClause) stmtNode()  {}
 func (s *CaseClause) Print(buffer *bytes.Buffer, indent int) {
-	for _, v := range s.List {
-		WriteIndent(buffer, indent)
-		buffer.WriteString("case ")
-		v.Print(buffer)
-		buffer.WriteString(":\n")
-	}
+	WriteIndent(buffer, indent)
+	buffer.WriteString("case ")
+	s.Expr.Print(buffer)
+	buffer.WriteString(":\n")
+
 	for _, v := range s.Body {
 		v.Print(buffer, indent+4)
 	}
@@ -773,27 +791,25 @@ func (*ImportDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {}
 type ValueDecl struct {
 	Doc      *Metadata // associated documentation; or nil
 	Modifier *Modifier
-	Names    []*Ident // value names (len(Names) > 0)
+	Name     *Ident // value names (len(Names) > 0)
 	Generic  *GenericLit
-	Type     Expr   // value type; or nil
-	Values   []Expr // initial values; or nil
+	Type     Expr // value type; or nil
+	Value    Expr // initial values; or nil
 }
 
-func (s *ValueDecl) Pos() Pos { return s.Names[0].Pos() }
+func (s *ValueDecl) Pos() Pos { return s.Name.Pos() }
 
 func (*ValueDecl) declNode() {}
 
 func (v *ValueDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
-	for i, n := range v.Names {
-		v.Type.Print(buffer)
-		buffer.WriteString(" ")
-		buffer.WriteString(n.Name)
-		if len(v.Values) == len(v.Names) {
-			buffer.WriteString(" = ")
-			v.Values[i].Print(buffer)
-		}
-		buffer.WriteString(";\n")
+	v.Type.Print(buffer)
+	buffer.WriteString(" ")
+	v.Name.Print(buffer)
+	if v.Value != nil {
+		buffer.WriteString(" = ")
+		v.Value.Print(buffer)
 	}
+	buffer.WriteString(";\n")
 }
 
 type ClassDecl struct {
@@ -1000,10 +1016,8 @@ func (obj *Object) Pos() Pos {
 		}
 		return d.Path.Pos()
 	case *ValueDecl:
-		for _, n := range d.Names {
-			if n.Name == name {
-				return n.Pos()
-			}
+		if d.Name.Name == name {
+			return d.Name.Pos()
 		}
 	//TO-DO class enum interface
 	case *FuncDecl:

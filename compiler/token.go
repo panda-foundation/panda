@@ -34,10 +34,12 @@ const (
 	Enum
 	False
 	For
+	Foreach
 	Function
-	Import
-	Interface
 	If
+	Import
+	In
+	Interface
 	New
 	Null
 	Operator
@@ -151,10 +153,12 @@ var (
 		Enum:      "enum",
 		False:     "false",
 		For:       "for",
+		Foreach:   "foreach",
 		Function:  "function",
-		Import:    "import",
-		Interface: "interface",
 		If:        "if",
+		Import:    "import",
+		In:        "In",
+		Interface: "interface",
 		New:       "new",
 		Null:      "null",
 		Operator:  "operator",
