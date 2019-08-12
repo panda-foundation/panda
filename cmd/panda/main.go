@@ -12,7 +12,7 @@ func main() {
 	pf, err := compiler.ParseFile(fileset, "./../../everything.pd", true, []string{})
 	if err == nil {
 		var b bytes.Buffer
-		pf.Print(&b, 0)
+		pf.Print(&b)
 		fmt.Println(b.String())
 	}
 }
