@@ -103,7 +103,6 @@ type parser struct {
 	errors  ErrorList
 	scanner Scanner
 
-	allowMeta bool
 	allowEmit bool
 	document  *Metadata // last lead comment
 	meta      *Metadata
@@ -223,16 +222,13 @@ func (p *parser) next() {
 	p.pos, p.tok, p.lit = p.scanner.Scan()
 	for p.tok == META {
 		// invalid: if the meta is on same line as the previous token
-		if p.file.Line(p.pos) == p.file.Line(prev) {
+		if p.file.Line(p.pos) == p.file.Line(prev) && p.pos != 0 {
 			p.error(p.pos, "meta data must start from newline.")
 			p.parseMetadata() // skip meta
 		} else {
 			metaData := p.parseMetadata()
 			for _, v := range metaData {
 				if v.Name == MetaDoc {
-					if p.allowMeta == false {
-						p.error(p.pos, "document is not allowed here.")
-					}
 					if p.document != nil {
 						p.error(p.pos, "duplicate document here.")
 					}
@@ -243,9 +239,6 @@ func (p *parser) next() {
 					}
 					p.emits = append(p.emits, v)
 				} else {
-					if p.allowMeta == false {
-						p.error(p.pos, "metadata is not allowed here.")
-					}
 					if p.meta != nil {
 						p.error(p.pos, "duplicate metadata here.")
 					}
@@ -269,7 +262,10 @@ func (p *parser) error(pos Pos, msg string) {
 		panic(tooManyErrors{})
 	}
 	p.errors.Add(errPos, msg)
-	fmt.Println("error: ", msg)
+	fmt.Println("file:", errPos.Filename)
+	fmt.Println("line:", errPos.Line)
+	fmt.Println("column:", errPos.Column)
+	fmt.Println("error:", msg)
 }
 
 func (p *parser) errorExpected(pos Pos, msg string) {
@@ -630,12 +626,13 @@ func (p *parser) parseStmtList() (list []Stmt) {
 }
 
 func (p *parser) parseBody(scope *Scope) *BlockStmt {
+	p.allowEmit = true
 	start := p.expect(LeftBrace)
 	p.topScope = scope // open function scope
 	list := p.parseStmtList()
 	p.closeScope()
 	p.expect(RightBrace)
-
+	p.allowEmit = false
 	return &BlockStmt{Start: start, Stmts: list}
 }
 
@@ -1254,8 +1251,6 @@ func (p *parser) parseFuncDecl(doc *Metadata, m *Modifier) *FuncDecl {
 
 	ident := p.parseIdent()
 	generic := p.parseGeneric(false)
-	//TO-DO parse <> generic
-
 	params := p.parseParameters(scope)
 	result := p.parseResult(scope)
 
