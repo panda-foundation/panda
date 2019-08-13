@@ -8,7 +8,6 @@ const (
 	// special tokens
 	ILLEGAL Token = iota
 	EOF
-	DOCUMENT
 
 	// literals
 	literal_begin
@@ -22,7 +21,6 @@ const (
 
 	// keywords
 	keyword_begin
-	Base
 	Break
 	Case
 	Catch
@@ -47,6 +45,7 @@ const (
 	Public
 	Return
 	Static
+	Super
 	Switch
 	This
 	Throw
@@ -141,7 +140,6 @@ const (
 var (
 	tokens = [...]string{
 
-		Base:      "base",
 		Break:     "break",
 		Case:      "case",
 		Catch:     "catch",
@@ -166,6 +164,7 @@ var (
 		Public:    "public",
 		Return:    "return",
 		Static:    "static",
+		Super:     "super",
 		Switch:    "switch",
 		This:      "this",
 		Throw:     "throw",
@@ -245,21 +244,18 @@ var (
 		Dot:              ".",
 		Ellipsis:         "...",
 
-		ILLEGAL:  "ILLEGAL",
-		EOF:      "EOF",
-		DOCUMENT: "DOCUMENT",
-
-		IDENT:  "IDENT",
-		INT:    "INT",
-		FLOAT:  "FLOAT",
-		CHAR:   "CHAR",
-		STRING: "STRING",
-		META:   "META",
+		ILLEGAL: "ILLEGAL",
+		EOF:     "EOF",
+		IDENT:   "IDENT",
+		INT:     "INT",
+		FLOAT:   "FLOAT",
+		CHAR:    "CHAR",
+		STRING:  "STRING",
+		META:    "META",
 	}
 
 	cppTokens = [...]string{
 
-		Base:      "base",
 		Break:     "break",
 		Case:      "case",
 		Catch:     "catch",
@@ -282,6 +278,7 @@ var (
 		Public:    "",
 		Return:    "return",
 		Static:    "static",
+		Super:     "super",
 		Switch:    "switch",
 		This:      "this",
 		Throw:     "throw",
