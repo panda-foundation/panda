@@ -21,6 +21,7 @@ const (
 
 	// keywords
 	keyword_begin
+	Await
 	Break
 	Case
 	Catch
@@ -43,6 +44,7 @@ const (
 	Operator
 	Package
 	Public
+	Result
 	Return
 	Static
 	Super
@@ -139,7 +141,7 @@ const (
 
 var (
 	tokens = [...]string{
-
+		Await:     "await",
 		Break:     "break",
 		Case:      "case",
 		Catch:     "catch",
@@ -162,6 +164,7 @@ var (
 		Operator:  "operator",
 		Package:   "package",
 		Public:    "public",
+		Result:    "result",
 		Return:    "return",
 		Static:    "static",
 		Super:     "super",
@@ -255,7 +258,6 @@ var (
 	}
 
 	cppTokens = [...]string{
-
 		Break:     "break",
 		Case:      "case",
 		Catch:     "catch",
@@ -465,6 +467,7 @@ func (node *OperatorNode) insertOperator(operator string, position int) {
 	}
 }
 
+// ==========================================================
 // A set of constants for precedence-based expression parsing.
 // Non-operators have lowest precedence, followed by operators
 // starting with precedence 1 up to unary operators. The highest

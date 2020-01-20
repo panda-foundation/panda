@@ -60,6 +60,8 @@ function add(a, b int) int
 
 
 /*
+await result
+
 public class empty
 {
     public function new()

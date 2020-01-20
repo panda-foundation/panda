@@ -19,7 +19,7 @@ const (
 
 var (
 	// max indent
-	indents = []byte("                    ")
+	indents = []byte("                              ")
 )
 
 func WriteIndent(buffer *bytes.Buffer, indent int) {
