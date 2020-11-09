@@ -34,6 +34,10 @@ type File struct {
 	lines []int
 }
 
+func NewFile(fileName string) *File {
+	return &File{name: fileName, lines: []int{0}}
+}
+
 func (f *File) LineCount() int {
 	return len(f.lines)
 }
@@ -69,22 +73,4 @@ func (f *File) unpack(offset int) (fileName string, line, column int) {
 		line, column = i+1, offset-f.lines[i]+1
 	}
 	return
-}
-
-type FileSet struct {
-	files []*File
-}
-
-func (s *FileSet) AddFile(filename string) *File {
-	f := &File{name: filename, lines: []int{0}}
-	s.files = append(s.files, f)
-	return f
-}
-
-func (s *FileSet) Iterate(f func(*File) bool) {
-	for _, file := range s.files {
-		if !f(file) {
-			break
-		}
-	}
 }

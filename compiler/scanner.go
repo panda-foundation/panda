@@ -63,7 +63,6 @@ func NewScanner(file *File, src []byte, errorHandler ErrorHandler, scanComment b
 	if s.char == bom {
 		s.next()
 	}
-
 	for _, flag := range flags {
 		s.flags[flag] = true
 	}
@@ -109,7 +108,6 @@ func (s *Scanner) peek() byte {
 }
 
 func (s *Scanner) error(offset int, msg string) {
-	fmt.Println("error:", msg)
 	if s.errorHandler != nil {
 		s.errorHandler(s.file.Position(offset), msg)
 	}
