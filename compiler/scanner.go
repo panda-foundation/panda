@@ -269,12 +269,12 @@ func (s *Scanner) scanEscape(quote rune) bool {
 }
 
 func (s *Scanner) scanString() string {
-	offset := s.offset - 1
+	offset := s.offset
 
 	for {
 		char := s.char
 		if char == '\n' || char < 0 {
-			s.error(offset, "string literal not terminated")
+			s.error(s.offset, "string literal not terminated")
 			break
 		}
 		s.next()
@@ -286,7 +286,7 @@ func (s *Scanner) scanString() string {
 		}
 	}
 
-	return string(s.src[offset:s.offset])
+	return string(s.src[offset : s.offset-1])
 }
 
 func (s *Scanner) scanChar() string {
@@ -474,6 +474,9 @@ func (s *Scanner) Scan() (pos int, token Token, literal string) {
 		case '@':
 			token = META
 			literal = "@"
+		case ';':
+			token = Semi
+			literal = ";"
 		case '#':
 			//#if #end, flag can add '!' for not operation
 			//nested # is not supported

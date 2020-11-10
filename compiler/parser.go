@@ -102,6 +102,9 @@ type Parser struct {
 	topScope   *Scope   // top-most scope; may be pkgScope
 	unresolved []*Ident // unresolved identifiers
 	badDecl    []*BadDecl
+
+	// If in a function
+	inFunction bool
 }
 
 func (p *Parser) doParse(src []byte, scanComments bool, flags []string) (f *ProgramFile, err error) {
@@ -201,8 +204,6 @@ func (p *Parser) resolve(x Expr, collectUnresolved bool) {
 // token on the same line, and that has no tokens after it on the line
 // where it ends.
 func (p *Parser) next() {
-	p.document = nil
-	p.meta = nil
 	p.emits = p.emits[:0]
 	prev := p.pos
 	p.pos, p.tok, p.lit = p.scanner.Scan()
@@ -219,10 +220,13 @@ func (p *Parser) next() {
 					if p.document != nil {
 						p.error(p.pos, "duplicate document here.")
 					}
+					if p.inFunction {
+						p.error(p.pos, "document cannot be write inside function.")
+					}
 					p.document = v
 				} else if v.Name == "" {
 					if p.allowEmit == false {
-						p.error(p.pos, "emit code is not allowed here.")
+						p.error(p.pos, "emit code is not allowed here.") //TO-DO
 					}
 					p.emits = append(p.emits, v)
 				} else {
@@ -243,6 +247,7 @@ func (p *Parser) error(pos int, msg string) {
 	// 10 errors.
 	n := len(p.errors)
 	if n > 0 && p.errors[n-1].Pos.Line == errPos.Line {
+		fmt.Println("spurious error")
 		return // discard - likely a spurious error
 	}
 	p.errors.Add(errPos, msg)
@@ -345,6 +350,12 @@ var exprEnd = map[Token]bool{
 	RightParen:   true,
 	RightBrace:   true,
 	RightBracket: true,
+}
+
+func (p *Parser) getDocument() *Metadata {
+	doc := p.document
+	p.document = nil
+	return doc
 }
 
 // ----------------------------------------------------------------------------
@@ -1133,9 +1144,10 @@ func (p *Parser) parseStmt() (s Stmt) {
 // ----------------------------------------------------------------------------
 // Declarations
 
-func (p *Parser) parsePackageDecl(doc *Metadata) *PackageDecl {
+func (p *Parser) parsePackageDecl() *PackageDecl {
 	// The namespace clause is not a declaration;
 	// the package name does not appear in any scope.
+	doc := p.getDocument()
 	ident := p.parseIdent()
 	p.expect(Semi)
 
@@ -1147,10 +1159,12 @@ func (p *Parser) parsePackageDecl(doc *Metadata) *PackageDecl {
 		Doc:  doc,
 		Name: ident,
 	}
+
 	return spec
 }
 
-func (p *Parser) parseImportDecl(doc *Metadata) *ImportDecl {
+func (p *Parser) parseImportDecl() *ImportDecl {
+	doc := p.getDocument()
 	var ident *Ident
 	var path *BasicLit
 	if p.tok == IDENT {
@@ -1164,6 +1178,7 @@ func (p *Parser) parseImportDecl(doc *Metadata) *ImportDecl {
 	} else {
 		p.error(p.pos, "expect import path (string)")
 	}
+	p.expect(Semi)
 
 	// collect imports
 	return &ImportDecl{
@@ -1173,17 +1188,21 @@ func (p *Parser) parseImportDecl(doc *Metadata) *ImportDecl {
 	}
 }
 
-func (p *Parser) parseValueDecl(doc *Metadata, m *Modifier) *ValueDecl {
+func (p *Parser) parseValueDecl(m *Modifier) *ValueDecl {
+	doc := p.getDocument()
 	keyword := p.tok
 	p.next()
 	name := p.parseIdent()
 	typ := p.tryType(true)
+
 	decl := &ValueDecl{
 		Doc:      doc,
 		Modifier: m,
 		Name:     name,
 		Type:     typ,
 	}
+
+	// TO-DO assert static can not used outside class
 
 	pos := p.pos
 	// always permit optional initialization for more tolerant parsing
@@ -1230,7 +1249,7 @@ func (p *Parser) parseTypeSpec(doc *CommentGroup, _ Token, _ int) Spec {
 }
 */
 
-func (p *Parser) parseFuncDecl(doc *Metadata, m *Modifier) *FuncDecl {
+func (p *Parser) parseFuncDecl(m *Modifier) *FuncDecl {
 	p.expect(Function)
 	scope := NewScope(p.topScope) // function scope
 
@@ -1245,7 +1264,7 @@ func (p *Parser) parseFuncDecl(doc *Metadata, m *Modifier) *FuncDecl {
 	}
 
 	decl := &FuncDecl{
-		Doc:     doc,
+		Doc:     p.getDocument(),
 		Name:    ident,
 		Params:  params,
 		Result:  result,
@@ -1262,13 +1281,13 @@ func (p *Parser) parseDecl(sync map[Token]bool) Decl {
 	m := p.parseModifier()
 	switch p.tok {
 	case Const, Var:
-		return p.parseValueDecl(p.document, m)
+		return p.parseValueDecl(m)
 	/*TO-DO class enum interface
 	case Type:
 		f = p.parseTypeSpec
 	*/
 	case Function:
-		return p.parseFuncDecl(p.document, m)
+		return p.parseFuncDecl(m)
 
 	default:
 		pos := p.pos
@@ -1284,13 +1303,9 @@ func (p *Parser) parseDecl(sync map[Token]bool) Decl {
 func (p *Parser) parseFile() *ProgramFile {
 	program := &ProgramFile{}
 
-	if p.errors.Len() != 0 {
-		return nil
-	}
-
 	// namespace
 	p.expect(Package)
-	program.Package = p.parsePackageDecl(p.document)
+	program.Package = p.parsePackageDecl()
 
 	if p.errors.Len() != 0 {
 		return nil
@@ -1301,7 +1316,7 @@ func (p *Parser) parseFile() *ProgramFile {
 	// import
 	for p.tok == Import {
 		p.next()
-		program.Imports = append(program.Imports, p.parseImportDecl(p.document))
+		program.Imports = append(program.Imports, p.parseImportDecl())
 	}
 
 	// rest of namespace body
@@ -1314,8 +1329,8 @@ func (p *Parser) parseFile() *ProgramFile {
 			program.Functions = append(program.Functions, v)
 		case *BadDecl:
 			p.badDecl = append(p.badDecl, v)
-
 		}
+		// TO-DO class // enum
 	}
 
 	p.closeScope()
@@ -1365,6 +1380,7 @@ type ErrorList []*Error
 
 // Add adds an Error with given position and error message to an ErrorList.
 func (p *ErrorList) Add(pos Position, msg string) {
+	fmt.Println("Add error:", msg)
 	*p = append(*p, &Error{pos, msg})
 }
 
@@ -1398,21 +1414,6 @@ func (p ErrorList) Less(i, j int) bool {
 //
 func (p ErrorList) Sort() {
 	sort.Sort(p)
-}
-
-// RemoveMultiples sorts an ErrorList and removes all but the first error per line.
-func (p *ErrorList) RemoveMultiples() {
-	sort.Sort(p)
-	var last Position // initial last.Line is != any legal error line
-	i := 0
-	for _, e := range *p {
-		if e.Pos.FileName != last.FileName || e.Pos.Line != last.Line {
-			last = e.Pos
-			(*p)[i] = e
-			i++
-		}
-	}
-	(*p) = (*p)[0:i]
 }
 
 // An ErrorList implements the error interface.

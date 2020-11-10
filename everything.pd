@@ -1,13 +1,10 @@
 @doc "all types elements of panda language"
 package main;
 
-/*
-import "system";
-import net "network";
-*/
+import sys "system";
+import "collection";
 
 const b bool = true;
-
 const c char = 'a'; // alias u32 //TO-DO
 
 var sbyte_v sbyte = 1; // alias i8
