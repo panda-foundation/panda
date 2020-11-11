@@ -1,8 +1,10 @@
-@doc "all types elements of panda language"
-package main;
+@doc "namespace_doc"
+namespace main;
 
-import sys "system";
-import "collection";
+@doc "import_doc"
+import sys = system;
+@doc "import_doc"
+import compiler.test.sub;
 
 const b bool = true;
 const c char = 'a'; // alias u32 //TO-DO

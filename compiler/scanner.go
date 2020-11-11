@@ -330,7 +330,7 @@ func (s *Scanner) scanChar() string {
 
 func (s *Scanner) scanRawString() string {
 	// '`' opening already consumed
-	offset := s.offset - 1
+	offset := s.offset
 	for {
 		char := s.char
 		if char < 0 {
@@ -342,7 +342,7 @@ func (s *Scanner) scanRawString() string {
 			break
 		}
 	}
-	return string(s.src[offset:s.offset])
+	return string(s.src[offset : s.offset-1])
 }
 
 func (s *Scanner) scanOperators() (token Token, literal string) {
