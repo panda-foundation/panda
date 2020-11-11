@@ -749,19 +749,19 @@ func (*BadDecl) declNode() {}
 
 func (*BadDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {}
 
-type PackageDecl struct {
+type NamespaceDecl struct {
 	Doc  *Metadata // associated documentation; or nil
 	Name *Ident    // import path
 }
 
-func (s *PackageDecl) Pos() int { return s.Name.Pos() }
+func (s *NamespaceDecl) Pos() int { return s.Name.Pos() }
 
-func (*PackageDecl) declNode() {}
+func (*NamespaceDecl) declNode() {}
 
 type ImportDecl struct {
 	Doc  *Metadata // associated documentation; or nil
 	Name *Ident    // local package name (including "."); or nil
-	Path *BasicLit // import path
+	Path Expr      // import path
 }
 
 func (s *ImportDecl) Pos() int {
@@ -873,9 +873,9 @@ func (f *FuncDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
 // ----------------------------------------------------------------------------
 // Files and packages
 type ProgramFile struct {
-	Scope      *Scope        // package scope (this file only)
-	Package    *PackageDecl  // position of "namespace" keyword
-	Imports    []*ImportDecl // imports in this file
+	Scope      *Scope         // package scope (this file only)
+	Namespace  *NamespaceDecl // position of "namespace" keyword
+	Imports    []*ImportDecl  // imports in this file
 	Values     []*ValueDecl
 	Functions  []*FuncDecl
 	Classes    []*ClassDecl
@@ -885,7 +885,7 @@ type ProgramFile struct {
 	Unresolved []*Ident // unresolved identifiers in this file
 }
 
-func (f *ProgramFile) Pos() int { return f.Package.Pos() }
+func (f *ProgramFile) Pos() int { return f.Namespace.Pos() }
 
 func (f *ProgramFile) End() int {
 	return f.EndPos
@@ -995,7 +995,7 @@ func (obj *Object) Pos() int {
 		if d.Name.Name == name {
 			return d.Pos()
 		}
-	case *PackageDecl:
+	case *NamespaceDecl:
 		return d.Pos()
 	case *ImportDecl:
 		if d.Name != nil && d.Name.Name == name {

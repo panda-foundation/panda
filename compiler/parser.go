@@ -1144,9 +1144,14 @@ func (p *Parser) parseStmt() (s Stmt) {
 // ----------------------------------------------------------------------------
 // Declarations
 
-func (p *Parser) parsePackageDecl() *PackageDecl {
+func (p *Parser) parseNamespaceDecl() *NamespaceDecl {
+	if p.tok != Namespace {
+		return &NamespaceDecl{}
+	}
+
+	p.expect(Namespace)
 	// The namespace clause is not a declaration;
-	// the package name does not appear in any scope.
+	// the namespace name does not appear in any scope.
 	doc := p.getDocument()
 	ident := p.parseIdent()
 	p.expect(Semi)
@@ -1155,7 +1160,7 @@ func (p *Parser) parsePackageDecl() *PackageDecl {
 		return nil
 	}
 
-	spec := &PackageDecl{
+	spec := &NamespaceDecl{
 		Doc:  doc,
 		Name: ident,
 	}
@@ -1163,29 +1168,33 @@ func (p *Parser) parsePackageDecl() *PackageDecl {
 	return spec
 }
 
-func (p *Parser) parseImportDecl() *ImportDecl {
-	doc := p.getDocument()
-	var ident *Ident
-	var path *BasicLit
-	if p.tok == IDENT {
-		ident = p.parseIdent()
-	}
+func (p *Parser) parseImportDecl() []*ImportDecl {
+	var imports []*ImportDecl
+	for p.tok == Import {
+		p.expect(Import)
 
-	if p.tok == STRING {
-		pos := p.pos
-		path = &BasicLit{Start: pos, Kind: STRING, Value: p.lit}
-		p.next()
-	} else {
-		p.error(p.pos, "expect import path (string)")
-	}
-	p.expect(Semi)
+		doc := p.getDocument()
+		var importDecl = &ImportDecl{
+			Doc: doc,
+		}
+		importDecl.Path = p.parseIdent()
 
-	// collect imports
-	return &ImportDecl{
-		Doc:  doc,
-		Name: ident,
-		Path: path,
+		if p.tok == Assign {
+			importDecl.Name = importDecl.Path.(*Ident)
+			p.next()
+			importDecl.Path = p.parseIdent()
+		}
+
+		for p.tok == Dot {
+			p.next()
+			importDecl.Path = p.parseSelector(importDecl.Path)
+		}
+		p.expect(Semi)
+
+		// collect imports
+		imports = append(imports, importDecl)
 	}
+	return imports
 }
 
 func (p *Parser) parseValueDecl(m *Modifier) *ValueDecl {
@@ -1250,6 +1259,7 @@ func (p *Parser) parseTypeSpec(doc *CommentGroup, _ Token, _ int) Spec {
 */
 
 func (p *Parser) parseFuncDecl(m *Modifier) *FuncDecl {
+	doc := p.getDocument()
 	p.expect(Function)
 	scope := NewScope(p.topScope) // function scope
 
@@ -1264,7 +1274,7 @@ func (p *Parser) parseFuncDecl(m *Modifier) *FuncDecl {
 	}
 
 	decl := &FuncDecl{
-		Doc:     p.getDocument(),
+		Doc:     doc,
 		Name:    ident,
 		Params:  params,
 		Result:  result,
@@ -1303,21 +1313,16 @@ func (p *Parser) parseDecl(sync map[Token]bool) Decl {
 func (p *Parser) parseFile() *ProgramFile {
 	program := &ProgramFile{}
 
-	// namespace
-	p.expect(Package)
-	program.Package = p.parsePackageDecl()
-
+	program.Namespace = p.parseNamespaceDecl()
 	if p.errors.Len() != 0 {
 		return nil
 	}
+
 	p.openScope()
 	p.pkgScope = p.topScope
 
 	// import
-	for p.tok == Import {
-		p.next()
-		program.Imports = append(program.Imports, p.parseImportDecl())
-	}
+	program.Imports = p.parseImportDecl()
 
 	// rest of namespace body
 	for p.tok != EOF {

@@ -42,7 +42,7 @@ const (
 	New
 	Null
 	Operator
-	Package
+	Namespace
 	Public
 	Result
 	Return
@@ -162,7 +162,7 @@ var (
 		New:       "new",
 		Null:      "null",
 		Operator:  "operator",
-		Package:   "package",
+		Namespace: "namespace",
 		Public:    "public",
 		Result:    "result",
 		Return:    "return",
@@ -276,7 +276,7 @@ var (
 		New:       "new",
 		Null:      "nullptr",
 		Operator:  "operator",
-		Package:   "namespace",
+		Namespace: "namespace",
 		Public:    "",
 		Return:    "return",
 		Static:    "static",
