@@ -36,8 +36,21 @@ var f64_v f64;
 
 var string_v string = "hello world\n";
 
+@doc "print varable to console; void return type can be ommited"
+function print<T>(&t T) 
+{
+    @emit `std::cout << t << std::endl;`
+}
+
 @doc "add_function"
 function add(a int, b int) int
 {
     return a + b;
+}
+
+@doc "programe_entry"
+public function main() int
+{
+    print(add(1, 1));
+    return 0;
 }

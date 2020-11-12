@@ -127,10 +127,10 @@ public class derive_class : base_class, must_do
 
 public class generic<K, V>
 {
-    var k_ : K;
-    var v_ : V;
+    var k_ K;
+    var v_ V;
 
-    public function new(k : K, v : V)
+    public function new(k K, v V)
     {
         k_ = k;
         v_ = v;
@@ -144,18 +144,18 @@ public class derive_generic : generic<int, int>
 
 function main()
 {
-    var a : int = 1;
-    var b : int = 2;
+    var a int = 1;
+    var b int = 2;
     var c = a + b;
     print(c);
 
-    var b : base_class = new base_class();
+    var b base_class = new base_class();
     b.print();
 
-    var d : derive_class = new derive_class;
+    var d derive_class = new derive_class;
     d.print();
 
-    var g ： generic<int, int> = new generic(1, 2);
+    var g generic<int, int> = new generic(1, 2);
     g.print();
     
 }

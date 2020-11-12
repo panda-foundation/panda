@@ -891,6 +891,8 @@ func (f *ProgramFile) End() int {
 	return f.EndPos
 }
 func (f *ProgramFile) Print(buffer *bytes.Buffer) {
+	buffer.WriteString("#include <cinttypes>\n\n")
+
 	for _, v := range f.Functions {
 		v.Print(buffer, 0, true)
 	}

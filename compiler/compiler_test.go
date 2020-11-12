@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"bytes"
 	"io/ioutil"
 	"testing"
 )
@@ -55,4 +56,17 @@ func TestAllTypes(t *testing.T) {
 	if p.Values[1].Doc.Text != "const_doc" {
 		t.Error("parse doc for [const c char = 'a'] failed")
 	}
+}
+
+func TestGenerate(t *testing.T) {
+	b, _ := ioutil.ReadFile("./test/all_types.pd")
+	p, err := ParseString(string(b), true, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	buff := bytes.NewBuffer(nil)
+	p.Print(buff)
+
+	ioutil.WriteFile("./test/all_types.cpp", buff.Bytes(), 0644)
 }

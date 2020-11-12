@@ -535,6 +535,10 @@ func (p *Parser) parseVarType(isParam bool) Expr {
 func (p *Parser) parseParameterList(scope *Scope) (params []*Field) {
 	for p.tok != RightParen {
 		field := &Field{}
+		if p.tok == And {
+			field.Ref = true
+			p.next()
+		}
 		typ := p.parseVarType(true)
 		if p.tok == Comma {
 			field.Name = nil
@@ -709,7 +713,9 @@ func (p *Parser) parseCall(fun Expr) *CallExpr {
 			ellipsis = len(list) - 1
 			p.next()
 		}
-		p.next()
+		if p.tok == Comma {
+			p.next()
+		}
 	}
 	p.exprLev--
 	p.expect(RightParen)
@@ -862,6 +868,10 @@ func (p *Parser) tokPrec() (Token, int) {
 func (p *Parser) parseBinaryExpr(lhs bool, prec1 int) Expr {
 	x := p.parseUnaryExpr(lhs)
 	for {
+		if p.tok == Semi {
+			return x
+		}
+
 		op, oprec := p.tokPrec()
 		if oprec < prec1 {
 			return x
@@ -879,9 +889,6 @@ func (p *Parser) parseBinaryExpr(lhs bool, prec1 int) Expr {
 			x = &TernaryExpr{Condition: x, First: y, Second: z}
 		} else {
 			x = &BinaryExpr{Left: x, Op: op, Right: y}
-		}
-		if p.tok == Semi {
-			return x
 		}
 	}
 }
@@ -937,19 +944,6 @@ func (p *Parser) parseSimpleStmt() Stmt {
 
 	// expression
 	return &ExprStmt{Expr: x}
-}
-
-func (p *Parser) parseCallExpr(callType string) *CallExpr {
-	pos := p.pos
-	x := p.parseRhs() // could be a conversion: (some type)(x)
-	if call, isCall := x.(*CallExpr); isCall {
-		return call
-	}
-	if _, isBad := x.(*BadExpr); !isBad {
-		// only report error if it's a new one
-		p.error(pos, fmt.Sprintf("function must be invoked in %s statement", callType))
-	}
-	return nil
 }
 
 func (p *Parser) parseReturnStmt() *ReturnStmt {
@@ -1112,6 +1106,7 @@ func (p *Parser) parseStmt() (s Stmt) {
 		Plus, Minus, Star, And, Caret, Not: // unary operators
 		fmt.Println("token:", p.tok.String(), "literal:", p.lit)
 		s = p.parseSimpleStmt()
+		p.expect(Semi)
 	case Return:
 		s = p.parseReturnStmt()
 	case Break, Continue:
