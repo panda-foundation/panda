@@ -447,7 +447,7 @@ func (node *OperatorNode) findOperator(bytes []byte, offset int) (Token, int) {
 		if offset < len(bytes) {
 			return child.findOperator(bytes, offset)
 		}
-		return node.token, offset
+		return child.token, offset
 	} else if offset > 0 {
 		return GetToken(string(bytes[:offset])), offset
 	}

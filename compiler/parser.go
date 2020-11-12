@@ -13,6 +13,8 @@ import (
 	"sort"
 )
 
+//TO-DO too many errors
+
 func ParseString(content string, scanComments bool, flags []string) (*ProgramFile, error) {
 	var p Parser
 	p.file = NewFile("source")
@@ -554,20 +556,13 @@ func (p *Parser) parseParameterList(scope *Scope) (params []*Field) {
 		params = append(params, field)
 		p.declare(field, scope, VarObj, field.Name)
 		p.resolve(field.Type, true)
-		p.expect(Comma)
-	}
-
-	var list []Expr
-	for {
-		list = append(list, p.parseVarType(true))
-		if p.tok != Comma {
-			break
-		}
-		p.next()
-		if p.tok == RightParen {
-			break
+		if p.tok != RightParen {
+			p.expect(Comma)
 		}
 	}
+	//TP-DO ...
+	//TO-DO ref
+	//TO-DO check default
 	return
 }
 
@@ -864,7 +859,7 @@ func (p *Parser) tokPrec() (Token, int) {
 }
 
 // If lhs is set and the result is an identifier, it is not resolved.
-func (p *Parser) parseBinaryExprWithPrec(lhs bool, prec1 int) Expr {
+func (p *Parser) parseBinaryExpr(lhs bool, prec1 int) Expr {
 	x := p.parseUnaryExpr(lhs)
 	for {
 		op, oprec := p.tokPrec()
@@ -876,14 +871,17 @@ func (p *Parser) parseBinaryExprWithPrec(lhs bool, prec1 int) Expr {
 			p.resolve(x, true)
 			lhs = false
 		}
-		y := p.parseBinaryExprWithPrec(false, oprec+1)
+		y := p.parseBinaryExpr(false, oprec+1)
 		if op == Question {
 			// TernaryExpr
 			p.expect(Colon)
-			z := p.parseBinaryExprWithPrec(false, oprec+1)
+			z := p.parseBinaryExpr(false, oprec+1)
 			x = &TernaryExpr{Condition: x, First: y, Second: z}
 		} else {
 			x = &BinaryExpr{Left: x, Op: op, Right: y}
+		}
+		if p.tok == Semi {
+			return x
 		}
 	}
 }
@@ -894,7 +892,7 @@ func (p *Parser) parseBinaryExprWithPrec(lhs bool, prec1 int) Expr {
 // check the result (using checkExpr or checkExprOrType), depending on
 // context.
 func (p *Parser) parseExpr(lhs bool) Expr {
-	return p.parseBinaryExprWithPrec(lhs, LowestPrec+1)
+	return p.parseBinaryExpr(lhs, LowestPrec+1)
 }
 
 func (p *Parser) parseRhs() Expr {
