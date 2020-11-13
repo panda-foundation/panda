@@ -22,8 +22,11 @@ enum class color
 class must_do
 {
 public:
-    virtual void print()= 0;
+    virtual void print() = 0;
+
 };
+
+class empty;
 
 bool b = true;
 
@@ -96,4 +99,19 @@ int32_t main()
     print_line(add(1, 1));
     return 0;
 }
+
+class empty
+{
+public:
+    int32_t value;
+
+    empty()
+    {
+    }
+
+    virtual ~empty()
+    {
+    }
+
+};
 

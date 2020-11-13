@@ -69,6 +69,8 @@ public interface must_do
 @doc "class_doc"
 public class empty
 {
+    var value int;
+
     public function empty()
     {
     }
@@ -120,7 +122,26 @@ public class derive_class : base_class, must_do
     {
         base.print();
     }
-}*/
+}
+
+
+public class generic<K, V>
+{
+    var k_ K;
+    var v_ V;
+
+    public function new(k K, v V)
+    {
+        k_ = k;
+        v_ = v;
+    }
+}
+
+public class derive_generic : generic<int, int>
+{
+
+}
+*/
 
 @doc "programe_entry"
 public function main() int

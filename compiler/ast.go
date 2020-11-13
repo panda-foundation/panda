@@ -463,7 +463,7 @@ func (s *BadStmt) Print(buffer *bytes.Buffer, indent int) {
 
 // A DeclStmt node represents a declaration in a statement list.
 type DeclStmt struct {
-	Decl Decl // *GenDecl with CONST, TYPE, or VAR token
+	Decl *ValueDecl // *GenDecl with CONST, or VAR token
 }
 
 func (s *DeclStmt) Pos() int { return s.Decl.Pos() }
@@ -619,6 +619,7 @@ func (s *BlockStmt) Pos() int { return s.Start }
 func (*BlockStmt) stmtNode() {}
 
 func (s *BlockStmt) Print(buffer *bytes.Buffer, indent int) {
+	WriteIndent(buffer, indent)
 	buffer.WriteString("{\n")
 	for _, v := range s.Stmts {
 		WriteIndent(buffer, indent+TabSize)
@@ -628,6 +629,7 @@ func (s *BlockStmt) Print(buffer *bytes.Buffer, indent int) {
 		}
 		buffer.WriteString("\n")
 	}
+	WriteIndent(buffer, indent)
 	buffer.WriteString("}\n")
 }
 
@@ -803,6 +805,7 @@ func (s *ValueDecl) Pos() int { return s.Name.Pos() }
 func (*ValueDecl) declNode() {}
 
 func (v *ValueDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
+	WriteIndent(buffer, indent)
 	v.Type.Print(buffer)
 	buffer.WriteString(" ")
 	v.Name.Print(buffer)
@@ -827,8 +830,28 @@ func (c *ClassDecl) Pos() int { return c.Name.Pos() }
 
 func (*ClassDecl) declNode() {}
 
-func (*ClassDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
-
+func (c *ClassDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
+	WriteIndent(buffer, indent)
+	buffer.WriteString("class ")
+	c.Name.Print(buffer)
+	//TO-DO inheritance
+	if onlyDeclare {
+		buffer.WriteString(";\n")
+		return
+	}
+	buffer.WriteString("\n")
+	WriteIndent(buffer, indent)
+	buffer.WriteString("{\n")
+	buffer.WriteString("public:\n")
+	for _, v := range c.Values {
+		v.Print(buffer, indent+TabSize, false)
+		buffer.WriteString("\n")
+	}
+	for _, f := range c.Functions {
+		f.Print(buffer, indent+TabSize, false)
+		buffer.WriteString("\n")
+	}
+	buffer.WriteString("};\n")
 }
 
 type EnumDecl struct {
@@ -876,23 +899,24 @@ func (i *InterfaceDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool
 	buffer.WriteString("{\n")
 	buffer.WriteString("public:\n")
 	for _, f := range i.Functions {
-		WriteIndent(buffer, indent+TabSize)
-		buffer.WriteString("virtual ")
-		f.Print(buffer, 0, true)
-		buffer.WriteString("= 0;\n")
+		f.Print(buffer, indent+TabSize, true)
+		buffer.WriteString("\n")
 	}
 	buffer.WriteString("};\n")
 }
 
 // A FuncDecl node represents a function declaration.
 type FuncDecl struct {
-	Doc      *Metadata // associated documentation; or nil
-	Modifier *Modifier
-	Name     *Ident     // function/method name
-	Params   *FieldList // (incoming) parameters; non-nil
-	Result   *Field     // (outgoing) results; or nil
-	Body     *BlockStmt // function body; or nil for external (non-Go) function
-	Generic  *GenericLit
+	Doc           *Metadata // associated documentation; or nil
+	Modifier      *Modifier
+	Name          *Ident     // function/method name
+	Params        *FieldList // (incoming) parameters; non-nil
+	Result        *Field     // (outgoing) results; or nil
+	Body          *BlockStmt // function body; or nil for external (non-Go) function
+	Generic       *GenericLit
+	IsMember      bool
+	IsConstructor bool
+	IsDestructor  bool
 }
 
 func (d *FuncDecl) Pos() int { return d.Name.Pos() }
@@ -915,13 +939,23 @@ func (f *FuncDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
 		buffer.WriteString(">\n")
 	}
 	WriteIndent(buffer, indent)
-	f.Result.Type.Print(buffer)
-	buffer.WriteString(" ")
+	if f.IsMember && !f.IsConstructor {
+		buffer.WriteString("virtual ")
+	}
+	if !(f.IsMember && (f.IsDestructor || f.IsConstructor)) {
+		f.Result.Type.Print(buffer)
+		buffer.WriteString(" ")
+	}
 	f.Name.Print(buffer)
 	buffer.WriteString("(")
 	f.Params.Print(buffer)
 	buffer.WriteString(")")
-	if !onlyDeclare {
+	if onlyDeclare {
+		if f.IsMember {
+			buffer.WriteString(" = 0")
+		}
+		buffer.WriteString(";\n")
+	} else {
 		buffer.WriteString("\n")
 		f.Body.Print(buffer, indent)
 	}
@@ -940,6 +974,9 @@ type ProgramFile struct {
 	Interfaces []*InterfaceDecl
 	EndPos     int
 	Unresolved []*Ident // unresolved identifiers in this file
+
+	//TO-DO add other program file as children
+	//one namespace has one program file // use tree to store
 }
 
 func (f *ProgramFile) Pos() int { return f.Namespace.Pos() }
@@ -956,7 +993,7 @@ func (f *ProgramFile) Print(buffer *bytes.Buffer, header bool) {
 
 	for _, v := range f.Functions {
 		v.Print(buffer, 0, true)
-		buffer.WriteString(";\n\n")
+		buffer.WriteString("\n")
 	}
 
 	for _, v := range f.Enums {

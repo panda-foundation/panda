@@ -1110,7 +1110,8 @@ func (p *Parser) parseForStmt() Stmt {
 func (p *Parser) parseStmt() (s Stmt) {
 	switch p.tok {
 	case Const, Var:
-		s = &DeclStmt{Decl: p.parseDecl(stmtStart)}
+		m := p.parseModifier()
+		s = &DeclStmt{Decl: p.parseValueDecl(m)}
 	case
 		// tokens that may start an expression
 		IDENT, INT, FLOAT, CHAR, STRING,
@@ -1296,7 +1297,13 @@ func (p *Parser) parseInterfaceDecl(m *Modifier) *InterfaceDecl {
 	p.expect(LeftBrace)
 	var list []*FuncDecl
 	for p.tok != RightBrace {
-		member := p.parseFuncDecl(nil, true)
+		member := p.parseFuncDecl(nil, true, true)
+		if member.Name.Name == name.Name {
+			p.error(member.Name.Pos(), "interface has no contructor")
+		}
+		if member.Name.Name[0] == '~' {
+			p.error(member.Name.Pos(), "interface has no destructor")
+		}
 		p.expect(Semi)
 		list = append(list, member)
 	}
@@ -1336,8 +1343,19 @@ func (p *Parser) parseClassDecl(m *Modifier) *ClassDecl {
 			decl.Values = append(decl.Values, p.parseValueDecl(m))
 
 		case Function:
-			decl.Functions = append(decl.Functions, p.parseFuncDecl(m, false))
-
+			f := p.parseFuncDecl(m, false, true)
+			if f.Name.Name == name.Name {
+				f.IsConstructor = true
+			}
+			if f.Name.Name[0] == '~' {
+				if f.Name.Name == "~"+name.Name {
+					f.IsDestructor = true
+				} else {
+					p.error(f.Name.Pos(), "invalid destructor name")
+				}
+				//TO-DO check return type. must be void
+			}
+			decl.Functions = append(decl.Functions, f)
 		default:
 			pos := p.pos
 			p.errorExpected(pos, "declaration")
@@ -1350,7 +1368,7 @@ func (p *Parser) parseClassDecl(m *Modifier) *ClassDecl {
 	return decl
 }
 
-func (p *Parser) parseFuncDecl(m *Modifier, onlyDeclare bool) *FuncDecl {
+func (p *Parser) parseFuncDecl(m *Modifier, onlyDeclare bool, isMember bool) *FuncDecl {
 	// onlyDeclare for interface
 	doc := p.getDocument()
 	if !onlyDeclare {
@@ -1380,6 +1398,7 @@ func (p *Parser) parseFuncDecl(m *Modifier, onlyDeclare bool) *FuncDecl {
 		Params:   params,
 		Result:   result,
 		Generic:  generic,
+		IsMember: isMember,
 	}
 
 	if onlyDeclare {
@@ -1413,7 +1432,7 @@ func (p *Parser) parseDecl(sync map[Token]bool) Decl {
 		return p.parseClassDecl(m)
 
 	case Function:
-		return p.parseFuncDecl(m, false)
+		return p.parseFuncDecl(m, false, false)
 
 	default:
 		pos := p.pos
@@ -1451,7 +1470,7 @@ func (p *Parser) parseFile() *ProgramFile {
 		case *InterfaceDecl:
 			program.Interfaces = append(program.Interfaces, v)
 		case *ClassDecl:
-			program.Classes = append(program.Classes)
+			program.Classes = append(program.Classes, v)
 		case *FuncDecl:
 			program.Functions = append(program.Functions, v)
 		case *BadDecl:
