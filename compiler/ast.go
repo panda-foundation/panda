@@ -330,8 +330,8 @@ func (x *CallExpr) Print(buffer *bytes.Buffer) {
 	for i, v := range x.Args {
 		if i != 0 {
 			buffer.WriteString(", ")
-			v.Print(buffer)
 		}
+		v.Print(buffer)
 	}
 	buffer.WriteString(")")
 }
@@ -927,6 +927,7 @@ func (f *ProgramFile) End() int {
 }
 func (f *ProgramFile) Print(buffer *bytes.Buffer) {
 	buffer.WriteString("#include <cinttypes>\n")
+	buffer.WriteString("#include <iostream>\n")
 	buffer.WriteString("#include <string>\n\n")
 
 	for _, v := range f.Functions {

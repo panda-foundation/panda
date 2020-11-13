@@ -2,7 +2,9 @@ package compiler
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
+	"os/exec"
 	"testing"
 )
 
@@ -69,4 +71,10 @@ func TestGenerate(t *testing.T) {
 	p.Print(buff)
 
 	ioutil.WriteFile("./test/all_types.cpp", buff.Bytes(), 0644)
+
+	cmd := exec.Command("g++", "-o", "test/all_types", "test/all_types.cpp")
+	err = cmd.Run()
+	if err != nil {
+		fmt.Println(err)
+	}
 }

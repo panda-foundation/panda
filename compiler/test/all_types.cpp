@@ -1,8 +1,9 @@
 #include <cinttypes>
+#include <iostream>
 #include <string>
 
 template <class T>
-void print(T &t);
+void print(T t);
 
 int32_t add(int32_t a, int32_t b);
 
@@ -33,7 +34,7 @@ double f64_v;
 std::string string_v = "hello world\n";
 
 template <class T>
-void print(T &t)
+void print(T t)
 {
     std::cout << t << std::endl;
 }
@@ -45,7 +46,7 @@ int32_t add(int32_t a, int32_t b)
 
 int32_t main()
 {
-    print();
+    print(add(1, 1));
     return 0;
 }
 

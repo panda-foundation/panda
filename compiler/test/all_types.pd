@@ -37,7 +37,7 @@ var f64_v f64;
 var string_v string = "hello world\n";
 
 @doc "print varable to console; void return type can be ommited"
-function print<T>(&t T) 
+function print<T>(t T) 
 {
     @emit `std::cout << t << std::endl;`
 }
