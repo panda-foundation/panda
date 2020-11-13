@@ -1,7 +1,11 @@
 #include <cinttypes>
+#include <string>
 
+template <class T>
 void print(T &t);
+
 int32_t add(int32_t a, int32_t b);
+
 int32_t main();
 
 bool b = true;
@@ -26,8 +30,22 @@ float float_v;
 double double_v;
 float f32_v;
 double f64_v;
-std::string string_v = hello world\n;
+std::string string_v = "hello world\n";
 
-void print(T &t);
-int32_t add(int32_t a, int32_t b);
-int32_t main();
+template <class T>
+void print(T &t)
+{
+    std::cout << t << std::endl;
+}
+
+int32_t add(int32_t a, int32_t b)
+{
+    return a + b;
+}
+
+int32_t main()
+{
+    print();
+    return 0;
+}
+

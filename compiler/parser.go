@@ -226,16 +226,18 @@ func (p *Parser) next() {
 						p.error(p.pos, "document cannot be write inside function.")
 					}
 					p.document = v
-				} else if v.Name == "" {
+				} else if v.Name == MetaEmit {
 					if p.allowEmit == false {
 						p.error(p.pos, "emit code is not allowed here.") //TO-DO
 					}
 					p.emits = append(p.emits, v)
-				} else {
+				} else if v.Name == MetaGeneric {
 					if p.meta != nil {
 						p.error(p.pos, "duplicate metadata here.")
 					}
 					p.meta = v
+				} else {
+					//TO-DO unknow meta
 				}
 			}
 		}
@@ -613,7 +615,19 @@ func (p *Parser) tryType(resolve bool) Expr {
 // Blocks
 
 func (p *Parser) parseStmtList() (list []Stmt) {
-	for p.tok != Case && p.tok != Default && p.tok != RightBrace && p.tok != EOF {
+	for {
+		if len(p.emits) > 0 {
+			for _, e := range p.emits {
+				list = append(list, &EmitStmt{
+					Start:   e.Pos(),
+					Content: e.Text,
+				})
+			}
+			p.emits = p.emits[:0]
+		}
+		if p.tok == RightBrace || p.tok == EOF {
+			return
+		}
 		list = append(list, p.parseStmt())
 	}
 	return
@@ -621,6 +635,10 @@ func (p *Parser) parseStmtList() (list []Stmt) {
 
 func (p *Parser) parseBody(scope *Scope) *BlockStmt {
 	p.allowEmit = true
+	if len(p.emits) > 0 {
+		//TO-DO
+		// unprocessed emits
+	}
 	start := p.expect(LeftBrace)
 	p.topScope = scope // open function scope
 	list := p.parseStmtList()
@@ -1083,19 +1101,6 @@ func (p *Parser) parseForStmt() Stmt {
 }
 
 func (p *Parser) parseStmt() (s Stmt) {
-	if len(p.emits) > 0 {
-		// only 1 "@emit" is valid here
-		var emits []Expr
-		for _, v := range p.emits {
-			emits = append(emits, &EmitExpr{
-				Meta: v,
-			})
-		}
-		s = &EmitsStmt{Content: emits}
-		p.emits = p.emits[:0]
-		return
-	}
-
 	switch p.tok {
 	case Const, Var:
 		s = &DeclStmt{Decl: p.parseDecl(stmtStart)}

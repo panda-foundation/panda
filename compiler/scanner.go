@@ -24,6 +24,7 @@ Meta programming
 
 import (
 	"fmt"
+	"strconv"
 	"unicode"
 	"unicode/utf8"
 )
@@ -342,7 +343,7 @@ func (s *Scanner) scanRawString() string {
 			break
 		}
 	}
-	return string(s.src[offset : s.offset-1])
+	return strconv.Quote(string(s.src[offset : s.offset-1]))
 }
 
 func (s *Scanner) scanOperators() (token Token, literal string) {

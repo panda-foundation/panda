@@ -3,18 +3,24 @@ package compiler
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 )
 
 const (
-	MetaDoc         = "doc"
-	MetaMeta        = "meta"
-	MetaEmit        = "emit"
-	MetaSerialilzer = "serializer"
-	MetaRef         = "ref"
-	MetaCall        = "call"
-	MetaReturn      = "return"
-	MetaInclude     = "include"
-	MetaMacro       = "macro"
+	MetaGeneric = "meta" // custom meta
+	MetaDoc     = "doc"
+	MetaEmit    = "emit"
+
+	/*
+		MetaSerialilzer = "serializer"
+		MetaRef         = "ref"
+		MetaCall        = "call"
+		MetaReturn      = "return"
+		MetaInclude     = "include"
+		MetaMacro       = "macro"
+	*/
+
+	TabSize = 4
 )
 
 var (
@@ -202,7 +208,10 @@ func (x *BasicLit) Pos() int { return x.Start }
 
 func (x *BasicLit) Print(buffer *bytes.Buffer) {
 	switch x.Kind {
-	case INT, FLOAT, STRING:
+	case STRING:
+		buffer.WriteString("\"" + x.Value + "\"")
+
+	case INT, FLOAT:
 		buffer.WriteString(x.Value)
 
 	case CHAR:
@@ -388,7 +397,9 @@ func (*BinaryExpr) exprNode() {}
 
 func (x *BinaryExpr) Print(buffer *bytes.Buffer) {
 	x.Left.Print(buffer)
+	buffer.WriteString(" ")
 	x.Op.Print(buffer)
+	buffer.WriteString(" ")
 	x.Right.Print(buffer)
 }
 
@@ -493,20 +504,21 @@ func (s *ExprStmt) Print(buffer *bytes.Buffer, indent int) {
 // An ExprStmt node represents a (stand-alone) expression
 // in a statement list.
 //
-type EmitsStmt struct {
-	Content []Expr // expression
+type EmitStmt struct {
+	Start   int
+	Content string // expression
 }
 
-func (s *EmitsStmt) Pos() int { return s.Content[0].Pos() }
+func (s *EmitStmt) Pos() int { return s.Start }
 
-func (*EmitsStmt) stmtNode() {}
+func (*EmitStmt) stmtNode() {}
 
-func (s *EmitsStmt) Print(buffer *bytes.Buffer, indent int) {
-	for _, v := range s.Content {
-		WriteIndent(buffer, indent)
-		v.Print(buffer)
-		buffer.WriteString(";\n")
+func (s *EmitStmt) Print(buffer *bytes.Buffer, indent int) {
+	c, err := strconv.Unquote(s.Content)
+	if err != nil {
+		//TO-DO throw error
 	}
+	buffer.WriteString(c)
 }
 
 // An IncDecStmt node represents an increment or decrement statement. ++ --
@@ -609,9 +621,12 @@ func (*BlockStmt) stmtNode() {}
 func (s *BlockStmt) Print(buffer *bytes.Buffer, indent int) {
 	buffer.WriteString("{\n")
 	for _, v := range s.Stmts {
-		WriteIndent(buffer, indent+4)
-		v.Print(buffer, indent+4)
-		buffer.WriteString(";\n")
+		WriteIndent(buffer, indent+TabSize)
+		v.Print(buffer, indent+TabSize)
+		if _, ok := v.(*EmitStmt); !ok {
+			buffer.WriteString(";")
+		}
+		buffer.WriteString("\n")
 	}
 	buffer.WriteString("}\n")
 }
@@ -862,12 +877,32 @@ func (d *FuncDecl) Pos() int { return d.Name.Pos() }
 func (*FuncDecl) declNode() {}
 
 func (f *FuncDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
+	//TO-DO indent
+	if f.Generic != nil {
+		WriteIndent(buffer, indent)
+		//template <class T, int N>
+		buffer.WriteString("template <")
+		for i, t := range f.Generic.Types {
+			if i > 0 {
+				buffer.WriteString(", ")
+			}
+			buffer.WriteString("class ")
+			t.Print(buffer)
+		}
+		buffer.WriteString(">\n")
+	}
+	WriteIndent(buffer, indent)
 	f.Result.Type.Print(buffer)
 	buffer.WriteString(" ")
 	f.Name.Print(buffer)
 	buffer.WriteString("(")
 	f.Params.Print(buffer)
-	buffer.WriteString(");\n")
+	if onlyDeclare {
+		buffer.WriteString(");\n")
+	} else {
+		buffer.WriteString(")\n")
+		f.Body.Print(buffer, indent)
+	}
 }
 
 // ----------------------------------------------------------------------------
@@ -891,12 +926,13 @@ func (f *ProgramFile) End() int {
 	return f.EndPos
 }
 func (f *ProgramFile) Print(buffer *bytes.Buffer) {
-	buffer.WriteString("#include <cinttypes>\n\n")
+	buffer.WriteString("#include <cinttypes>\n")
+	buffer.WriteString("#include <string>\n\n")
 
 	for _, v := range f.Functions {
 		v.Print(buffer, 0, true)
+		buffer.WriteString("\n")
 	}
-	buffer.WriteString("\n")
 
 	for _, v := range f.Values {
 		v.Print(buffer, 0, false)
@@ -905,6 +941,7 @@ func (f *ProgramFile) Print(buffer *bytes.Buffer) {
 
 	for _, v := range f.Functions {
 		v.Print(buffer, 0, false)
+		buffer.WriteString("\n")
 	}
 }
 
