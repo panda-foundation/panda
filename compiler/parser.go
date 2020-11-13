@@ -1271,13 +1271,43 @@ func (p *Parser) parseEnumDecl(m *Modifier) *EnumDecl {
 	}
 	p.expect(RightBrace)
 	decl.List = list
-
+	//TO-DO check later call.delare ?
 	return decl
 }
 
-func (p *Parser) parseFuncDecl(m *Modifier) *FuncDecl {
+func (p *Parser) parseInterfaceDecl(m *Modifier) *InterfaceDecl {
 	doc := p.getDocument()
-	p.expect(Function)
+
+	p.next()
+	name := p.parseIdent()
+
+	decl := &InterfaceDecl{
+		Doc:      doc,
+		Modifier: m,
+		Name:     name,
+	}
+
+	//TO-DO generic
+
+	p.expect(LeftBrace)
+	var list []*FuncDecl
+	for p.tok != RightBrace {
+		member := p.parseFuncDecl(nil, true)
+		p.expect(Semi)
+		list = append(list, member)
+	}
+	p.expect(RightBrace)
+	decl.Functions = list
+	//TO-DO check later call.delare ?
+	return decl
+}
+
+func (p *Parser) parseFuncDecl(m *Modifier, onlyDeclare bool) *FuncDecl {
+	// onlyDeclare for interface
+	doc := p.getDocument()
+	if !onlyDeclare {
+		p.expect(Function)
+	}
 	scope := NewScope(p.topScope) // function scope
 
 	ident := p.parseIdent()
@@ -1285,20 +1315,25 @@ func (p *Parser) parseFuncDecl(m *Modifier) *FuncDecl {
 	params := p.parseParameters(scope)
 	result := p.parseResult(scope)
 
-	var body *BlockStmt
-	if p.tok == LeftBrace {
-		body = p.parseBody(scope)
-	}
-
 	decl := &FuncDecl{
-		Doc:     doc,
-		Name:    ident,
-		Params:  params,
-		Result:  result,
-		Body:    body,
-		Generic: generic,
+		Doc:      doc,
+		Modifier: m,
+		Name:     ident,
+		Params:   params,
+		Result:   result,
+		Generic:  generic,
 	}
 
+	if onlyDeclare {
+		//TO-DO check later call.delare ?
+		return decl
+	}
+
+	if p.tok == LeftBrace {
+		decl.Body = p.parseBody(scope)
+	}
+
+	//TO-DO check later
 	p.declare(decl, p.pkgScope, FunctionObj, ident)
 
 	return decl
@@ -1315,8 +1350,11 @@ func (p *Parser) parseDecl(sync map[Token]bool) Decl {
 	case Enum:
 		return p.parseEnumDecl(m)
 
+	case Interface:
+		return p.parseInterfaceDecl(m)
+
 	case Function:
-		return p.parseFuncDecl(m)
+		return p.parseFuncDecl(m, false)
 
 	default:
 		pos := p.pos
@@ -1351,6 +1389,10 @@ func (p *Parser) parseFile() *ProgramFile {
 			program.Values = append(program.Values, v)
 		case *EnumDecl:
 			program.Enums = append(program.Enums, v)
+		case *InterfaceDecl:
+			program.Interfaces = append(program.Interfaces, v)
+		case *ClassDecl:
+			program.Classes = append(program.Classes)
 		case *FuncDecl:
 			program.Functions = append(program.Functions, v)
 		case *BadDecl:

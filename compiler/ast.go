@@ -846,10 +846,6 @@ func (e *EnumDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
 	WriteIndent(buffer, indent)
 	buffer.WriteString("enum class ")
 	e.Name.Print(buffer)
-	if onlyDeclare {
-		buffer.WriteString(";\n")
-		return
-	}
 	buffer.WriteString("\n")
 	WriteIndent(buffer, indent)
 	buffer.WriteString("{\n")
@@ -871,18 +867,32 @@ func (c *InterfaceDecl) Pos() int { return c.Name.Pos() }
 
 func (*InterfaceDecl) declNode() {}
 
-func (*InterfaceDecl) Print(bbuffer *bytes.Buffer, indent int, onlyDeclare bool) {
-
+func (i *InterfaceDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
+	WriteIndent(buffer, indent)
+	buffer.WriteString("class ")
+	i.Name.Print(buffer)
+	buffer.WriteString("\n")
+	WriteIndent(buffer, indent)
+	buffer.WriteString("{\n")
+	buffer.WriteString("public:\n")
+	for _, f := range i.Functions {
+		WriteIndent(buffer, indent+TabSize)
+		buffer.WriteString("virtual ")
+		f.Print(buffer, 0, true)
+		buffer.WriteString("= 0;\n")
+	}
+	buffer.WriteString("};\n")
 }
 
 // A FuncDecl node represents a function declaration.
 type FuncDecl struct {
-	Doc     *Metadata  // associated documentation; or nil
-	Name    *Ident     // function/method name
-	Params  *FieldList // (incoming) parameters; non-nil
-	Result  *Field     // (outgoing) results; or nil
-	Body    *BlockStmt // function body; or nil for external (non-Go) function
-	Generic *GenericLit
+	Doc      *Metadata // associated documentation; or nil
+	Modifier *Modifier
+	Name     *Ident     // function/method name
+	Params   *FieldList // (incoming) parameters; non-nil
+	Result   *Field     // (outgoing) results; or nil
+	Body     *BlockStmt // function body; or nil for external (non-Go) function
+	Generic  *GenericLit
 }
 
 func (d *FuncDecl) Pos() int { return d.Name.Pos() }
@@ -910,10 +920,9 @@ func (f *FuncDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
 	f.Name.Print(buffer)
 	buffer.WriteString("(")
 	f.Params.Print(buffer)
-	if onlyDeclare {
-		buffer.WriteString(");\n")
-	} else {
-		buffer.WriteString(")\n")
+	buffer.WriteString(")")
+	if !onlyDeclare {
+		buffer.WriteString("\n")
 		f.Body.Print(buffer, indent)
 	}
 }
@@ -945,12 +954,22 @@ func (f *ProgramFile) Print(buffer *bytes.Buffer, header bool) {
 		buffer.WriteString("#include <string>\n\n")
 	}
 
+	for _, v := range f.Functions {
+		v.Print(buffer, 0, true)
+		buffer.WriteString(";\n\n")
+	}
+
 	for _, v := range f.Enums {
 		v.Print(buffer, 0, true)
 		buffer.WriteString("\n")
 	}
 
-	for _, v := range f.Functions {
+	for _, v := range f.Interfaces {
+		v.Print(buffer, 0, true)
+		buffer.WriteString("\n")
+	}
+
+	for _, v := range f.Classes {
 		v.Print(buffer, 0, true)
 		buffer.WriteString("\n")
 	}
@@ -960,12 +979,12 @@ func (f *ProgramFile) Print(buffer *bytes.Buffer, header bool) {
 		buffer.WriteString("\n")
 	}
 
-	for _, v := range f.Enums {
+	for _, v := range f.Functions {
 		v.Print(buffer, 0, false)
 		buffer.WriteString("\n")
 	}
 
-	for _, v := range f.Functions {
+	for _, v := range f.Classes {
 		v.Print(buffer, 0, false)
 		buffer.WriteString("\n")
 	}
@@ -1091,12 +1110,13 @@ type ObjKind int
 
 // The list of possible Object kinds.
 const (
-	Bad         ObjKind = iota // for error handling
-	ConstObj                   // constant
-	VarObj                     // variable
-	ClassObj                   // class
-	EnumObj                    // enum
-	FunctionObj                // function or method
+	Bad          ObjKind = iota // for error handling
+	ConstObj                    // constant
+	VarObj                      // variable
+	ClassObj                    // class
+	InterfaceObj                //interface
+	EnumObj                     // enum
+	FunctionObj                 // function or method
 )
 
 var objKindStrings = [...]string{

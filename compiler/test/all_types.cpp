@@ -2,14 +2,28 @@
 #include <iostream>
 #include <string>
 
-enum class color;
-
 template <class T>
 void print(T t);
+
+template <class T>
+void print_line(T t);
 
 int32_t add(int32_t a, int32_t b);
 
 int32_t main();
+
+enum class color
+{
+    red,
+    green = 10,
+    blue,
+};
+
+class must_do
+{
+public:
+    virtual void print()= 0;
+};
 
 bool b = true;
 
@@ -59,15 +73,14 @@ std::string string_v = "hello world\n";
 
 std::string string_v_raw = "hello \\n\n    world\\n";
 
-enum class color
-{
-    red,
-    green = 10,
-    blue,
-};
-
 template <class T>
 void print(T t)
+{
+    std::cout << t;
+}
+
+template <class T>
+void print_line(T t)
 {
     std::cout << t << std::endl;
 }
@@ -79,7 +92,8 @@ int32_t add(int32_t a, int32_t b)
 
 int32_t main()
 {
-    print(add(1, 1));
+    print(string_v);
+    print_line(add(1, 1));
     return 0;
 }
 

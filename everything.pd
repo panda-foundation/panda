@@ -60,6 +60,13 @@ function add(a, b int) int
 /*
 await result
 
+enum color
+{
+    red;
+    green = 10;
+    blue;
+}
+
 public class empty
 {
     public function new()
@@ -76,33 +83,27 @@ public interface must_do
     print() void; // void can be ommited
 }
 
-enum color
-{
-    red;
-    green = 10;
-    blue;
-}
-
-enum more_color : color
-{
-    yellow;
-}
-
 public class base_class
 {
-    // private member
-    value_ : int = 0;
+    var value int = 1;
 
     // private constructor
-    function new(value : int)
+    function new(value int)
     {
-        value_ = value;
+        this.value = value;
+        print("constructor with 1 param")
     }
 
     // also constructor
     function new()
     {
-        value_ = 10;
+        this.value = 10;
+        print("constructor with no param")
+    }
+
+    function destroy()
+    {
+        print("destructor")
     }
 }
 

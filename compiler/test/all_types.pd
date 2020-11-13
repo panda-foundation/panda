@@ -38,6 +38,11 @@ var string_v_raw string = `hello \n
 @doc "print varable to console; void return type can be ommited"
 function print<T>(t T) 
 {
+    @emit `std::cout << t;`
+}
+
+function print_line<T>(t T) 
+{
     @emit `std::cout << t << std::endl;`
 }
 
@@ -55,9 +60,73 @@ enum color
     blue;
 }
 
+@doc "interface_doc"
+public interface must_do
+{
+    print() void; // void can be ommited
+}
+
+/*
+@doc "class_doc"
+public class empty
+{
+    public function new()
+    {
+    }
+
+    public function destroy()
+    {
+    }
+}
+
+
+public class base_class
+{
+    var value int = 1;
+
+    // private constructor
+    function new(value int)
+    {
+        this.value = value;
+        print("constructor with 1 param")
+    }
+
+    // also constructor
+    function new()
+    {
+        this.value = 10;
+        print("constructor with no param")
+    }
+
+    function destroy()
+    {
+        print("destructor")
+    }
+}
+
+public class derive_class : base_class, must_do
+{
+    public function new()
+    {
+        base.new();
+    }
+
+    public function new(value : int)
+    {
+        base.new(value);
+    }
+
+    // all function will be virtual, can be override
+    public function print()
+    {
+        base.print();
+    }
+}*/
+
 @doc "programe_entry"
 public function main() int
 {
-    print(add(1, 1));
+    print(string_v);
+    print_line(add(1, 1));
     return 0;
 }
