@@ -518,7 +518,7 @@ func (s *EmitStmt) Pos() int { return s.Start }
 func (*EmitStmt) stmtNode() {}
 
 func (s *EmitStmt) Print(buffer *bytes.Buffer, indent int) {
-	buffer.WriteString(s.Content)
+	buffer.WriteString(s.Content[1 : len(s.Content)-1])
 }
 
 // An IncDecStmt node represents an increment or decrement statement. ++ --
@@ -552,7 +552,7 @@ func (s *EnumStmt) Print(buffer *bytes.Buffer, indent int) {
 		buffer.WriteString(" = ")
 		s.Value.Print(buffer)
 	}
-	buffer.WriteString(";\n")
+	buffer.WriteString(",\n")
 }
 
 // An AssignStmt node represents an assignment or
@@ -838,12 +838,25 @@ type EnumDecl struct {
 	List     []*EnumStmt
 }
 
-func (c *EnumDecl) Pos() int { return c.Name.Pos() }
+func (e *EnumDecl) Pos() int { return e.Name.Pos() }
 
 func (*EnumDecl) declNode() {}
 
-func (*EnumDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
-
+func (e *EnumDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
+	WriteIndent(buffer, indent)
+	buffer.WriteString("enum class ")
+	e.Name.Print(buffer)
+	if onlyDeclare {
+		buffer.WriteString(";\n")
+		return
+	}
+	buffer.WriteString("\n")
+	WriteIndent(buffer, indent)
+	buffer.WriteString("{\n")
+	for _, item := range e.List {
+		item.Print(buffer, indent+4)
+	}
+	buffer.WriteString("};\n")
 }
 
 type InterfaceDecl struct {
@@ -925,10 +938,17 @@ func (f *ProgramFile) Pos() int { return f.Namespace.Pos() }
 func (f *ProgramFile) End() int {
 	return f.EndPos
 }
-func (f *ProgramFile) Print(buffer *bytes.Buffer) {
-	buffer.WriteString("#include <cinttypes>\n")
-	buffer.WriteString("#include <iostream>\n")
-	buffer.WriteString("#include <string>\n\n")
+func (f *ProgramFile) Print(buffer *bytes.Buffer, header bool) {
+	if header {
+		buffer.WriteString("#include <cinttypes>\n")
+		buffer.WriteString("#include <iostream>\n")
+		buffer.WriteString("#include <string>\n\n")
+	}
+
+	for _, v := range f.Enums {
+		v.Print(buffer, 0, true)
+		buffer.WriteString("\n")
+	}
 
 	for _, v := range f.Functions {
 		v.Print(buffer, 0, true)
@@ -937,8 +957,13 @@ func (f *ProgramFile) Print(buffer *bytes.Buffer) {
 
 	for _, v := range f.Values {
 		v.Print(buffer, 0, false)
+		buffer.WriteString("\n")
 	}
-	buffer.WriteString("\n")
+
+	for _, v := range f.Enums {
+		v.Print(buffer, 0, false)
+		buffer.WriteString("\n")
+	}
 
 	for _, v := range f.Functions {
 		v.Print(buffer, 0, false)

@@ -38,13 +38,21 @@ var string_v_raw string = `hello \n
 @doc "print varable to console; void return type can be ommited"
 function print<T>(t T) 
 {
-    @emit "std::cout << t << std::endl;"
+    @emit `std::cout << t << std::endl;`
 }
 
 @doc "add_function"
 function add(a int, b int) int
 {
     return a + b;
+}
+
+@doc "enum_doc"
+enum color
+{
+    red;
+    green = 10;
+    blue;
 }
 
 @doc "programe_entry"

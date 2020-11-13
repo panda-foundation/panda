@@ -2,7 +2,6 @@ package compiler
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"testing"
@@ -51,7 +50,6 @@ func TestAllTypes(t *testing.T) {
 	}
 }
 
-//Test namespace
 func TestNameSpace(t *testing.T) {
 	s := "@doc `namespace_doc`\nnamespace test;\n"
 
@@ -62,6 +60,21 @@ func TestNameSpace(t *testing.T) {
 
 	if p.Namespace.Path.(*Ident).Name != "test" || p.Namespace.Doc.Text != "`namespace_doc`" {
 		t.Error("parse [namespace test] failed")
+	}
+
+	s = "@doc `namespace_doc`\nnamespace test.sub;\n"
+
+	p, err = ParseString(s, true, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if p.Namespace.Path.(*SelectorExpr).Selector.Name != "sub" || p.Namespace.Doc.Text != "`namespace_doc`" {
+		t.Error("parse [namespace test.sub] failed")
+	}
+
+	if p.Namespace.Path.(*SelectorExpr).Expr.(*Ident).Name != "test" {
+		t.Error("parse [namespace test.sub] failed")
 	}
 }
 
@@ -75,13 +88,13 @@ func TestGenerate(t *testing.T) {
 	}
 
 	buff := bytes.NewBuffer(nil)
-	p.Print(buff)
+	p.Print(buff, true)
 
 	ioutil.WriteFile("./test/all_types.cpp", buff.Bytes(), 0644)
 
 	cmd := exec.Command("g++", "-o", "test/all_types", "test/all_types.cpp")
 	err = cmd.Run()
 	if err != nil {
-		fmt.Println(err)
+		t.Error("compile failed:", err)
 	}
 }

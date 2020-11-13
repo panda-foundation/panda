@@ -1234,27 +1234,46 @@ func (p *Parser) parseValueDecl(m *Modifier) *ValueDecl {
 	return decl
 }
 
-/*
-func (p *Parser) parseTypeSpec(doc *CommentGroup, _ Token, _ int) Spec {
-	ident := p.parseIdent()
+func (p *Parser) parseEnumDecl(m *Modifier) *EnumDecl {
+	doc := p.getDocument()
 
-	// Go spec: The scope of a type identifier declared inside a function begins
-	// at the identifier in the TypeSpec and ends at the end of the innermost
-	// containing block.
-	// (Global identifiers are resolved in a separate phase after parsing.)
-	spec := &TypeSpec{Doc: doc, Name: ident}
-	p.declare(spec, p.topScope, Typ, ident)
-	if p.tok == Assign {
-		spec.Assign = p.pos
-		p.next()
+	p.next()
+	name := p.parseIdent()
+
+	decl := &EnumDecl{
+		Doc:      doc,
+		Modifier: m,
+		Name:     name,
 	}
-	spec.Type = p.parseType()
-	p.expect(Semi) // call before accessing p.linecomment
-	spec.Comment = p.lineComment
 
-	return spec
+	p.expect(LeftBrace)
+	var list []*EnumStmt
+	for p.tok != RightBrace {
+		member := &EnumStmt{
+			Name: p.parseIdent(),
+		}
+		if p.tok == Assign {
+			p.next()
+			//later check there are same values
+			if p.tok == INT {
+				member.Value = &BasicLit{
+					Start: p.pos,
+					Kind:  INT,
+					Value: p.lit,
+				}
+			} else {
+				p.error(p.pos, "only int value can assign to enum")
+			}
+			p.next()
+		}
+		p.expect(Semi)
+		list = append(list, member)
+	}
+	p.expect(RightBrace)
+	decl.List = list
+
+	return decl
 }
-*/
 
 func (p *Parser) parseFuncDecl(m *Modifier) *FuncDecl {
 	doc := p.getDocument()
@@ -1290,10 +1309,12 @@ func (p *Parser) parseDecl(sync map[Token]bool) Decl {
 	switch p.tok {
 	case Const, Var:
 		return p.parseValueDecl(m)
-	/*TO-DO class enum interface
-	case Type:
-		f = p.parseTypeSpec
-	*/
+
+	//TO-DO class interface
+
+	case Enum:
+		return p.parseEnumDecl(m)
+
 	case Function:
 		return p.parseFuncDecl(m)
 
@@ -1328,6 +1349,8 @@ func (p *Parser) parseFile() *ProgramFile {
 		switch v := decl.(type) {
 		case *ValueDecl:
 			program.Values = append(program.Values, v)
+		case *EnumDecl:
+			program.Enums = append(program.Enums, v)
 		case *FuncDecl:
 			program.Functions = append(program.Functions, v)
 		case *BadDecl:
