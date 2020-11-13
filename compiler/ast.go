@@ -209,7 +209,11 @@ func (x *BasicLit) Pos() int { return x.Start }
 func (x *BasicLit) Print(buffer *bytes.Buffer) {
 	switch x.Kind {
 	case STRING:
-		buffer.WriteString("\"" + x.Value + "\"")
+		if x.Value[0] == '"' {
+			buffer.WriteString(x.Value)
+		} else if x.Value[0] == '`' {
+			buffer.WriteString(strconv.Quote(x.Value[1 : len(x.Value)-1]))
+		}
 
 	case INT, FLOAT:
 		buffer.WriteString(x.Value)
@@ -514,11 +518,7 @@ func (s *EmitStmt) Pos() int { return s.Start }
 func (*EmitStmt) stmtNode() {}
 
 func (s *EmitStmt) Print(buffer *bytes.Buffer, indent int) {
-	c, err := strconv.Unquote(s.Content)
-	if err != nil {
-		//TO-DO throw error
-	}
-	buffer.WriteString(c)
+	buffer.WriteString(s.Content)
 }
 
 // An IncDecStmt node represents an increment or decrement statement. ++ --
@@ -766,16 +766,16 @@ func (*BadDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {}
 
 type NamespaceDecl struct {
 	Doc  *Metadata // associated documentation; or nil
-	Name *Ident    // import path
+	Path Expr      // namespace path
 }
 
-func (s *NamespaceDecl) Pos() int { return s.Name.Pos() }
+func (s *NamespaceDecl) Pos() int { return s.Path.Pos() }
 
 func (*NamespaceDecl) declNode() {}
 
 type ImportDecl struct {
 	Doc  *Metadata // associated documentation; or nil
-	Name *Ident    // local package name (including "."); or nil
+	Name *Ident    // local name; or nil
 	Path Expr      // import path
 }
 

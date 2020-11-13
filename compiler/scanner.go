@@ -24,7 +24,6 @@ Meta programming
 
 import (
 	"fmt"
-	"strconv"
 	"unicode"
 	"unicode/utf8"
 )
@@ -270,7 +269,7 @@ func (s *Scanner) scanEscape(quote rune) bool {
 }
 
 func (s *Scanner) scanString() string {
-	offset := s.offset
+	offset := s.offset - 1
 
 	for {
 		char := s.char
@@ -287,7 +286,7 @@ func (s *Scanner) scanString() string {
 		}
 	}
 
-	return string(s.src[offset : s.offset-1])
+	return string(s.src[offset:s.offset])
 }
 
 func (s *Scanner) scanChar() string {
@@ -331,11 +330,11 @@ func (s *Scanner) scanChar() string {
 
 func (s *Scanner) scanRawString() string {
 	// '`' opening already consumed
-	offset := s.offset
+	offset := s.offset - 1
 	for {
 		char := s.char
 		if char < 0 {
-			s.error(offset, "raw string literal not terminated")
+			s.error(s.offset, "raw string literal not terminated")
 			break
 		}
 		s.next()
@@ -343,7 +342,7 @@ func (s *Scanner) scanRawString() string {
 			break
 		}
 	}
-	return strconv.Quote(string(s.src[offset : s.offset-1]))
+	return string(s.src[offset:s.offset])
 }
 
 func (s *Scanner) scanOperators() (token Token, literal string) {

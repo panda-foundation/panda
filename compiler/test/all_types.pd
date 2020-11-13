@@ -1,6 +1,3 @@
-@doc `namespace_doc`
-namespace main;
-
 @doc "import_doc"
 import sys = system;
 @doc "import_doc"
@@ -35,11 +32,13 @@ var f32_v f32;
 var f64_v f64;
 
 var string_v string = "hello world\n";
+var string_v_raw string = `hello \n
+    world\n`;
 
 @doc "print varable to console; void return type can be ommited"
 function print<T>(t T) 
 {
-    @emit `std::cout << t << std::endl;`
+    @emit "std::cout << t << std::endl;"
 }
 
 @doc "add_function"

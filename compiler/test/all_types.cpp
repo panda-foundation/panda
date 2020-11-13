@@ -32,11 +32,12 @@ double double_v;
 float f32_v;
 double f64_v;
 std::string string_v = "hello world\n";
+std::string string_v_raw = "hello \\n\n    world\\n";
 
 template <class T>
 void print(T t)
 {
-    std::cout << t << std::endl;
+    "std::cout << t << std::endl;"
 }
 
 int32_t add(int32_t a, int32_t b)

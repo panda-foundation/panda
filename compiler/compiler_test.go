@@ -9,21 +9,16 @@ import (
 )
 
 func TestAllTypes(t *testing.T) {
-	b, _ := ioutil.ReadFile("./test/all_types.pd")
-	p, err := ParseString(string(b), true, nil)
+	p, err := ParseFile("./test/all_types.pd", true, nil)
 	if err != nil {
 		t.Error(err)
-	}
-
-	if p.Namespace.Name.Name != "main" || p.Namespace.Doc.Text != "namespace_doc" {
-		t.Error("parse [package main] failed")
 	}
 
 	if p.Imports[0].Name.Name != "sys" {
 		t.Error("parse [import system] failed")
 	}
 
-	if p.Imports[0].Doc.Text != "import_doc" {
+	if p.Imports[0].Doc.Text != `"import_doc"` {
 		t.Error("parse [import system] failed")
 	}
 
@@ -51,14 +46,26 @@ func TestAllTypes(t *testing.T) {
 		t.Error("parse [public const b bool = true] failed")
 	}
 
-	if p.Values[0].Doc.Text != "const_doc" {
+	if p.Values[0].Doc.Text != `"const_doc"` {
 		t.Error("parse doc for [public const b bool = true] failed")
 	}
+}
 
-	if p.Values[1].Doc.Text != "const_doc" {
-		t.Error("parse doc for [const c char = 'a'] failed")
+//Test namespace
+func TestNameSpace(t *testing.T) {
+	s := "@doc `namespace_doc`\nnamespace test;\n"
+
+	p, err := ParseString(s, true, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if p.Namespace.Path.(*Ident).Name != "test" || p.Namespace.Doc.Text != "`namespace_doc`" {
+		t.Error("parse [namespace test] failed")
 	}
 }
+
+//Test some errors
 
 func TestGenerate(t *testing.T) {
 	b, _ := ioutil.ReadFile("./test/all_types.pd")

@@ -206,7 +206,6 @@ func (p *Parser) resolve(x Expr, collectUnresolved bool) {
 // token on the same line, and that has no tokens after it on the line
 // where it ends.
 func (p *Parser) next() {
-	p.emits = p.emits[:0]
 	prev := p.pos
 	p.pos, p.tok, p.lit = p.scanner.Scan()
 	fmt.Println(p.tok.String(), p.lit)
@@ -635,10 +634,6 @@ func (p *Parser) parseStmtList() (list []Stmt) {
 
 func (p *Parser) parseBody(scope *Scope) *BlockStmt {
 	p.allowEmit = true
-	if len(p.emits) > 0 {
-		//TO-DO
-		// unprocessed emits
-	}
 	start := p.expect(LeftBrace)
 	p.topScope = scope // open function scope
 	list := p.parseStmtList()
@@ -1151,7 +1146,12 @@ func (p *Parser) parseNamespaceDecl() *NamespaceDecl {
 	// The namespace clause is not a declaration;
 	// the namespace name does not appear in any scope.
 	doc := p.getDocument()
-	ident := p.parseIdent()
+	var path Expr = p.parseIdent()
+
+	for p.tok == Dot {
+		p.next()
+		path = p.parseSelector(path)
+	}
 	p.expect(Semi)
 
 	if p.errors.Len() != 0 {
@@ -1160,7 +1160,7 @@ func (p *Parser) parseNamespaceDecl() *NamespaceDecl {
 
 	spec := &NamespaceDecl{
 		Doc:  doc,
-		Name: ident,
+		Path: path,
 	}
 
 	return spec
