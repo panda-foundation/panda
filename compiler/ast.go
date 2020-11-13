@@ -816,7 +816,7 @@ func (v *ValueDecl) Print(buffer *bytes.Buffer, indent int, onlyDeclare bool) {
 type ClassDecl struct {
 	Doc       *Metadata // associated documentation; or nil
 	Modifier  *Modifier
-	Parents   []*Expr
+	Parents   []Expr
 	Name      *Ident // type name
 	Generic   *GenericLit
 	Values    []*ValueDecl

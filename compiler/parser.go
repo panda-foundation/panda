@@ -923,6 +923,18 @@ func (p *Parser) parseRhs() Expr {
 	return x
 }
 
+func (p *Parser) parseIdentOrSelector(existing Expr) Expr {
+	if existing == nil {
+		existing = p.parseIdent()
+	}
+	full := existing
+	for p.tok == Dot {
+		p.next()
+		full = p.parseSelector(full)
+	}
+	return full
+}
+
 // ----------------------------------------------------------------------------
 // Statements
 
@@ -1146,12 +1158,7 @@ func (p *Parser) parseNamespaceDecl() *NamespaceDecl {
 	// The namespace clause is not a declaration;
 	// the namespace name does not appear in any scope.
 	doc := p.getDocument()
-	var path Expr = p.parseIdent()
-
-	for p.tok == Dot {
-		p.next()
-		path = p.parseSelector(path)
-	}
+	path := p.parseIdentOrSelector(nil)
 	p.expect(Semi)
 
 	if p.errors.Len() != 0 {
@@ -1183,10 +1190,7 @@ func (p *Parser) parseImportDecl() []*ImportDecl {
 			importDecl.Path = p.parseIdent()
 		}
 
-		for p.tok == Dot {
-			p.next()
-			importDecl.Path = p.parseSelector(importDecl.Path)
-		}
+		importDecl.Path = p.parseIdentOrSelector(importDecl.Path)
 		p.expect(Semi)
 
 		// collect imports
@@ -1302,6 +1306,50 @@ func (p *Parser) parseInterfaceDecl(m *Modifier) *InterfaceDecl {
 	return decl
 }
 
+func (p *Parser) parseClassDecl(m *Modifier) *ClassDecl {
+	doc := p.getDocument()
+
+	p.next()
+	name := p.parseIdent()
+
+	decl := &ClassDecl{
+		Doc:      doc,
+		Modifier: m,
+		Name:     name,
+	}
+
+	//TO-DO generic
+	if p.tok == Colon {
+		for p.tok != LeftBrace {
+			decl.Parents = append(decl.Parents, p.parseIdentOrSelector(nil))
+			if p.tok == Comma {
+				p.next()
+			}
+		}
+	}
+
+	p.expect(LeftBrace)
+	for p.tok != RightBrace {
+		m = p.parseModifier()
+		switch p.tok {
+		case Const, Var:
+			decl.Values = append(decl.Values, p.parseValueDecl(m))
+
+		case Function:
+			decl.Functions = append(decl.Functions, p.parseFuncDecl(m, false))
+
+		default:
+			pos := p.pos
+			p.errorExpected(pos, "declaration")
+			//p.advance(sync)
+			//TO-DO advance wrong part
+		}
+	}
+	p.expect(RightBrace)
+	//TO-DO check later call.delare ?
+	return decl
+}
+
 func (p *Parser) parseFuncDecl(m *Modifier, onlyDeclare bool) *FuncDecl {
 	// onlyDeclare for interface
 	doc := p.getDocument()
@@ -1310,7 +1358,17 @@ func (p *Parser) parseFuncDecl(m *Modifier, onlyDeclare bool) *FuncDecl {
 	}
 	scope := NewScope(p.topScope) // function scope
 
+	//Tilde
+	tilde := false
+	if p.tok == Tilde {
+		tilde = true
+		p.next()
+	}
 	ident := p.parseIdent()
+	if tilde {
+		//TO-DO check in class
+		ident.Name = "~" + ident.Name
+	}
 	generic := p.parseGeneric(false)
 	params := p.parseParameters(scope)
 	result := p.parseResult(scope)
@@ -1345,13 +1403,14 @@ func (p *Parser) parseDecl(sync map[Token]bool) Decl {
 	case Const, Var:
 		return p.parseValueDecl(m)
 
-	//TO-DO class interface
-
 	case Enum:
 		return p.parseEnumDecl(m)
 
 	case Interface:
 		return p.parseInterfaceDecl(m)
+
+	case Class:
+		return p.parseClassDecl(m)
 
 	case Function:
 		return p.parseFuncDecl(m, false)
@@ -1398,7 +1457,6 @@ func (p *Parser) parseFile() *ProgramFile {
 		case *BadDecl:
 			p.badDecl = append(p.badDecl, v)
 		}
-		// TO-DO class // enum
 	}
 
 	p.closeScope()

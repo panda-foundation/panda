@@ -66,20 +66,19 @@ public interface must_do
     print() void; // void can be ommited
 }
 
-/*
 @doc "class_doc"
 public class empty
 {
-    public function new()
+    public function empty()
     {
     }
 
-    public function destroy()
+    public function ~empty()
     {
     }
 }
 
-
+/*
 public class base_class
 {
     var value int = 1;
