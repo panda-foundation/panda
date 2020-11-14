@@ -22,6 +22,7 @@ const (
 	// keywords
 	keyword_begin
 	Await
+	Base
 	Break
 	Case
 	Catch
@@ -41,13 +42,10 @@ const (
 	Interface
 	New
 	Null
-	Operator
 	Namespace
 	Public
-	Result
 	Return
 	Static
-	Super
 	Switch
 	This
 	Throw
@@ -142,6 +140,7 @@ const (
 var (
 	tokens = [...]string{
 		Await:     "await",
+		Base:      "base",
 		Break:     "break",
 		Case:      "case",
 		Catch:     "catch",
@@ -161,13 +160,10 @@ var (
 		Interface: "interface",
 		New:       "new",
 		Null:      "null",
-		Operator:  "operator",
 		Namespace: "namespace",
 		Public:    "public",
-		Result:    "result",
 		Return:    "return",
 		Static:    "static",
-		Super:     "super",
 		Switch:    "switch",
 		This:      "this",
 		Throw:     "throw",
@@ -246,19 +242,11 @@ var (
 		Semi:             ";",
 		Dot:              ".",
 		Ellipsis:         "...",
-
-		ILLEGAL: "ILLEGAL",
-		EOF:     "EOF",
-		IDENT:   "IDENT",
-		INT:     "INT",
-		FLOAT:   "FLOAT",
-		CHAR:    "CHAR",
-		STRING:  "STRING",
-		META:    "META",
 	}
 
 	cppTokens = [...]string{
 		Break:     "break",
+		Base:      "base",
 		Case:      "case",
 		Catch:     "catch",
 		Class:     "class",
@@ -275,12 +263,10 @@ var (
 		If:        "if",
 		New:       "new",
 		Null:      "nullptr",
-		Operator:  "operator",
 		Namespace: "namespace",
 		Public:    "",
 		Return:    "return",
 		Static:    "static",
-		Super:     "super",
 		Switch:    "switch",
 		This:      "this",
 		Throw:     "throw",

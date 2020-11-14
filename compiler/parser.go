@@ -444,21 +444,21 @@ func (p *Parser) parseMetadata() []*Metadata {
 				if p.tok == IDENT {
 					name := p.lit
 					p.next()
-					if p.tok == Equal {
-						p.next()
-						switch p.tok {
-						case INT, FLOAT, CHAR, STRING:
-							//TO-DO check if duplicated
-							m.Values[name] = &BasicLit{
-								Start: p.pos,
-								Kind:  p.tok,
-								Value: p.lit,
-							}
-						default:
-							p.errorExpected(p.pos, "basic literal (char, int, float, string)")
+
+					p.expect(Assign)
+					switch p.tok {
+					case INT, FLOAT, CHAR, STRING, True, False:
+						//TO-DO check if duplicated
+						m.Values[name] = &BasicLit{
+							Start: p.pos,
+							Kind:  p.tok,
+							Value: p.lit,
 						}
-						p.next()
+					default:
+						p.errorExpected(p.pos, "basic literal (bool, char, int, float, string)")
 					}
+					p.next()
+
 					if p.tok == RightParen {
 						break
 					}

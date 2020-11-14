@@ -35,13 +35,14 @@ var string_v string = "hello world\n";
 var string_v_raw string = `hello \n
     world\n`;
 
-@doc "print varable to console; void return type can be ommited"
-function print<T>(t T) 
+@doc "print varable to console"
+public function print<T>(t T) 
 {
     @emit `std::cout << t;`
 }
 
-function print_line<T>(t T) 
+@custom(b = true, c = 'c', i = 1, f = 3.14, s = "some string")
+public function print_line<T>(t T) 
 {
     @emit `std::cout << t << std::endl;`
 }
