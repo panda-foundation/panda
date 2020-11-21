@@ -1,62 +1,56 @@
 namespace collection;
 
-@include "<vector>"
+@cpp(include = "<vector>")
 
-@ref "std::vector"
-class vector<T>
+public class vector<type> : std.vector
 {
-    @ref "size"
-    u32 size();
+    @cpp(reference = "size")
+    public function size() int;
 
-    @ref "resize"
-    void resize(u32 n);
+    @cpp(reference = "resize")
+    public function resize(size int);
 
-    @ref "capacity"
-    u32 capacity;
+    @cpp(reference = "capacity")
+    public function capacity() int;
 
-    @ref "empty"
-    bool empty();
+    @cpp(reference = "empty")
+    public function empty() bool;
 
-    @ref "reserve"
-    void reserve(u32 n);
+    @cpp(reference = "reserve")
+    public function reserve(size int);
 
-    @ref "shrink_to_fit"
-    void shrink();
+    @cpp(reference = "shrink_to_fit")
+    public function shrink();
 
-    //TO-DO operator[] 
-    //reference operator[] (u32 n);
+    @cpp(reference = "operator[]" operator = "[]")
+    public function operator(position int) type;
 
-    @ref "at"
-    T at(u32 n);
+    @cpp(reference = "at")
+    public function at(position int) type;
     
-    @ref "front"
-    T front();
+    @cpp(reference = "front")
+    public function front() type;
     
-    @ref "back"
-    T back();
+    @cpp(reference = "back")
+    public function back() type;
 
-    @ref "assign"
-    void fill(u32 n, T val);
+    @cpp(reference = "assign")
+    public function fill(size int, value type);
+    
+    @cpp(reference = "push_back")
+    public function push(value type);
 
-    @ref "push_back"
-    void push(T val);
+    @cpp(reference = "pop_back")
+    public function pop();
 
-    @macro
-    T pop()
+    public inline function insert(position int, value type)
     {
-        @return "$.back()"
-        @call "$.pop_back()"
+        @cpp("std::vector::insert(std::vector::begin() + position, value))")
     }
 
-    @macro
-    void insert(u32 position, T val)
-    {
-        @call "$.insert($.begin() + ${position}, ${val})"
-    }
+    @cpp(reference = "erase")
+    public function erase(position int);
 
-    @ref "erase"
-    void erase(u32 position);
-
-    @ref "clear"
-    void clear();
+    @cpp(reference = "clear")
+    public function clear();
 }

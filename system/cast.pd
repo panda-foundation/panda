@@ -1,1 +1,6 @@
 namespace system;
+
+public function enum_value<enum_type>(value enum_type) int
+{
+    @cpp("return static_cast<int>(value);")
+}

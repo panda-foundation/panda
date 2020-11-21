@@ -1,0 +1,28 @@
+namespace system;
+
+function _print<type, ...types>(value type, values ...types)
+{
+    @cpp("std::cout << value << \" \";")
+    _print(values...);
+}
+
+public function print<...types>(values ...types)
+{
+    _print(values...);
+}
+
+public function print_line<...types>(values ...types)
+{
+    _print(values...);
+    @cpp("std::cout << std::endl;")
+}
+
+public function printf<...types>(format string, args ...types)
+{
+    @cpp("system::_print(std::format(format, args...));")
+}
+
+public function sprintf() string
+{
+    @cpp("return std::format(format, args...);")
+}
