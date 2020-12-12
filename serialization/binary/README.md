@@ -1,0 +1,9 @@
+bool
+int32
+int64
+float
+double
+string
+array
+typed_array
+object

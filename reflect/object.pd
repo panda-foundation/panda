@@ -1,0 +1,22 @@
+#if cpp
+namespace reflect;
+
+@cpp(top = true)
+public interface object
+{
+    @cpp(replace = "__create_child")
+    create_child(name string) object;
+
+    @cpp(replace = "__call")
+    call(name string, args vector<any>) any;
+
+    @cpp(replace = "__set")
+    set(name string, value any);
+
+    @cpp(replace = "__create_child_alias")
+    create_child_alias(name string) object;
+
+    @cpp(replace = "__set_alias")
+    set_alias(name string, value any);
+}
+#end

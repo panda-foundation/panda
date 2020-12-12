@@ -1,56 +1,47 @@
+#if cpp
+@cpp(include = "<vector>")
 namespace collection;
 
-@cpp(include = "<vector>")
-
-public class vector<type> : std.vector
+@cpp(replace = "std::vector<$type>")
+public class vector<type>
 {
-    @cpp(reference = "size")
     public function size() int;
 
-    @cpp(reference = "resize")
     public function resize(size int);
 
-    @cpp(reference = "capacity")
     public function capacity() int;
 
-    @cpp(reference = "empty")
     public function empty() bool;
 
-    @cpp(reference = "reserve")
     public function reserve(size int);
 
-    @cpp(reference = "shrink_to_fit")
+    @cpp(replace = "shrink_to_fit()")
     public function shrink();
 
-    @cpp(reference = "operator[]" operator = "[]")
-    public function operator(position int) type;
+    @cpp(operator = true)
+    public function get(position int) type;
 
-    @cpp(reference = "at")
-    public function at(position int) type;
-    
-    @cpp(reference = "front")
+    @cpp(operator = true)
+    public function set(position int, value type) type;
+
     public function front() type;
-    
-    @cpp(reference = "back")
+
     public function back() type;
 
-    @cpp(reference = "assign")
+    @cpp(replace = "assign($size, $value)")
     public function fill(size int, value type);
     
-    @cpp(reference = "push_back")
+    @cpp(replace = "push_back()")
     public function push(value type);
 
-    @cpp(reference = "pop_back")
-    public function pop();
+    @cpp(replace = "$this->back();$this->pop_back()")
+    public function pop() type;
 
-    public inline function insert(position int, value type)
-    {
-        @cpp("std::vector::insert(std::vector::begin() + position, value))")
-    }
+    @cpp(replace = "$this->insert($this->begin() + $position, $value))")
+    public function insert(position int, value type);
 
-    @cpp(reference = "erase")
     public function erase(position int);
 
-    @cpp(reference = "clear")
     public function clear();
 }
+#end

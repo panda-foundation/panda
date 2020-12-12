@@ -1,0 +1,10 @@
+#if cpp
+@cpp(include = "<string>")
+@cpp(include = "<format>")
+namespace;
+
+public function format<...types>(format string, args ...types) string
+{
+    @"return std::format(format, args...);"
+}
+#endif
