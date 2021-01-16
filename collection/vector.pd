@@ -1,12 +1,51 @@
 #if cpp
-@cpp(include = "<vector>")
-namespace collection;
+@cpp(include = "<cstddef>")
+@cpp(include = "<memory>")
+namespace;
 
-@cpp(replace = "std::vector<$type>")
 public class vector<type>
 {
-    public function size() int;
+    var start @"type*" = null;
+    var end @"type*" = null;
+    var cap @"type*" = null;
+    var allocator @"std::allocator<type>";
 
+    public function vector(count int)
+    {
+        @`start = allocator.allocate(count);
+        end = start + count`
+    }
+
+    public function ~vector()
+    {
+        free();
+    }
+
+    public function __get(position int) type
+    {
+        @`if (start + position >= end)
+        {
+            throw std::runtime_error("out of range");
+        }
+        return *(start + position)`
+    }
+
+    public function __set(position int, value type) type
+    {
+        @`if (start + position >= end)
+        {
+            throw std::runtime_error("out of range");
+        }
+        *(start + position) = value;
+        return *(start + position)`
+    }
+  
+    public function size() int
+    {
+        @"return end - start"
+    }
+
+    /*
     public function resize(size int);
 
     public function capacity() int;
@@ -15,33 +54,64 @@ public class vector<type>
 
     public function reserve(size int);
 
-    @cpp(replace = "shrink_to_fit()")
     public function shrink();
-
-    @cpp(operator = true)
-    public function get(position int) type;
-
-    @cpp(operator = true)
-    public function set(position int, value type) type;
 
     public function front() type;
 
     public function back() type;
 
-    @cpp(replace = "assign($size, $value)")
     public function fill(size int, value type);
-    
-    @cpp(replace = "push_back()")
-    public function push(value type);
+    */
 
-    @cpp(replace = "$this->back();$this->pop_back()")
-    public function pop() type;
+    public function push(value type)
+    {
+        @`check_cap();
+        allocator.construct(end, value);
+        end++`;
+    }
 
-    @cpp(replace = "$this->insert($this->begin() + $position, $value))")
+    public function pop() type
+    {
+        @`if (end - start > 0)
+        {
+            auto value = *end;
+            allocator.destroy(end);
+            end--;
+            return value;
+        }
+        throw std::runtime_error("no element to pop")`
+    }
+    /*
     public function insert(position int, value type);
 
     public function erase(position int);
 
-    public function clear();
+    public function clear();*/
+
+    function check_cap()
+    {
+        @`if (end == cap)
+        {
+            int new_size = size() ? size() << 1 : 1;
+            auto new_start = allocator.allocate(new_size);
+            auto new_end = std::uninitialized_copy(std::make_move_iterator(start), std::make_move_iterator(end), new_start);
+            free();
+            start = new_start;
+            end = new_end;
+            cap = new_start + new_size;
+        }`
+    }
+
+    function free()
+    {
+        @`if (startptr)
+        {
+            for (auto p = start; p != end; p++)
+            {
+                allocator.destroy(p);
+            }
+            allocator.deallocate(start, end - start);
+        }`
+    }
 }
 #end

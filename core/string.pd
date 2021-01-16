@@ -1,10 +1,73 @@
-#if cpp
-@cpp(include = "<string>")
-@cpp(include = "<format>")
 namespace;
 
-public function format<...types>(format string, args ...types) string
+import libc;
+
+public class string : allocator
 {
-    @"return std::format(format, args...);"
+    var text_size int;
+
+    function allocate(size int)
+    {
+        base.allocate(size);
+    }
+
+    // raw text has "\0" end
+    /*
+    function __set_raw(text pointer, size int)
+    {
+        this.allocate(length);
+        libc.memcpy(this.address, text, size);
+        this.text_size = this.size - 1;
+    }
+
+    // overwrite previous "\0" end
+    function __add_raw(text pointer, size int)
+    {
+        this.reallocate(this.size + size - 1);
+        libc.memcpy(this.address + this.text_size, text, size);
+        this.text_size = this.size - 1;
+    }*/
+
+    /* TO-DO use shared or weak
+    function __assign(str string)
+    {
+        this.free()
+
+        this.text = malloc(str.length + 1)
+        this.length = str.length
+        memcpy(str.text, this.text, str.length + 1)
+    }*/
+
+    /*
+    function __add(str string)
+    {
+        if (str.length == 0) return;
+        var new_buffer = malloc()
+
+        ; Check if we need to grow the string.
+        %1 = getelementptr %String* %this, i32 0, i32 1
+        %length = load i32* %1
+        %2 = getelementptr %String* %this, i32 0, i32 2
+        %maxlen = load i32* %2
+        ; if length == maxlen:
+        %3 = icmp eq i32 %length, %maxlen
+        br i1 %3, label %grow_begin, label %grow_close
+
+    grow_begin:
+        %4 = getelementptr %String* %this, i32 0, i32 3
+        %factor = load i32* %4
+        %5 = add i32 %maxlen, %factor
+        call void @String_Resize(%String* %this, i32 %5)
+        br label %grow_close
+
+    grow_close:
+        %6 = getelementptr %String* %this, i32 0, i32 0
+        %buffer = load i8** %6
+        %7 = getelementptr i8* %buffer, i32 %length
+        store i8 %value, i8* %7
+        %8 = add i32 %length, 1
+        store i32 %8, i32* %1
+
+        ret void
+    }*/
 }
-#endif

@@ -4,12 +4,12 @@ namespace console;
 
 public function write<type>(value type)
 {
-    @"std::cout << value;"
+    @"std::cout << value"
 }
 
 public function write_line<type>(value type)
 {
-    @"std::cout << value << std::endl;"
+    @"std::cout << value << std::endl"
 }
 
 //to-do write_object (with reflection)

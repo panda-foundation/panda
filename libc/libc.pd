@@ -1,0 +1,25 @@
+namespace libc;
+
+// io
+@extern
+function printf(text pointer) int;
+
+// memory
+@extern
+function malloc(size int) pointer;
+
+@extern
+function realloc(address pointer, size int) pointer;
+
+@extern
+function free(address pointer);
+
+// string
+@extern
+function memcmp(dest pointer, source pointer, size int) int;
+
+@extern
+function memcpy(dest pointer, source pointer, size int);
+
+@extern
+function memset(source pointer, value int, size int);
