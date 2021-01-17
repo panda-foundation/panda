@@ -2,28 +2,21 @@ namespace;
 
 import libc;
 
+@builtin
 public class allocator
 {
     var address pointer;
     var size int;
-    /*
-    function reallocate(size int)
+
+    public function create(size int) 
     {
-        if (this.address == null)
+        if (size > 0)
         {
-            return this.allocate(size);
+            this.allocate(size);
         }
+    }
 
-        var new_address pointer = libc.malloc(size);
-        libc.memset(new_address, 0, size);
-        var copy_size int = (size < this.size) ? size : this.size;
-        libc.memcpy(new_address, this.address, copy_size);
-        libc.free(this.address);
-        this.address = new_address;
-        this.size = size;
-    }*/
-
-    function allocate(size int)
+    public function allocate(size int)
     {
         this.free();
         this.address = libc.malloc(size);
@@ -31,20 +24,44 @@ public class allocator
         this.size = size;
     }
 
+    public function reallocate(size int)
+    {
+        if (this.address == null)
+        {
+            return this.allocate(size);
+        }
+
+        // keep old content
+        var new_address pointer = libc.malloc(size);
+        libc.memset(new_address, 0, size);
+        var copy_size int = (size < this.size) ? size : this.size;
+        libc.memcpy(new_address, this.address, copy_size);
+        libc.free(this.address);
+        this.address = new_address;
+        this.size = size;
+    }
+
+    public function copy(source allocator)
+    {
+        this.free();
+        this.address = libc.malloc(source.size);
+        libc.memcpy(this.address, source.address, source.size);
+        this.size = source.size;
+    }
+
     //TO-DO sizeof
     //TO-DO read, write values //endian?
 
-    /*
-    function free()
+    public function free()
     {
         if (this.address != null)
         {
             libc.free(this.address);
             this.address = null;
         }
-    }*/
+    }
 
-    function destroy()
+    public function destroy()
     {
         this.free();
     }

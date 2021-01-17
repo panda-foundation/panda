@@ -2,41 +2,37 @@ namespace;
 
 import libc;
 
+@builtin
 public class string : allocator
 {
     var text_size int;
 
-    function allocate(size int)
+    // raw text has "\0" end
+    function raw() pointer
     {
-        base.allocate(size);
+        return this.address;
     }
 
-    // raw text has "\0" end
-    /*
-    function __set_raw(text pointer, size int)
+    function set_raw(text pointer, size int)
     {
-        this.allocate(length);
+        this.allocate(size);
         libc.memcpy(this.address, text, size);
         this.text_size = this.size - 1;
     }
 
-    // overwrite previous "\0" end
-    function __add_raw(text pointer, size int)
+    function add_raw(text pointer, size int)
     {
         this.reallocate(this.size + size - 1);
+        // overwrite previous "\0" end
         libc.memcpy(this.address + this.text_size, text, size);
         this.text_size = this.size - 1;
-    }*/
+    }
 
-    /* TO-DO use shared or weak
-    function __assign(str string)
+    public function assign(source string)
     {
-        this.free()
-
-        this.text = malloc(str.length + 1)
-        this.length = str.length
-        memcpy(str.text, this.text, str.length + 1)
-    }*/
+        this.copy(source);
+        this.text_size = source.text_size;
+    }
 
     /*
     function __add(str string)
