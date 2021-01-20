@@ -1,0 +1,61 @@
+namespace;
+
+import libc;
+
+@builtin
+class counter
+{
+    var shared_ref int;
+    var weak_ref int;
+    var object pointer;
+    //var destructor function(pointer);
+
+    function retain_shared() bool
+    {
+        this.shared_ref++;
+    }
+
+    function release_shared()
+    {
+        this.shared_ref--;
+        if (this.shared_ref == 0)
+        {
+            //this.destructor(this.object);
+            this.object = null;
+
+            if (this.weak_ref == 0)
+            {
+                libc.free(this);
+            }
+        }
+    }
+
+    function retain_weak()
+    {
+        return this.weak_ref++;
+    }
+
+    function release_weak()
+    {
+        this.weak_ref--;
+        if (this.shared_ref == 0 && this.weak_ref == 0)
+        {
+            libc.free(this);
+        }
+    }
+
+    function shared() int
+    {
+        return this.shared_ref;
+    }
+
+    function weak() int
+    {
+        return this.weak_ref;
+    }
+
+    function get_object() pointer
+    {
+        return this.object;
+    }
+}

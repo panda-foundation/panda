@@ -1,7 +1,13 @@
-#if cpp
-@cpp(include = "<iostream>")
 namespace console;
 
+import libc;
+
+public function write(value string)
+{
+    libc.puts(value.raw());
+}
+
+/*
 public function write<type>(value type)
 {
     @"std::cout << value"
@@ -10,9 +16,8 @@ public function write<type>(value type)
 public function write_line<type>(value type)
 {
     @"std::cout << value << std::endl"
-}
+}*/
 
 //to-do write_object (with reflection)
 //to-do public function read()
 //to-do public function read_line()
-#end

@@ -2,7 +2,7 @@ namespace libc;
 
 // io
 @extern
-function printf(text pointer) int;
+function puts(text pointer) int;
 
 // memory
 @extern
