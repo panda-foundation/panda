@@ -1,30 +1,6 @@
 namespace;
 
-// TO-DO add mutex later
 public class object
 {
 
 }
-
-/*
-class IReferenceCounters
-{
-public:
-    virtual Atomics::Long AddStrongRef() = 0;
-    virtual Atomics::Long ReleaseStrongRef() = 0;
-    virtual Atomics::Long AddWeakRef() = 0;
-    virtual Atomics::Long ReleaseWeakRef() = 0;
-    virtual void GetObject(class IObject **ppObject) = 0;
-    virtual Atomics::Long GetNumStrongRefs()const = 0;
-    virtual Atomics::Long GetNumWeakRefs()const = 0;
-};*/
-
-/*
-class IObject
-{
-public:
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) = 0;
-    virtual Atomics::Long AddRef() = 0;
-    virtual Atomics::Long Release() = 0;
-    virtual IReferenceCounters* GetReferenceCounters()const = 0;
-};*/

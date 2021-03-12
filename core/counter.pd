@@ -1,30 +1,43 @@
 namespace;
 
 import libc;
+import type;
 
-@builtin
 class counter
 {
     var shared_ref int;
     var weak_ref int;
     var object pointer;
-    //var destructor function(pointer);
+    var destructor function(pointer);
 
-    function retain_shared() bool
+    function create()
     {
+        libc.puts("create counter");
+    }
+    
+    function retain_shared()
+    {
+        libc.puts("retain shared");
         this.shared_ref++;
     }
-
+    
     function release_shared()
     {
+        libc.puts("release shared");
+        if (this == null) return;
+
         this.shared_ref--;
+        libc.printf("shared count: %d \n", this.shared_ref);
         if (this.shared_ref == 0)
         {
-            //this.destructor(this.object);
-            this.object = null;
+            this.destructor(this.object);
+            libc.printf("free object %p \n", this.object);
+            libc.free(this.object);
 
+            this.object = null;
             if (this.weak_ref == 0)
             {
+                libc.printf("free counter %p \n", this);
                 libc.free(this);
             }
         }
@@ -32,30 +45,27 @@ class counter
 
     function retain_weak()
     {
-        return this.weak_ref++;
+        libc.puts("retain weak");
+        this.weak_ref++;
     }
-
+    
     function release_weak()
     {
+        libc.puts("release weak");
+        if (this == null) return;
+
         this.weak_ref--;
+        libc.printf("weak count: %d \n", this.weak_ref);
         if (this.shared_ref == 0 && this.weak_ref == 0)
         {
+            libc.printf("free counter %p \n", this);
             libc.free(this);
         }
     }
 
-    function shared() int
+    function destroy()
     {
-        return this.shared_ref;
-    }
-
-    function weak() int
-    {
-        return this.weak_ref;
-    }
-
-    function get_object() pointer
-    {
-        return this.object;
+        libc.puts("destroy counter");
+        libc.free(this);
     }
 }

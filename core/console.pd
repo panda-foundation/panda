@@ -7,6 +7,11 @@ public function write(value string)
     libc.puts(value.raw());
 }
 
+public function write_raw(value pointer)
+{
+    libc.puts(value);
+}
+
 /*
 public function write<type>(value type)
 {

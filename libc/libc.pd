@@ -4,17 +4,16 @@ namespace libc;
 @extern
 function puts(text pointer) int;
 
+@extern(variadic = true)
+function printf(format pointer) int;
+
 // memory
 @extern
 function malloc(size int) pointer;
 
 @extern
-function realloc(address pointer, size int) pointer;
-
-@extern
 function free(address pointer);
 
-// string
 @extern
 function memcmp(dest pointer, source pointer, size int) int;
 

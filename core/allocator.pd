@@ -2,7 +2,6 @@ namespace;
 
 import libc;
 
-@builtin
 public class allocator
 {
     var address pointer;

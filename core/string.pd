@@ -2,7 +2,6 @@ namespace;
 
 import libc;
 
-@builtin
 public class string : allocator
 {
     var text_size int;

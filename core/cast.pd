@@ -1,12 +1,3 @@
-#if cpp
 namespace;
 
-@cpp(top = true)
-public class cast
-{
-    public static inline function enum_value<enum_type>(value enum_type) int
-    {
-        @"return std::static_cast<int>(value);"
-    }
-}
-#end
+function cast<type>(value any);
