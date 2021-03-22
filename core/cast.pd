@@ -1,3 +1,6 @@
 namespace;
 
 function cast<type>(value any);
+
+function read_memory<type>(source pointer, offset int) type;
+function write_memory<type>(source pointer, value type);

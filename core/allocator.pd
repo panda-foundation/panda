@@ -63,5 +63,7 @@ public class allocator
     public function destroy()
     {
         this.free();
+        libc.free(this);
+        libc.puts("destroy allocator");
     }
 }

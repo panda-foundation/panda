@@ -1,7 +1,6 @@
 namespace;
 
 import libc;
-import type;
 
 class counter
 {
@@ -17,17 +16,16 @@ class counter
     
     function retain_shared()
     {
-        libc.puts("retain shared");
         this.shared_ref++;
+        libc.printf("retain shared: %d \n", this.shared_ref);
     }
     
     function release_shared()
     {
-        libc.puts("release shared");
         if (this == null) return;
 
         this.shared_ref--;
-        libc.printf("shared count: %d \n", this.shared_ref);
+        libc.printf("release shared: %d \n", this.shared_ref);
         if (this.shared_ref == 0)
         {
             this.destructor(this.object);
@@ -45,17 +43,16 @@ class counter
 
     function retain_weak()
     {
-        libc.puts("retain weak");
         this.weak_ref++;
+        libc.printf("retain weak: %d \n", this.weak_ref);
     }
     
     function release_weak()
     {
-        libc.puts("release weak");
         if (this == null) return;
 
         this.weak_ref--;
-        libc.printf("weak count: %d \n", this.weak_ref);
+        libc.printf("release weak: %d \n", this.weak_ref);
         if (this.shared_ref == 0 && this.weak_ref == 0)
         {
             libc.printf("free counter %p \n", this);
@@ -65,7 +62,7 @@ class counter
 
     function destroy()
     {
-        libc.puts("destroy counter");
         libc.free(this);
+        libc.puts("destroy counter");
     }
 }

@@ -2,67 +2,60 @@ namespace;
 
 import libc;
 
-public class string : allocator
+public class string
 {
     var text_size int;
+    var address pointer;
 
-    // raw text has "\0" end
-    function raw() pointer
+    function create()
+    {
+        libc.puts("create string");
+    }
+
+    public function raw() pointer
     {
         return this.address;
     }
 
-    function set_raw(text pointer, size int)
+    public function size() int
     {
-        this.allocate(size);
-        libc.memcpy(this.address, text, size);
-        this.text_size = this.size - 1;
+        return this.text_size;
     }
 
-    function add_raw(text pointer, size int)
+    public function assign(ref value string)
     {
-        this.reallocate(this.size + size - 1);
-        // overwrite previous "\0" end
-        libc.memcpy(this.address + this.text_size, text, size);
-        this.text_size = this.size - 1;
+        libc.free(this);
+        var size int = value.size();
+        this.text_size = size;
+        this.address = libc.malloc(this.text_size + 1);
+        libc.memcpy(this.address, value.raw(), size);
     }
 
-    public function assign(source string)
+    public function plus(ref value string) string
     {
-        this.copy(source);
-        this.text_size = source.text_size;
+        var new_value string;
+        var new_size int = this.text_size + value.size() + 1;
+        var new_address pointer = libc.malloc(new_size);
+        libc.memcpy(new_address, this.address, this.text_size + 1);
+        var second_address pointer = pointer_offset(new_address, this.text_size);
+        libc.memcpy(second_address, value.raw(), value.size() + 1);
+        return new_value;
     }
 
-    /*
-    function __add(str string)
+    public function plus_assign(ref value string)
     {
-        if (str.length == 0) return;
-        var new_buffer = malloc()
+        //TO-DO
+    }
 
-        ; Check if we need to grow the string.
-        %1 = getelementptr %String* %this, i32 0, i32 1
-        %length = load i32* %1
-        %2 = getelementptr %String* %this, i32 0, i32 2
-        %maxlen = load i32* %2
-        ; if length == maxlen:
-        %3 = icmp eq i32 %length, %maxlen
-        br i1 %3, label %grow_begin, label %grow_close
+    public function compare(ref value string) int
+    {
+        //TO-DO
+        return 0;
+    }
 
-    grow_begin:
-        %4 = getelementptr %String* %this, i32 0, i32 3
-        %factor = load i32* %4
-        %5 = add i32 %maxlen, %factor
-        call void @String_Resize(%String* %this, i32 %5)
-        br label %grow_close
-
-    grow_close:
-        %6 = getelementptr %String* %this, i32 0, i32 0
-        %buffer = load i8** %6
-        %7 = getelementptr i8* %buffer, i32 %length
-        store i8 %value, i8* %7
-        %8 = add i32 %length, 1
-        store i32 %8, i32* %1
-
-        ret void
-    }*/
+    function destroy()
+    {
+        libc.free(this);
+        libc.puts("destroy string");
+    }
 }

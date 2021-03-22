@@ -1,0 +1,67 @@
+namespace;
+/*
+import libc;
+
+public class string_buffer : allocator
+{
+    var text_size int;
+
+    // raw text has "\0" end
+    function raw() pointer
+    {
+        return this.address;
+    }
+
+    function set_raw(text pointer, size int)
+    {
+        this.allocate(size);
+        libc.memcpy(this.address, text, size);
+        this.text_size = this.size - 1;
+    }
+
+    function add_raw(text pointer, size int)
+    {
+        this.reallocate(this.size + size - 1);
+        // overwrite previous "\0" end
+        libc.memcpy(this.address + this.text_size, text, size);
+        this.text_size = this.size - 1;
+    }
+
+    public function assign(source string)
+    {
+        this.copy(source);
+        this.text_size = source.text_size;
+    }
+
+    function __add(str string)
+    {
+        if (str.length == 0) return;
+        var new_buffer = malloc()
+
+        ; Check if we need to grow the string.
+        %1 = getelementptr %String* %this, i32 0, i32 1
+        %length = load i32* %1
+        %2 = getelementptr %String* %this, i32 0, i32 2
+        %maxlen = load i32* %2
+        ; if length == maxlen:
+        %3 = icmp eq i32 %length, %maxlen
+        br i1 %3, label %grow_begin, label %grow_close
+
+    grow_begin:
+        %4 = getelementptr %String* %this, i32 0, i32 3
+        %factor = load i32* %4
+        %5 = add i32 %maxlen, %factor
+        call void @String_Resize(%String* %this, i32 %5)
+        br label %grow_close
+
+    grow_close:
+        %6 = getelementptr %String* %this, i32 0, i32 0
+        %buffer = load i8** %6
+        %7 = getelementptr i8* %buffer, i32 %length
+        store i8 %value, i8* %7
+        %8 = add i32 %length, 1
+        store i32 %8, i32* %1
+
+        ret void
+    }
+}*/

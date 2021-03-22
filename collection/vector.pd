@@ -1,6 +1,3 @@
-#if cpp
-@cpp(include = "<cstddef>")
-@cpp(include = "<memory>")
 namespace;
 
 public class vector<type>
@@ -114,4 +111,3 @@ public class vector<type>
         }`
     }
 }
-#end
